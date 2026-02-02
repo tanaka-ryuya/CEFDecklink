@@ -50,3 +50,64 @@ Run the following command from the project root:
 ## Troubleshooting
 - **"Invalid file descriptor to ICU data"**: This happens if you run the executable from the wrong directory. Make sure to run it as shown above, or ensure all `*.pak` and `*.dat` files from `vender/cef/Resources` are next to the `.exe`.
 - **Decklink not found**: Ensure Blackmagic Desktop Video drivers are installed and a compatible device is connected.
+
+## Crash Debugging
+
+### Crash Dump Files
+
+When the application crashes, it automatically generates a crash dump file in the current directory:
+
+**File Pattern**: `crash_YYYYMMDD_HHMMSS.dmp`  
+**Example**: `crash_20260202_160102.dmp`
+
+**Implementation Files**: 
+- `src/CrashHandler.h` / `src/CrashHandler.cpp`: Implements Windows Structured Exception Handling (SEH)
+- Uses `SetUnhandledExceptionFilter()` to catch unhandled exceptions
+- Calls `MiniDumpWriteDump()` to generate `.dmp` files with stack traces
+- Initialized in `main.cpp` via `CrashHandler::Initialize()`
+
+### Analyzing Crash Dumps
+
+**Using CDB (Console Debugger)**:
+```powershell
+# Quick stack trace analysis
+"C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe" -z crash_20260202_160102.dmp -c ".ecxr; kv 30; q"
+
+# Full crash analysis
+"C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe" -z crash_20260202_160102.dmp -c "!analyze -v; q"
+```
+
+**Helper Scripts**:
+- `analyze_crash.bat`: Auto-generated script for quick analysis
+- Output saved to `crash_analysis_*.txt`
+
+**Key Information in Dumps**:
+- **Exception Code**: `0xC0000005` = Access Violation (NULL pointer dereference)
+- **Exception Address**: Instruction pointer where crash occurred
+- **Call Stack (kv)**: Function call chain leading to crash
+- **Registers**: `rcx`, `rdx` show parameter values
+  - Example: `rcx=0x20` indicates NULL pointer + 0x20 offset
+
+**Common Crash Patterns**:
+- `memcpy` with `rcx=0x20`: NULL destination buffer in `ShaderManager::ConvertAndDownload`
+- Check `outputBuffer` / `pBuffer` validity in DeckLink operations
+
+### GPU Adapter Selection
+
+The application automatically selects the best GPU on startup:
+
+**Priority Order**:
+1. NVIDIA GPU (Vendor ID: 0x10DE)
+2. Highest dedicated VRAM
+3. Fallback to default adapter
+
+**Console Output Example**:
+```
+[GPU] Enumerating available adapters:
+  [0] Intel(R) UHD Graphics (Vendor: 0x8086, VRAM: 128 MB)
+  [1] NVIDIA GeForce RTX 4070 Laptop GPU (Vendor: 0x10de, VRAM: 7948 MB)
+  -> NVIDIA GPU detected, selecting this adapter
+[GPU] Selected adapter [1]: NVIDIA GeForce RTX 4070 Laptop GPU
+```
+
+**Implementation**: `SelectBestAdapter()` function in `src/main.cpp`

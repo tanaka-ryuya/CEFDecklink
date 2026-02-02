@@ -2,6 +2,7 @@
 #include <shellapi.h>
 #include <tchar.h>
 #include <d3d11.h>
+#include <dxgi.h>
 #include <vector>
 #include <iostream>
 #include <iomanip>
@@ -27,6 +28,7 @@ static std::unique_ptr<ShaderManager> g_shaderManager;
 static DeckLinkDevice g_deckLink;
 
 // Forward declarations of helper functions
+IDXGIAdapter* SelectBestAdapter();
 bool CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
 void CreateRenderTarget();
@@ -251,6 +253,72 @@ int main(int, char**)
 }
 
 // Helper functions for D3D implementation...
+
+// Select the best GPU adapter (prioritize NVIDIA or high VRAM)
+IDXGIAdapter* SelectBestAdapter()
+{
+    IDXGIFactory* factory = nullptr;
+    HRESULT hr = CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&factory);
+    if (FAILED(hr)) {
+        std::cerr << "[GPU] Failed to create DXGI Factory" << std::endl;
+        return nullptr;
+    }
+
+    IDXGIAdapter* bestAdapter = nullptr;
+    SIZE_T maxDedicatedMem = 0;
+    UINT adapterIndex = 0;
+
+    std::cout << "[GPU] Enumerating available adapters:" << std::endl;
+
+    for (UINT i = 0; ; ++i) {
+        IDXGIAdapter* adapter = nullptr;
+        if (factory->EnumAdapters(i, &adapter) == DXGI_ERROR_NOT_FOUND)
+            break;
+
+        DXGI_ADAPTER_DESC desc;
+        adapter->GetDesc(&desc);
+
+        // Convert wide string to narrow for printing
+        char descStr[128];
+        wcstombs_s(nullptr, descStr, sizeof(descStr), desc.Description, _TRUNCATE);
+
+        std::cout << "  [" << i << "] " << descStr
+                  << " (Vendor: 0x" << std::hex << desc.VendorId << std::dec
+                  << ", VRAM: " << (desc.DedicatedVideoMemory / 1024 / 1024) << " MB)" << std::endl;
+
+        // Prioritize NVIDIA (0x10DE) or highest VRAM
+        bool isNvidia = (desc.VendorId == 0x10DE);
+        bool hasMoreVRAM = (desc.DedicatedVideoMemory > maxDedicatedMem);
+
+        if (isNvidia || (!bestAdapter && hasMoreVRAM)) {
+            if (bestAdapter) bestAdapter->Release();
+            bestAdapter = adapter;
+            maxDedicatedMem = desc.DedicatedVideoMemory;
+            adapterIndex = i;
+
+            if (isNvidia) {
+                std::cout << "  -> NVIDIA GPU detected, selecting this adapter" << std::endl;
+            }
+        } else {
+            adapter->Release();
+        }
+    }
+
+    factory->Release();
+
+    if (bestAdapter) {
+        DXGI_ADAPTER_DESC desc;
+        bestAdapter->GetDesc(&desc);
+        char descStr[128];
+        wcstombs_s(nullptr, descStr, sizeof(descStr), desc.Description, _TRUNCATE);
+        std::cout << "[GPU] Selected adapter [" << adapterIndex << "]: " << descStr << std::endl;
+    } else {
+        std::cout << "[GPU] No suitable adapter found, using default" << std::endl;
+    }
+
+    return bestAdapter;
+}
+
 bool CreateDeviceD3D(HWND hWnd)
 {
     // Setup swap chain
@@ -274,9 +342,22 @@ bool CreateDeviceD3D(HWND hWnd)
     //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     D3D_FEATURE_LEVEL featureLevel;
     const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
-    HRESULT res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
-    if (res == DXGI_ERROR_UNSUPPORTED) // Try high-performance WARP software driver if hardware is not available.
+    
+    // Select best GPU adapter (NVIDIA or highest VRAM)
+    IDXGIAdapter* adapter = SelectBestAdapter();
+    D3D_DRIVER_TYPE driverType = adapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE;
+    
+    HRESULT res = D3D11CreateDeviceAndSwapChain(adapter, driverType, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
+    
+    if (res == DXGI_ERROR_UNSUPPORTED) { // Try high-performance WARP software driver if hardware is not available.
+        if (adapter) adapter->Release();
+        adapter = nullptr;
         res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
+    }
+    
+    // Release adapter after device creation
+    if (adapter) adapter->Release();
+    
     if (res != S_OK)
         return false;
 

@@ -19,6 +19,7 @@ DeckLinkDevice::DeckLinkDevice()
       m_deckLink(nullptr),
       m_deckLinkOutput(nullptr),
       m_videoFrame(nullptr),
+      m_currentBuffer(nullptr),
       m_frameCompletedSignal(false),
       m_totalFramesScheduled(0),
       m_timeScale(30000),     // 30000 / 1001 ~= 29.97 fps (59.94i)
@@ -29,6 +30,14 @@ DeckLinkDevice::DeckLinkDevice()
 DeckLinkDevice::~DeckLinkDevice()
 {
     StopOutput();
+    
+    // Clean up current buffer if exists
+    if (m_currentBuffer) {
+        m_currentBuffer->EndAccess(bmdBufferAccessWrite);
+        m_currentBuffer->Release();
+        m_currentBuffer = nullptr;
+    }
+    
     SafeRelease(&m_videoFrame);
     SafeRelease(&m_deckLinkOutput);
     SafeRelease(&m_deckLink);
@@ -238,14 +247,32 @@ bool DeckLinkDevice::GetFrameBuffer(void** pBuffer)
 {
     if (!m_videoFrame) return false;
 
-    IDeckLinkVideoBuffer* videoBuffer = nullptr;
-    if (m_videoFrame->QueryInterface(IID_IDeckLinkVideoBuffer, (void**)&videoBuffer) == S_OK)
-    {
-        videoBuffer->GetBytes(pBuffer);
-        videoBuffer->Release();
-        return true;
+    // Release previous buffer if exists
+    if (m_currentBuffer) {
+        m_currentBuffer->EndAccess(bmdBufferAccessWrite);
+        m_currentBuffer->Release();
+        m_currentBuffer = nullptr;
     }
-    return false;
+
+    IDeckLinkVideoBuffer* videoBuffer = nullptr;
+    if (m_videoFrame->QueryInterface(IID_IDeckLinkVideoBuffer, (void**)&videoBuffer) != S_OK)
+        return false;
+
+    // Start access before getting bytes
+    if (videoBuffer->StartAccess(bmdBufferAccessWrite) != S_OK) {
+        videoBuffer->Release();
+        return false;
+    }
+
+    if (videoBuffer->GetBytes(pBuffer) != S_OK) {
+        videoBuffer->EndAccess(bmdBufferAccessWrite);
+        videoBuffer->Release();
+        return false;
+    }
+
+    // Keep reference for EndAccess later
+    m_currentBuffer = videoBuffer;
+    return true;
 }
 
 bool DeckLinkDevice::ScheduleNextFrame()

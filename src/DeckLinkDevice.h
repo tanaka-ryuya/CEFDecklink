@@ -58,6 +58,7 @@ private:
 
     // Output State
     IDeckLinkMutableVideoFrame* m_videoFrame; // Reusable frame for sync
+    IDeckLinkVideoBuffer* m_currentBuffer;    // Current buffer for EndAccess
     long long m_totalFramesScheduled;
     BMDTimeScale m_timeScale;
     BMDTimeValue m_frameDuration;
