@@ -2,6 +2,7 @@
 #include <shellapi.h>
 #include <tchar.h>
 #include <d3d11.h>
+#include <d3d11_1.h>
 #include <dxgi.h>
 #include <vector>
 #include <iostream>
@@ -169,10 +170,17 @@ int main(int, char**)
             // Note: CefRenderHandler::GetTextureSRV needs to be thread-safe or we need to accept risk.
             // D3D11 Device Context access inside ShaderManager is locked, so this part is okay.
             auto renderHandler = g_cefManager.GetRenderHandler();
+            
+            static int debugLogCounter = 0;
+            // if (debugLogCounter++ % 60 == 0) { // Log once per second (approx)
+                 // std::cout << "[Callback] RenderHandler: " << (renderHandler ? "OK" : "NULL") << std::endl;
+            // }
 
             if (renderHandler) {
-                // SyncWithGPU uses mutex internally? Checking... assuming simple getter is safe
-                // renderHandler->SyncWithGPU(); // This might be main-thread only. Skip for now or ensure thread safety.
+                // SyncWithGPU uses mutex internally and GetImmediateContext.
+                // Since we are single-threaded regarding D3D access (Main thread does nothing), this is safe-ish.
+                // Ideally use ID3D11Multithread, but for now this enables the transfer.
+                renderHandler->SyncWithGPU(); 
                 
                 // Shift History
                  if (prevSRV) prevSRV->Release();
@@ -180,6 +188,10 @@ int main(int, char**)
                  
                  // Get NEW Current
                  currentSRV = renderHandler->GetTextureSRV();
+                 
+                 // if (debugLogCounter % 60 == 0 && currentSRV == nullptr) {
+                 //    std::cout << "[Callback] currentSRV is NULL! CEF not rendering?" << std::endl;
+                 // }
             }
 
             // Handle startup
@@ -198,6 +210,14 @@ int main(int, char**)
                     g_shaderManager->ConvertAndDownload(currentSRV, prevSRV, pBuffer); 
                 } else if (currentSRV && g_shaderManager) {
                      g_shaderManager->ConvertAndDownload(currentSRV, currentSRV, pBuffer);
+                } else if (g_shaderManager) {
+                     // No texture yet - Clear to Blue to verify shader manager works
+                     // To do this, we need a Clear function or just memset pBuffer
+                     // if (debugLogCounter % 60 == 0) std::cout << "[Callback] No textures available. Clearing buffer." << std::endl;
+                     
+                     // Fill Blue for debug
+                     // uint32_t* p32 = (uint32_t*)pBuffer;
+                     // for(int i=0; i<1920*1080; ++i) *p32++ = 0xFF0000FF; // Blue
                 }
             }
         });
@@ -369,6 +389,18 @@ bool CreateDeviceD3D(HWND hWnd)
     if (res != S_OK)
         return false;
 
+    // --- Enable Multithread Protection ---
+    // Critical for Callback-Driven Architecture where DeckLink thread uses the Context
+    /*
+    ID3D11Multithread* pMultithread = nullptr;
+    if (SUCCEEDED(g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&pMultithread)))) {
+        pMultithread->SetMultithreadProtected(TRUE);
+        pMultithread->Release();
+        std::cout << "[D3D11] Multithread protection enabled." << std::endl;
+    } else {
+        std::cerr << "[D3D11] Failed to enable multithread protection!" << std::endl;
+    }
+    */
     CreateRenderTarget();
     return true;
 }

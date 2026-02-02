@@ -84,15 +84,22 @@ bool ShaderManager::CreateBuffers(int width, int height) {
 void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D11ShaderResourceView* inputSRV2, void* outputBuffer) {
     if (!m_computeShader || !inputSRV1 || !inputSRV2) return;
 
+    static int logCounter = 0;
+    bool doLog = (++logCounter % 120 == 0); // Log every ~4 seconds at 30fps
+
     // Update Constant Buffer
     D3D11_MAPPED_SUBRESOURCE mappedResource;
-    if (SUCCEEDED(m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource))) {
+    HRESULT hr = m_context->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    if (SUCCEEDED(hr)) {
         float* data = (float*)mappedResource.pData;
         data[0] = m_alphaThreshold;
         data[1] = 0.0f; // padding
         data[2] = 0.0f; // padding
         data[3] = 0.0f; // padding
         m_context->Unmap(m_constantBuffer.Get(), 0);
+    } else {
+        if (doLog) std::cerr << "[Shader] Failed to map constant buffer: " << std::hex << hr << std::endl;
+        return;
     }
 
     // Set Shader
@@ -110,12 +117,7 @@ void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D
     m_context->CSSetUnorderedAccessViews(0, 1, uavs, nullptr);
     
     // Dispatch
-    // Thread group size in shader is (16, 16, 1) = 256 threads.
-    // Each thread processes 1 pixel (ARGB).
-    // X Groups = Ceil(1920 / 16) = 120
-    // Y Groups = Ceil(1080 / 16) = 68
-    
-    m_context->Dispatch(120, 68, 1);
+    m_context->Dispatch(120, 68, 1); // 1920x1080 / 16x16
     
     // Unbind UAVs
     ID3D11UnorderedAccessView* nullUAVs[] = { nullptr };
@@ -129,16 +131,25 @@ void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D
     
     // Map and Download (ARGB)
     D3D11_MAPPED_SUBRESOURCE mapped;
-    if (SUCCEEDED(m_context->Map(m_stagingOutput.Get(), 0, D3D11_MAP_READ, 0, &mapped))) {
+    hr = m_context->Map(m_stagingOutput.Get(), 0, D3D11_MAP_READ, 0, &mapped);
+    if (SUCCEEDED(hr)) {
         uint8_t* src = (uint8_t*)mapped.pData;
         uint8_t* dst = (uint8_t*)outputBuffer;
-        // ARGB: 1920 pixels wide, 4 bytes per pixel
-        // Copy row by row
+        
+        // Check if output is all black (debug)
+        if (doLog) {
+            uint32_t* pHead = (uint32_t*)src;
+            uint32_t sample = pHead[1920*540 + 960]; // Center pixel
+            std::cout << "[Shader] Map OK. Center Pixel: 0x" << std::hex << sample << std::dec << std::endl;
+        }
+
         for (int y = 0; y < m_height; ++y) {
              memcpy(dst + y * (m_width * 4), src + y * mapped.RowPitch, m_width * 4);
         }
         
         m_context->Unmap(m_stagingOutput.Get(), 0);
+    } else {
+        if (doLog) std::cerr << "[Shader] Failed to map staging texture: " << std::hex << hr << std::endl;
     }
 }
 
