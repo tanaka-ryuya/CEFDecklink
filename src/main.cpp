@@ -12,6 +12,7 @@
 #include "CefManager.h"
 #include "CefRenderHandler.h"
 #include "ShaderManager.h"
+#include "CrashHandler.h"
 
 // Data
 static ID3D11Device*            g_pd3dDevice = nullptr;
@@ -111,14 +112,13 @@ void RenderFrame() {
 
         // 2. Get DeckLink Buffer
         void* pBuffer = nullptr;
-        void* pKeyBuffer = nullptr;
         
-        if (g_deckLink.GetFrameBuffer(&pBuffer, &pKeyBuffer)) {
-            // 3. Convert BGRA -> YUV (GPU) with Frame Mixing
+        if (g_deckLink.GetFrameBuffer(&pBuffer)) {
+            // 3. Convert BGRA -> ARGB (GPU) with Frame Mixing
             if (prevSRV && currentSRV && g_shaderManager) {
-                g_shaderManager->ConvertAndDownload(currentSRV, prevSRV, pBuffer, pKeyBuffer); 
+                g_shaderManager->ConvertAndDownload(currentSRV, prevSRV, pBuffer); 
             } else if (currentSRV && g_shaderManager) {
-                 g_shaderManager->ConvertAndDownload(currentSRV, currentSRV, pBuffer, pKeyBuffer);
+                 g_shaderManager->ConvertAndDownload(currentSRV, currentSRV, pBuffer);
             }
             
             // 4. Schedule Frame
@@ -153,6 +153,9 @@ int main(int, char**)
     
     std::cout << "--- DeckLink + CEF CUI Application ---" << std::endl;
     std::cout << "Initializing..." << std::endl;
+
+    // Initialize Crash Handler for debugging
+    CrashHandler::Initialize();
 
     // Initialize CEF early
     if (!g_cefManager.Initialize(GetModuleHandle(nullptr))) {
@@ -204,20 +207,30 @@ int main(int, char**)
     std::cout << "Starting Main Loop..." << std::endl;
 
     // Main loop
-    while (!g_appDone)
-    {
-        // Poll Windows Messages
-        MSG msg;
-        while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
+    try {
+        while (!g_appDone)
         {
-            ::TranslateMessage(&msg);
-            ::DispatchMessage(&msg);
-            if (msg.message == WM_QUIT)
-                g_appDone = true;
-        }
-        if (g_appDone) break;
+            // Poll Windows Messages
+            MSG msg;
+            while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
+            {
+                ::TranslateMessage(&msg);
+                ::DispatchMessage(&msg);
+                if (msg.message == WM_QUIT)
+                    g_appDone = true;
+            }
+            if (g_appDone) break;
 
-        RenderFrame();
+            RenderFrame();
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "\n[EXCEPTION] Caught C++ exception in main loop: " << e.what() << std::endl;
+        CrashHandler::ForceCrashDump();
+    }
+    catch (...) {
+        std::cerr << "\n[EXCEPTION] Caught unknown exception in main loop" << std::endl;
+        CrashHandler::ForceCrashDump();
     }
     
     // Shutdown

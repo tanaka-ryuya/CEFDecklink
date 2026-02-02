@@ -1,0 +1,94 @@
+
+************* Preparing the environment for Debugger Extensions Gallery repositories **************
+   ExtensionRepository : Implicit
+   UseExperimentalFeatureForNugetShare : true
+   AllowNugetExeUpdate : true
+   NonInteractiveNuget : true
+   AllowNugetMSCredentialProviderInstall : true
+   AllowParallelInitializationOfLocalRepositories : true
+
+   EnableRedirectToV8JsProvider : false
+
+   -- Configuring repositories
+      ----> Repository : LocalInstalled, Enabled: true
+      ----> Repository : UserExtensions, Enabled: true
+
+>>>>>>>>>>>>> Preparing the environment for Debugger Extensions Gallery repositories completed, duration 0.000 seconds
+
+************* Waiting for Debugger Extensions Gallery to Initialize **************
+
+>>>>>>>>>>>>> Waiting for Debugger Extensions Gallery to Initialize completed, duration 0.015 seconds
+   ----> Repository : UserExtensions, Enabled: true, Packages count: 0
+   ----> Repository : LocalInstalled, Enabled: true, Packages count: 30
+
+Microsoft (R) Windows Debugger Version 10.0.26100.7627 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+
+Loading Dump File [C:\Users\tanaka\CEFDecklink\crash_20260202_151934.dmp]
+User Mini Dump File: Only registers, stack and portions of memory are available
+
+Symbol search path is: srv*
+Executable search path is: 
+Windows 10 Version 26200 MP (16 procs) Free x64
+Product: WinNt, suite: SingleUserTS
+Edition build lab: 26100.1.amd64fre.ge_release.240331-1435
+Debug session time: Mon Feb  2 15:19:34.000 2026 (UTC + 9:00)
+System Uptime: 0 days 5:28:33.365
+Process Uptime: 0 days 0:00:18.000
+................................................................
+......................................................
+Loading unloaded module list
+.................
+This dump file has an exception of interest stored in it.
+The stored exception information can be accessed via .ecxr.
+(1e74.38c4): Access violation - code c0000005 (first/second chance not available)
+
++------------------------------------------------------------------------+
+| This target supports Hardware-enforced Stack Protection. A HW based    |
+| "Shadow Stack" may be available to assist in debugging and analysis.   |
+| See aka.ms/userhsp for more info.                                      |
+|                                                                        |
+| dps @ssp                                                               |
+|                                                                        |
++------------------------------------------------------------------------+
+
+For analysis of this file, run !analyze -v
+ntdll!NtGetContextThread+0x14:
+00007ffe`1d9a3b14 c3              ret
+0:000> cdb: Reading initial command '.ecxr; k; q'
+rax=0000000000000000 rbx=0000000000000000 rcx=0000000000000020
+rdx=000001a476920020 rsi=0000000000000000 rdi=0000001fdf4ff840
+rip=00007ffe010311f3 rsp=0000001fdf4ff5b8 rbp=0000000000000000
+ r8=0000000000001de0  r9=ffffffffffffffe0 r10=00007ffe01010000
+r11=00007ffe0ed6cef1 r12=0000000000000000 r13=0000000000000000
+r14=0000000000000000 r15=0000000000000000
+iopl=0         nv up ei ng nz na pe cy
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010283
+VCRUNTIME140D!memcpy_avx_ermsb_Intel+0x1c3:
+00007ffe`010311f3 c5fd7f09        vmovdqa ymmword ptr [rcx],ymm1 ds:00000000`00000020=??
+  *** Stack trace for last set context - .thread/.cxr resets it
+*** WARNING: Unable to verify checksum for DeckLinkDX11.exe
+Child-SP          RetAddr               Call Site
+0000001f`df4ff5b8 00007ff7`eb8b6365     VCRUNTIME140D!memcpy_avx_ermsb_Intel+0x1c3
+0000001f`df4ff5c0 00007ff7`eb8b8760     DeckLinkDX11!ShaderManager::ConvertAndDownload+0x745
+0000001f`df4ff850 00007ff7`eb8b8db9     DeckLinkDX11!RenderFrame+0x440
+0000001f`df4ff9c0 00007ff7`eb9d2f19     DeckLinkDX11!main+0x479
+0000001f`df4ffbd0 00007ff7`eb9d2e02     DeckLinkDX11!invoke_main+0x39
+0000001f`df4ffc20 00007ff7`eb9d2cbe     DeckLinkDX11!__scrt_common_main_seh+0x132
+0000001f`df4ffc90 00007ff7`eb9d2fae     DeckLinkDX11!__scrt_common_main+0xe
+0000001f`df4ffcc0 00007ffe`1c8fe8d7     DeckLinkDX11!mainCRTStartup+0xe
+0000001f`df4ffcf0 00007ffe`1d8cc53c     kernel32!BaseThreadInitThunk+0x17
+0000001f`df4ffd20 00000000`00000000     ntdll!RtlUserThreadStart+0x2c
+quit:
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\atlmfc.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\ObjectiveC.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\concurrency.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\cpp_rest.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\stl.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Data.Json.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Geolocation.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Devices.Sensors.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\Windows.Media.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\windows.natvis'
+NatVis script unloaded from 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\Visualizers\winrt.natvis'

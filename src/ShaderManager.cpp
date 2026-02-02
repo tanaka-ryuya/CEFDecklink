@@ -32,7 +32,7 @@ bool ShaderManager::LoadShader() {
     
     if (FAILED(hr)) {
         if (errorBlob) {
-            std::cerr << "Shader Compile Error: " << (char*)errorBlob->GetBufferPointer() << std::endl;
+            std::cerr << "Shader Compile Error: " << static_cast<char*>(errorBlob->GetBufferPointer()) << std::endl;
         } else {
              std::cerr << "Shader Compile Failed (File not found?)" << std::endl;
         }
@@ -81,7 +81,7 @@ bool ShaderManager::CreateBuffers(int width, int height) {
     return true;
 }
 
-void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D11ShaderResourceView* inputSRV2, void* outputBuffer, void* keyBuffer) {
+void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D11ShaderResourceView* inputSRV2, void* outputBuffer) {
     if (!m_computeShader || !inputSRV1 || !inputSRV2) return;
 
     // Update Constant Buffer
@@ -126,9 +126,6 @@ void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D
 
     // Copy to Staging
     m_context->CopyResource(m_stagingOutput.Get(), m_outputTexture.Get());
-    if (keyBuffer) {
-        m_context->CopyResource(m_stagingKey.Get(), m_keyTexture.Get());
-    }
     
     // Map and Download (ARGB)
     D3D11_MAPPED_SUBRESOURCE mapped;

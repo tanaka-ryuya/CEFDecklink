@@ -108,6 +108,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     d3d11.lib
     dxgi.lib
     d3dcompiler.lib
+    dbghelp.lib
     libcef_dll_wrapper
     "${CEF_ROOT}/Release/libcef.lib"
 )

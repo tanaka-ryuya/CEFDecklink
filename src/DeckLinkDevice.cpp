@@ -216,6 +216,9 @@ ULONG DeckLinkDevice::Release()
 // Callback
 HRESULT DeckLinkDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame *completedFrame, BMDOutputFrameCompletionResult result)
 {
+    (void)completedFrame;  // Unused
+    (void)result;          // Unused
+    
     // Signal main loop that a frame completed
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -231,7 +234,7 @@ HRESULT DeckLinkDevice::ScheduledPlaybackHasStopped()
     return S_OK;
 }
 
-bool DeckLinkDevice::GetFrameBuffer(void** pBuffer, void** pKeyBuffer)
+bool DeckLinkDevice::GetFrameBuffer(void** pBuffer)
 {
     if (!m_videoFrame) return false;
 

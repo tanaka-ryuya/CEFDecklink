@@ -31,3 +31,6 @@ vender/cef_binary_*
 
 # Large media files
 *.avi
+*.tar.bz2
+*.zip
+*.7z

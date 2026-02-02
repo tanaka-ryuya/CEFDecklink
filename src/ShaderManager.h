@@ -13,12 +13,11 @@ public:
     // Initialize shaders and buffers
     bool Initialize(int width, int height);
 
-    // Convert BGRA texture to UYVY and Key buffers
+    // Convert BGRA texture to ARGB for DeckLink
     // inputSRV1: SRV of the CEF BGRA texture (Frame T)
     // inputSRV2: SRV of the CEF BGRA texture (Frame T+1)
-    // outputBuffer: Pointer to the DeckLink YUV buffer memory
-    // keyBuffer: Pointer to the DeckLink Key buffer memory
-    void ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D11ShaderResourceView* inputSRV2, void* outputBuffer, void* keyBuffer);
+    // outputBuffer: Pointer to the DeckLink ARGB buffer memory
+    void ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D11ShaderResourceView* inputSRV2, void* outputBuffer);
 
     // Set alpha threshold for unpremultiply
     void SetAlphaThreshold(float threshold);
@@ -30,15 +29,11 @@ private:
     ComPtr<ID3D11ComputeShader> m_computeShader;
     
     // GPU Buffers for Output
-    ComPtr<ID3D11Texture2D> m_outputTexture; // YUV
+    ComPtr<ID3D11Texture2D> m_outputTexture; // ARGB
     ComPtr<ID3D11UnorderedAccessView> m_outputUAV;
     
-    ComPtr<ID3D11Texture2D> m_keyTexture;    // Key
-    ComPtr<ID3D11UnorderedAccessView> m_keyUAV;
-    
-    // CPU Readback Buffers (Staging)
+    // CPU Readback Buffer (Staging)
     ComPtr<ID3D11Texture2D> m_stagingOutput;
-    ComPtr<ID3D11Texture2D> m_stagingKey;
 
     // Constant Buffer for Parameters
     ComPtr<ID3D11Buffer> m_constantBuffer;

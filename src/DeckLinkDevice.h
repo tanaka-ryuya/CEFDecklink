@@ -40,8 +40,7 @@ public:
 
     // Access to the video buffer for writing
     // pBuffer: receives the pointer to the pixel data
-    // pKeyBuffer: (Optional) receives pointer to key buffer if internal keying is used
-    bool GetFrameBuffer(void** pBuffer, void** pKeyBuffer = nullptr);
+    bool GetFrameBuffer(void** pBuffer);
 
     // Schedule the frame after writing to it
     bool ScheduleNextFrame();
