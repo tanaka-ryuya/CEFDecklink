@@ -1,0 +1,33 @@
+# CMake Build
+build/
+out/
+bin/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.ipch
+*.aps
+*.opendb
+*.db
+*.pdb
+*.ilk
+*.exe
+*.dll
+*.lib
+*.obj
+*.tlog
+*.idb
+
+# CEF (Downloaded)
+vender/cef/
+vender/cef_binary_*
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+
+# Large media files
+*.avi

@@ -1,0 +1,924 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us">
+<head>
+<title>CEF Automated Builds</title>
+<meta name="author" content="The Chromium Embedded Framework Authors" />
+<meta name="copyright" content="2022 The Chromium Embedded Framework Authors. All rights reserved." />
+<style type="text/css">
+body {font-family: Verdana,Arial; font-size: 10pt; background-color: white;}
+table.top {border-spacing: 0; border: 0px; padding: 0px}
+table.top td.logo {padding-right: 10px}
+table.top td.header {font-size: 14pt; white-space: nowrap; padding-right: 10px}
+table.top td.header .links {font-size: 10pt}
+table.top td.branding {font-size: 8pt; white-space: nowrap; text-align: center}
+table.top td.filters {font-size: 10pt}
+table.list {border-spacing: 0; border: 0px; margin-left: 20px; font-size: 10pt; width:825px}
+table.list tr.topheader td {border-bottom: 1px solid black; padding: 5px; padding-top: 4px; font-size: 9pt}
+table.list tr.toprow:nth-child(even) {color: #000; background: #fff}
+table.list tr.toprow:nth-child(odd) {color: #000; background: #ddd}
+table.list tr.toprow {display:none}
+table.list tr.toprow:nth-child(2) {display:table-row}
+table.version {border-spacing: 0; border: 0px; padding: 4px 4px; font-size: 10pt}
+table.version td.header {font-weight: bold; font-size: 9pt}
+table.version td.links {font-size: 8pt}
+table.version-toplevel {margin-left: 20px; width: 825px}
+table.files {border-spacing: 0; border: 0px; font-size: 10pt}
+table.files td {padding-top: 5px; padding-left: 20px; font-size: 10pt; white-space: nowrap}
+table.files td.first {padding-left: 0px;}
+.header-text {font-size: 11pt; font-weight: bold}
+.bullet {font-size: 8pt; vertical-align: top}
+.footer {font-size: 8pt; text-align: center; border-top: 1px solid #aaa}
+.tooltip {position: relative; display: inline-block; border-bottom: 1px dotted black; cursor:default}
+.tooltip .tooltip-text {visibility: hidden; width: 500px; background-color: white; color: black; text-align: left; box-shadow: 2px 2px #aaa; border: 1px solid black; border-radius: 6px; padding: 5px; position: absolute; z-index: 1; top: -5px; left: 105%}
+.tooltip:hover .tooltip-text {visibility: visible}
+.tooltip-text {white-space: normal}
+.legend {font-size: 9pt}
+.link {cursor: pointer; text-decoration: underline}
+.tag {background-color: #71a4d6; color: white; margin-left: 10px; border-radius: 6px; padding: 4px; font-size: 7pt; font-weight: bold}
+.tabs {border-bottom: 1px solid #aaa; cursor: default}
+.tab {display: inline-block; border: 1px solid transparent; border-color: #ddd; border-radius: 5px 5px 0 0; border-bottom: none; bottom: -1px; position: relative; padding: 0px; list-style: none; padding: 6px 6px; cursor: pointer}
+.tab-selected {background: #fff; border-color: #aaa; color: black}
+.tab:hover:not(.tab-selected) {border-color: #aaa}
+.build-section:not(:last-child) {margin-bottom: 20px}
+.build-status {display: inline-block; margin-right: 4px; width: 11px; height: 11px; border-radius: 50%}
+.build-legend {width: 9px; height: 9px}
+.build-unknown {box-sizing: border-box; border: 1px solid #ddd}
+.build-pending {background: orange}
+.build-current {background: green}
+.build-pending-current {background: linear-gradient( -45deg, green, green 49%, white 49%, white 51%, orange 51% ) }
+.build-current-pending {background: linear-gradient( -45deg, orange, orange 49%, white 49%, white 51%, green 51% )}
+.build-current-current {background: linear-gradient( -45deg, green, green 49%, white 49%, white 51%, green 51% )}
+.build-pending-pending {background: linear-gradient( -45deg, orange, orange 49%, white 49%, white 51%, orange 51% )}
+.build-warning {color: #c21a02; font-size: 12pt; font-weight: bold; margin-top: 5px; margin-bottom: 25px}
+</style>
+<script>
+"use strict";
+
+// HELPERS
+
+function setElementVisible(e, visible) {
+  e.style.display = visible ? '' : 'none';
+}
+
+// Parse version number of the form: 86.0.4240.75
+function getBranch(chromeVersion) {
+  return parseInt(chromeVersion.split('.')[2]);
+}
+
+// Parse version number of the form: 86.0.17+g4a33048+chromium-86.0.4240.75
+function getHash(cefVersion) {
+  return cefVersion.split('+')[1].substring(1);
+}
+
+function formatBytes(bytes, decimals = 2) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return (bytes / Math.pow(k, i)).toFixed(dm) + ' ' + sizes[i];
+}
+
+function formatDate(date) {
+  let year = date.getFullYear();
+  let month = (1 + date.getMonth()).toString().padStart(2, '0');
+  let day = date.getDate().toString().padStart(2, '0');
+  return month + '/' + day + '/' + year;
+}
+
+// Backwards compatible version of String.replaceAll (added in Chrome 85).
+function replaceAll(string, search, replace) {
+  return string.split(search).join(replace);
+}
+
+// FILTER MANAGEMENT
+
+var version_filter = '';
+
+// Show more rows and change related UI.
+function showBuilds(tab, showmore) {
+  const more = document.getElementById(tab).getElementsByClassName('showmore')[0];
+  const less = document.getElementById(tab).getElementsByClassName('showless')[0];
+  const notes = document.getElementById(tab).getElementsByClassName('shownotes')[0];
+
+  const rows = document.getElementById(tab).getElementsByClassName('toprow');
+
+  // Number of rows we would like to display.
+  const desired_ct = showmore ? rows.length : 1;
+  // Number of rows allowed by the version filter.
+  let allowed_ct = 0;
+  // Number of rows actually displayed.
+  let displayed_ct = 0;
+
+  for (let i = 0; i < rows.length; ++i) {
+    let version = rows[i].getAttribute('data-version');
+    let allow = (version_filter == '' || version.indexOf(version_filter) == 0);
+    let display = (allow && displayed_ct < desired_ct);
+    setElementVisible(rows[i], display);
+    rows[i].style.display = (display ? 'table-row' : 'none');
+    rows[i].style.background = (displayed_ct % 2 == 0 ? '#FFF' : '#DDD');
+    allowed_ct += allow;
+    displayed_ct += display;
+  }
+
+  if (allowed_ct <= 1) {
+    // One or less rows. No need for controls.
+    setElementVisible(more, false);
+    setElementVisible(less, false);
+  } else if (showmore) {
+    setElementVisible(more, false);
+    setElementVisible(less, true);
+  } else {
+    setElementVisible(more, true);
+    setElementVisible(less, false);
+  }
+
+  let notes_str = '';
+  if (allowed_ct !== rows.length) {
+    const hidden_ct = rows.length - allowed_ct;
+    notes_str = ' (' + hidden_ct + ' build' + (hidden_ct === 1 ? '' : 's') + ' hidden, <span class="link" onclick="setVersionFilter(\'\')">reset filter</span> to restore)';
+  }
+  notes.innerHTML = notes_str;
+  setElementVisible(notes, notes_str.length > 0);
+}
+
+// Shrink all lists on page load.
+function shrinkAllBuilds() {
+  const platforms = document.getElementsByClassName('list');
+  for (let i = 0; i < platforms.length; ++i)
+    showBuilds(platforms[i].id, false);
+}
+
+function showAllBuildsSection(show=true) {
+  const links = document.getElementsByClassName('showallbuilds');
+  for (let i = 0; i < links.length; ++i)
+    setElementVisible(links[i], !show);
+
+  const divs = document.getElementsByClassName('allbuilds');
+  for (let i = 0; i < divs.length; ++i)
+    setElementVisible(divs[i], show);
+}
+
+// Only show rows that start with the version string.
+function applyVersionFilter(pushState=true) {
+  const value = document.getElementById('version-filter').value;
+  if (value === version_filter)
+    return;
+
+  version_filter = value;
+  shrinkAllBuilds();
+  showAllBuildsSection(version_filter.length > 0);
+
+  if (pushState)
+    pushHistoryState();
+}
+
+function setVersionFilter(filter, pushState=true) {
+  document.getElementById('version-filter').value = filter;
+  applyVersionFilter(pushState);
+}
+
+function onVersionFilterKeyUp(event) {
+  if (event.keyCode === 13) {
+    // Enter key.
+    event.preventDefault();
+    applyVersionFilter();
+  }
+}
+
+// STATUS MANAGEMENT
+
+function createStatusDiv(id, withDefaultClass=true) {
+  const statusDiv = document.createElement('div');
+  if (id !== null)
+    statusDiv.id = id;
+  statusDiv.classList.add('build-status');
+  if (withDefaultClass)
+    statusDiv.classList.add('build-unknown');
+  return statusDiv;
+}
+
+function getStatusId(tab, ident) {
+  return tab + '-status-' + ident;
+}
+
+function getStatusInfo(id, build, channel) {
+  return {
+    'id': id,
+    'branch': getBranch(build.chromium_version),
+    'channel': channel,
+    'hash': getHash(build.cef_version),
+  };
+}
+
+function setStatus(id, states) {
+  const statusDiv = document.getElementById(id);
+  statusDiv.classList.remove('build-unknown');
+  statusDiv.classList.add('build-' + states.join('-'));
+}
+
+// TAB MANAGEMENT
+
+// Full set of platforms that might exist in the build JSON file.
+const kTabLabels = {
+  'windows64': 'Windows 64-bit',
+  'windowsarm64': 'Windows ARM64',
+  'windows32': 'Windows 32-bit',
+  'macosx64': 'MacOS 64-bit',
+  'macosarm64': 'MacOS ARM64',
+  'linux64': 'Linux 64-bit',
+  'linuxarm64': 'Linux ARM64',
+  'linuxarm': 'Linux ARM',
+  'linux32': 'Linux 32-bit',
+};
+
+const kTabWarnings = {
+  'linux32': 'Linux x86 32-bit builds are discontinued after version 101 (<a href="https://bitbucket.org/chromiumembedded/cef/issues/2676">details</a>)',
+};
+
+// Don't show pending status if the branch is out of date.
+const kTabSkipPending = [
+  'linux32',
+];
+
+// List of existing tabs.
+var tabs_list = [];
+
+var selected_tab = '';
+
+function populateTabs(tabs, selectedTab) {
+  tabs_list = tabs;
+  const tabsOrder = Object.keys(kTabLabels);
+  if (selectedTab === '')
+    selectedTab = tabsOrder[0];
+  if (!tabs.includes(selectedTab))
+    selectedTab = tabs[0];
+
+  selected_tab = selectedTab;
+
+  const tabsDiv = document.getElementById('tabs-list');
+  const contentsDiv = document.getElementById('contents-list');
+
+  for (let i = 0; i < tabsOrder.length; ++i) {
+    const tab = tabsOrder[i];
+    if (!tabs.includes(tab))
+      continue;
+
+    const tabElement = document.createElement('span')
+    tabElement.id = tab + '-tab';
+    tabElement.classList.add('tab');
+    tabElement.appendChild(createStatusDiv(getStatusId(tab, 'tab')));
+
+    const labelSpan = document.createElement('span');
+    labelSpan.innerHTML = kTabLabels[tab];
+    tabElement.appendChild(labelSpan);
+
+    const contentsElement = document.createElement('div');
+    contentsElement.id = tab + '-contents';
+
+    if (selectedTab === tab) {
+      tabElement.classList.add('tab-selected');
+    } else {
+      tabElement.onclick = () => selectTab(tab);
+      setElementVisible(contentsElement, false);
+    }
+
+    tabsDiv.appendChild(tabElement);
+    contentsDiv.appendChild(contentsElement);
+  }
+}
+
+function setTabVisible(tab, visible) {
+  const tabElement = document.getElementById(tab + '-tab');
+  const contentsElement = document.getElementById(tab + '-contents');
+
+  if (visible) {
+    tabElement.onclick = null;
+    tabElement.classList.add('tab-selected');
+  } else {
+    tabElement.onclick = () => selectTab(tab);
+    tabElement.classList.remove('tab-selected');
+  }
+
+  setElementVisible(contentsElement, visible);
+}
+
+function selectTab(tab, pushState=true) {
+  if (tab === '' || !tabs_list.includes(tab))
+    tab = tabs_list[0];
+
+  if (tab === selected_tab)
+    return;
+
+  selected_tab = tab;
+
+  // Hide all unselected tab contents before showing the current tab contents.
+  for (let i = 0; i < tabs_list.length; ++i) {
+    const currentTab = tabs_list[i];
+    if (currentTab === tab)
+      continue;
+    setTabVisible(currentTab, false);
+  }
+
+  setTabVisible(tab, true);
+
+  if (pushState)
+    pushHistoryState();
+}
+
+// HISTORY MANAGEMENT
+
+window.onpopstate = function(event) {
+  let state = event.state;
+  if (state === null) {
+    // Navigating to a URL without a fragment.
+    state = {
+      tab: '',
+      filter: '',
+    };
+  }
+
+  if (state.tab !== undefined)
+    selectTab(state.tab, false);
+  if (state.filter !== undefined)
+    setVersionFilter(state.filter, false);
+}
+
+function parseHistoryState(replaceState=true) {
+  const state = {
+    tab: selected_tab,
+    filter: version_filter,
+  };
+
+  const href = window.location.href;
+  if (href.indexOf('#') > 0) {
+    const fragment = href.split('#')[1];
+    const parts = fragment.split(':');
+    state.tab = decodeURIComponent(parts[0]);
+    if (parts.length > 1)
+      state.filter = decodeURIComponent(parts[1]);
+
+    if (replaceState)
+      history.replaceState(state, document.title, href);
+  }
+
+  return state;
+}
+
+function pushHistoryState() {
+  const href = window.location.href.split('#')[0];
+
+  var fragment = encodeURIComponent(selected_tab);
+  if (version_filter.length > 0)
+    fragment += ':' + encodeURIComponent(version_filter);
+
+  const state = {
+    tab: selected_tab,
+    filter: version_filter,
+  };
+
+  history.pushState(state, document.title, href + '#' + fragment);
+}
+
+// COMMIT DATA MANAGEMENT
+
+// Cache timeout in milliseconds (20 minutes). Unauthenticated access to GitHub APIs is
+// rate limited by IP address to 60 requests/hour, so we cache the responses in localStorage.
+const kCacheTimeout = 20 * 60 * 1000;
+
+function getData(key) {
+  const lastAccess = localStorage.getItem(key + '_lastaccess');
+  if (lastAccess === null)
+    return null;
+
+  const currentTime = Date.now();
+  if (currentTime - parseInt(lastAccess) > kCacheTimeout)
+    return null;
+
+  return localStorage.getItem(key);
+}
+
+function setData(key, value) {
+  localStorage.setItem(key + '_lastaccess', Date.now());
+  localStorage.setItem(key, value);
+}
+
+function fetchLastCommit(branch) {
+  const data_key = 'cef_branch_' + branch;
+  const data = getData(data_key);
+  if (data !== null) {
+    return Promise.resolve(JSON.parse(data));
+  }
+
+  console.log('Fetching last commit for branch ' + branch);
+  return fetch('https://api.github.com/repos/chromiumembedded/cef/commits/' + branch, {credentials: 'omit'})
+  .then(response => response.json())
+  .then(data => {
+    if (data === undefined || data.sha === undefined) {
+      console.log('Error: No commit returned for branch: ' + branch);
+      return {};
+    }
+
+    const commit = {
+      'branch': branch,
+      'hash': data.sha.substring(0, 7),
+    };
+
+    setData(data_key, JSON.stringify(commit));
+
+    return commit;
+  })
+  .catch((error) => {
+    console.error('Error:', error);
+  });
+}
+
+// BUILD DATA MANAGEMENT
+
+// Beta build age limit in milliseconds (60 days).
+const kBetaAgeLimit = 60 * 24 * 60 * 60 * 1000;
+
+function fetchBuilds() {
+  console.log('Fetching builds list');
+  if (window.location.protocol == 'file:') {
+    // For local testing replace {} below with the contents of index.json.
+    // Test data can be generated using cef_json_builder_test.py from
+    // https://github.com/chromiumembedded/cef/tree/master/tools/cefbuilds
+    console.log('TODO: Add test data!');
+    return Promise.resolve({});
+  }
+
+  return fetch('index.json', {credentials: 'omit'})
+  .then(response => response.json())
+  .catch((error) => {
+    console.error('Error:', error);
+  });
+}
+
+// Check for a beta suffix on the first file name entry.
+function isBetaBuild(build) {
+  return build.files[0].name.indexOf('_beta') > 0;
+}
+
+// Returns the newest non-beta build. We occasionally run hot-fix or LTS builds
+// for older branches, so pick the newest branch build from among the top few.
+function getStableBuild(versions) {
+  let depth = 5;
+  let retBranch = 0;
+  let retBuild = null;
+
+  for (let i = 0; i < versions.length; ++i) {
+    const build = versions[i];
+    if (!isBetaBuild(build)) {
+      const branch = getBranch(build.chromium_version);
+      if (branch > retBranch) {
+        retBranch = branch;
+        retBuild = build;
+      }
+      if (--depth === 0)
+        break;
+    }
+  }
+
+  return retBuild;
+}
+
+// Returns the first (newest) beta build. Don't return the beta build if:
+// (a) A stable build is already available for the same or newer branch, or
+// (b) The beta build is too old.
+function getBetaBuild(versions, stable_build) {
+  const stableBranch = stable_build !== null ?
+      getBranch(stable_build.chromium_version) : 0;
+
+  for (let i = 0; i < versions.length; ++i) {
+    const build = versions[i];
+    if (isBetaBuild(build)) {
+      const branch = getBranch(build.chromium_version);
+      if (branch > stableBranch) {
+        const timeStamp = build.files[0].last_modified;
+        if ((Date.now() - Date.parse(timeStamp)) < kBetaAgeLimit)
+          return build;
+      }
+      break;
+    }
+  }
+
+  return null;
+}
+
+// BUILD HTML GENERATION
+
+function createTopDiv() {
+  const topDiv = document.createElement('div');
+  topDiv.classList.add('build-section');
+  return topDiv;
+}
+
+function createLinkSpan(className, label, onclick, visible=true) {
+  const linkSpan = document.createElement('span');
+  linkSpan.classList.add('link');
+  if (className !== null)
+    linkSpan.classList.add(className);
+  linkSpan.onclick = onclick;
+  linkSpan.innerHTML = label;
+  if (!visible)
+    setElementVisible(linkSpan, false);
+  return linkSpan;
+}
+
+function createTextHeader(label) {
+  const headerSpan = document.createElement('span');
+  headerSpan.innerHTML = label;
+  headerSpan.classList.add('header-text');
+  return headerSpan;
+}
+
+function createLink(url, label=null) {
+  const link = document.createElement('a');
+  link.href = replaceAll(url, '+', '%2B');
+  link.innerHTML = label === null ? url : label;
+  return link;
+}
+
+// Full set of file types that might exist in the build JSON file.
+// Listed in the prefered order for sorting file entries.
+const kFileOrder = ['standard', 'minimal', 'client', 'tools', 'debug_symbols', 'release_symbols'];
+
+function getFileLabel(type) {
+  return {
+    'standard': 'Standard Distribution',
+    'minimal': 'Minimal Distribution',
+    'client': 'Sample Application',
+    'tools': 'Additional Tools',
+    'debug_symbols': 'Debug Symbols',
+    'release_symbols': 'Release Symbols',
+  }[type];
+}
+
+function getFileTooltip(tab, type) {
+  const sample_app = (tab.indexOf('linux') === 0 || tab === 'windowsarm64') ? 'cefsimple' : 'cefclient';
+  return {
+    'standard':
+        'Standard binary distribution. Includes header files, libcef_dll_wrapper source code, binary files, CMake configuration files and source code for the cefclient and cefsimple sample applications. See the included README.txt file for usage and build requirements.',
+    'minimal':
+        'Minimal binary distribution. Includes header files, libcef_dll_wrapper source code, Release build binary files and CMake configuration files. Does not include Debug build binary files or sample application source code. See the included README.txt file for usage and build requirements.',
+    'client':
+        'Release build of the ' + sample_app + ' sample application. See the included README.txt file for usage requirements.',
+    'tools':
+        'Additional and optional tools for building CEF applications (custom V8 snapshots, etc). See the included README.txt file for usage requirements.',
+    'debug_symbols':
+        'Debug build symbols. Must be extracted and placed next to the CEF Debug binary file with the same name and version.',
+    'release_symbols':
+        'Release build symbols. Must be extracted and placed next to the CEF Release binary file with the same name and version.'
+  }[type];
+}
+
+function createFileTr(tab, file) {
+  const tr = document.createElement('tr');
+
+  const labelTd = document.createElement('td');
+  labelTd.classList.add('first');
+  labelTd.innerHTML = '<span class="bullet">&#9654;</span> <div class="tooltip">' + getFileLabel(file.type) +
+                      '<span class="tooltip-text">' + getFileTooltip(tab, file.type) + '</span></div>';
+  tr.appendChild(labelTd);
+
+  const fileTd = document.createElement('td');
+  fileTd.width = '100%';
+  fileTd.appendChild(createLink(file.name));
+  tr.appendChild(fileTd);
+
+  const sizeTd = document.createElement('td');
+  sizeTd.align = 'right';
+  sizeTd.innerHTML = formatBytes(parseInt(file.size));
+  tr.appendChild(sizeTd);
+
+  const shaTd = document.createElement('td');
+  shaTd.appendChild(createLink(file.name + '.sha1', 'sha1'));
+  tr.appendChild(shaTd);
+
+  return tr;
+}
+
+function createBuildTable(tab, build, tag=null) {
+  const table = document.createElement('table');
+  table.classList.add('version');
+
+  const headerTr = document.createElement('tr');
+  const versionTd = document.createElement('td');
+  versionTd.classList.add('header');
+  const date = new Date(build.files[0].last_modified);
+  versionTd.innerHTML = formatDate(date) + ' - ' + build.cef_version + ' / Chromium ' + build.chromium_version +
+                        (tag !== null ? '<span class="tag">' + tag + '</span>' : '');
+  headerTr.appendChild(versionTd);
+
+  const linksTd = document.createElement('td');
+  linksTd.classList.add('links');
+  linksTd.align = 'right';
+  linksTd.innerHTML = '<a href="https://bitbucket.org/chromiumembedded/cef/get/' + getBranch(build.chromium_version) + '.tar.bz2">CEF source</a>' +
+                      ' | <a href="chromium-' + build.chromium_version + '.tar.xz">Chromium source</a>';
+  headerTr.appendChild(linksTd);
+
+  table.appendChild(headerTr);
+
+  const filesTr = document.createElement('tr');
+  const filesTd = document.createElement('td');
+  filesTd.setAttribute('colspan', 2);
+  const filesTable = document.createElement('table');
+  filesTable.classList.add('files');
+  filesTable.width = '100%';
+
+  // Add the files in the desired sort order.
+  let addedCt = 0;
+  for (let i = 0; i < kFileOrder.length; ++i) {
+    const type = kFileOrder[i];
+    for (let j = 0; j < build.files.length; ++j) {
+      const file = build.files[j];
+      if (file.type === type) {
+        filesTable.appendChild(createFileTr(tab, file));
+        addedCt++;
+        break;
+      }
+    }
+    if (addedCt === build.files.length)
+      break;
+  }
+
+  filesTd.appendChild(filesTable);
+  filesTr.appendChild(filesTd);
+
+  table.appendChild(filesTr);
+
+  return table;
+}
+
+function createHighlightedBuild(status_id, label, tab, build) {
+  const topDiv = createTopDiv();
+  topDiv.appendChild(createStatusDiv(status_id));
+  topDiv.appendChild(createTextHeader(label));
+
+  const buildTable = createBuildTable(tab, build);
+  buildTable.classList.add('version-toplevel');
+  topDiv.appendChild(buildTable);
+
+  return topDiv;
+}
+
+function createAllBuilds(tab, versions) {
+  const topDiv = createTopDiv();
+
+  const linkDiv = document.createElement('div');
+  linkDiv.classList.add('showallbuilds');
+  linkDiv.appendChild(createStatusDiv(null, false));
+  linkDiv.appendChild(createLinkSpan(null, 'Show All Builds', showAllBuildsSection));
+  topDiv.appendChild(linkDiv);
+
+  const contentsDiv = document.createElement('div');
+  contentsDiv.classList.add('allbuilds');
+  setElementVisible(contentsDiv, false);
+  contentsDiv.appendChild(createStatusDiv(null, false));
+  contentsDiv.appendChild(createTextHeader('All Builds'));
+
+  const table = document.createElement('table');
+  table.id = tab;
+  table.classList.add('list');
+
+  const headerTr = document.createElement('tr');
+  headerTr.classList.add('topheader');
+
+  const headerTd = document.createElement('td');
+  headerTd.appendChild(createLinkSpan('showmore', 'Show more builds', () => showBuilds(tab, true), false));
+  headerTd.appendChild(createLinkSpan('showless', 'Show less builds', () => showBuilds(tab, false), false));
+
+  const notesSpan = document.createElement('span');
+  notesSpan.classList.add('shownotes');
+  setElementVisible(notesSpan, false);
+  headerTd.appendChild(notesSpan);
+
+  headerTr.appendChild(headerTd);
+  table.appendChild(headerTr);
+
+  for (let i = 0; i < versions.length; ++i) {
+    const build = versions[i];
+
+    const buildTr = document.createElement('tr');
+    buildTr.classList.add('toprow');
+    buildTr.setAttribute('data-version', build.cef_version);
+
+    const buildTd = document.createElement('td');
+    buildTd.width = '100%';
+
+    const tag = isBetaBuild(build) ? 'BETA' : 'STABLE';
+    const buildTable = createBuildTable(tab, build, tag);
+    buildTable.width = '100%';
+
+    buildTd.appendChild(buildTable);
+    buildTr.appendChild(buildTd);
+    table.appendChild(buildTr);
+  }
+
+  contentsDiv.appendChild(table);
+  topDiv.appendChild(contentsDiv);
+
+  return topDiv;
+}
+
+function populateBuilds(tab, versions) {
+  const contentsElement = document.getElementById(tab + '-contents');
+
+  if (kTabWarnings[tab] !== undefined) {
+    const warningDiv = document.createElement('div');
+    warningDiv.classList.add('build-warning');
+    warningDiv.innerHTML = kTabWarnings[tab];
+    contentsElement.appendChild(warningDiv);
+  }
+
+  // Identify the newest build for each channel, if any.
+  const stableBuild = getStableBuild(versions);
+  const betaBuild = getBetaBuild(versions, stableBuild);
+
+  let statusInfo = [];
+
+  if (stableBuild !== null) {
+    const statusId = getStatusId(tab, 'stable');
+    statusInfo.push(getStatusInfo(statusId, stableBuild, 'stable'));
+    contentsElement.appendChild(
+        createHighlightedBuild(statusId, 'Current Stable Build (Preferred)', tab, stableBuild));
+  }
+  if (betaBuild !== null) {
+    const statusId = getStatusId(tab, 'beta');
+    statusInfo.push(getStatusInfo(statusId, betaBuild, 'beta'));
+    contentsElement.appendChild(
+        createHighlightedBuild(statusId, 'Current Beta Build (For Testing)', tab, betaBuild));
+  }
+  contentsElement.appendChild(createAllBuilds(tab, versions));
+
+  return statusInfo;
+}
+
+// LOAD STATUS
+
+function showLoadStatus(message=null) {
+  const statusDiv = document.getElementById('load-status');
+  statusDiv.innerHTML = message === null ? 'Loading build information...' : message;
+  setElementVisible(statusDiv, true);
+}
+
+function onLoad() {
+  const state = parseHistoryState();
+
+  // In case the load takes too long.
+  const timerId = setTimeout(showLoadStatus, 1000);
+
+  fetchBuilds().then(builds => {
+    clearTimeout(timerId);
+
+    const tabs = builds !== undefined ? Object.keys(builds) : [];
+    if (tabs.length === 0) {
+      showLoadStatus('No build information available at this time.');
+      return;
+    }
+
+    setElementVisible(document.getElementById('load-status'), false);
+
+    populateTabs(tabs, state.tab);
+
+    let branches = [];
+    let promises = [];
+
+    // Map of statusId to build info list.
+    let statusMap = {};
+
+    // Populate builds.
+    for (let i = 0; i < tabs.length; ++i) {
+      const tab = tabs[i];
+      const versions = builds[tab].versions;
+      if (versions !== undefined && versions.length > 0) {
+        let tabInfo = [];
+        const buildsInfo = populateBuilds(tab, versions);
+        for (let j = 0; j < buildsInfo.length; ++j) {
+          const buildInfo = buildsInfo[j];
+
+          const branch = buildInfo.branch;
+          if (!branches.includes(branch)) {
+            branches.push(branch);
+            promises.push(fetchLastCommit(branch));
+          }
+
+          statusMap[buildInfo.id] = [buildInfo];
+          tabInfo.push(buildInfo);
+        }
+
+        if (tabInfo.length > 0) {
+          statusMap[getStatusId(tab, 'tab')] = tabInfo;
+        }
+      }
+    }
+
+    // Enable the version filter.
+    setElementVisible(document.getElementById('version-filter-div'), true);
+    if (state.filter.length > 0)
+      setVersionFilter(state.filter, false);
+    else
+      shrinkAllBuilds();
+
+    if (promises.length === 0) {
+      console.log('Error: No branches to resolve.');
+      return;
+    }
+
+    // Load newest branch commit info.
+    Promise.all(promises).then(commits => {
+      console.log('Newest commits:', commits);
+
+      let commitMap = {};
+      for (let i = 0; i < commits.length; ++i) {
+        const commit = commits[i];
+        if (commit !== undefined && commit.branch !== undefined) {
+          commitMap[commit.branch] = commit;
+        }
+      }
+
+      // Determine the newest available branch build for each channel.
+      let newestBranches = {};
+      for (let id in statusMap) {
+        // Channel-specific IDs have a single entry in the status map.
+        if (statusMap[id].length === 1) {
+          const branch = statusMap[id][0].branch;
+          const channel = statusMap[id][0].channel;
+          if (newestBranches[channel] === undefined || branch > newestBranches[channel]) {
+            newestBranches[channel] = branch;
+          }
+        }
+      }
+      console.log('Newest branch builds:', newestBranches);
+
+      // Assign the build state for each status ID ([tab]-status-[beta|stable|tab]).
+      for (let id in statusMap) {
+        const buildInfo = statusMap[id];
+        let states = [];
+
+        for (let i = 0; i < buildInfo.length; ++i) {
+          const statusInfo = buildInfo[i];
+          const branch = statusInfo.branch;
+          if (branch < newestBranches[statusInfo.channel]) {
+            const tab = id.split('-')[0];
+            if (!kTabSkipPending.includes(tab)) {
+              // All channel builds should eventually catch up to the newest branch.
+              states.push('pending');
+            }
+          } else {
+            const commitInfo = commitMap[branch];
+            if (commitInfo !== undefined) {
+              states.push(statusInfo.hash === commitInfo.hash ? 'current' : 'pending');
+            }
+          }
+        }
+
+        if (states.length > 0) {
+          setStatus(id, states);
+        }
+      }
+    });
+  });
+}
+</script>
+</head>
+<body onload="onLoad()">
+  <table class="top">
+    <tr>
+      <td class="logo"><img width="66" height="50" alt="CEF Logo" src="data:image/png;base64,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"></td>
+      <td class="header" width="100%">
+        Chromium Embedded Framework (CEF) Automated Builds
+        <br/><span class="links">[
+          <a href="https://bitbucket.org/chromiumembedded/cef/">Project Page</a> |
+          <a href="http://www.magpcss.org/ceforum">Support Forum</a>
+        ]</span></td>
+      <td class="branding" valign="top">
+        Hosted By:<br/><a href="https://www.spotify.com"><img width="150" height="46" alt="Spotify Logo" src="data:image/png;base64,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"></a>
+      </td>
+    </tr>
+    <tr>
+      <td class="filters" colspan="3">
+        <br/>
+        <div id="version-filter-div" style="display:none">
+          <div class="tooltip">Version Filter<span class="tooltip-text">Optionally filter All Builds by version number. This filter supports partial matching. For example, enter "85." to only show builds for the 85 version.</span></div>:
+          <input type="text" size="20" id="version-filter" onkeyup="onVersionFilterKeyUp(event);"/><input type="button" value="Apply" onclick="applyVersionFilter();"/>
+        </div>
+        <br/>
+        <div class="legend">
+          <div class="build-status build-current build-legend"></div>Build is up to date&nbsp;&nbsp;
+          <div class="build-status build-pending build-legend"></div>New build is pending&nbsp;&nbsp;
+          <div class="build-status build-unknown build-legend"></div>Build status is unknown
+        </div>
+        <br/>
+        <div id="tabs-list" class="tabs"></div>
+      </td>
+    </tr>
+  </table>
+  <br/>
+  <div id="contents-list" class="contents"></div>
+  <div id="load-status" class="header-text" style="display:none"></div>
+  <br/>
+  <p class="footer">Copyright &copy; 2022 The Chromium Embedded Framework Authors. All rights reserved.</p>
+</body>
+</html>
