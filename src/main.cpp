@@ -80,7 +80,7 @@ void RenderFrame() {
     g_cefManager.DoMessageLoopWork();
 
     // --- Synchronization ---
-    bool deckLinkReady = g_deckLink.WaitForNextFrame(35); 
+    bool deckLinkReady = g_deckLink.WaitForNextFrame(16); // 16ms ≈ 60Hz, balances responsiveness and CPU load
     
     // --- Process Pipeline ---
     // Persistent History Frame
@@ -112,7 +112,7 @@ void RenderFrame() {
              currentSRV = prevSRV;
         }
 
-        // 2. Get DeckLink Buffer
+        // 2. Get DeckLink Buffer for NEXT frame
         void* pBuffer = nullptr;
         
         if (g_deckLink.GetFrameBuffer(&pBuffer)) {
@@ -123,7 +123,7 @@ void RenderFrame() {
                  g_shaderManager->ConvertAndDownload(currentSRV, currentSRV, pBuffer);
             }
             
-            // 4. Schedule Frame
+            // 4. Schedule Frame (this releases the buffer internally)
             g_deckLink.ScheduleNextFrame();
         }
     }

@@ -18,12 +18,13 @@ DeckLinkDevice::DeckLinkDevice()
     : m_refCount(1),
       m_deckLink(nullptr),
       m_deckLinkOutput(nullptr),
-      m_videoFrame(nullptr),
-      m_currentBuffer(nullptr),
+      m_currentFrame(nullptr),
       m_frameCompletedSignal(false),
       m_totalFramesScheduled(0),
-      m_timeScale(30000),     // 30000 / 1001 ~= 29.97 fps (59.94i)
-      m_frameDuration(1001)
+      m_timeScale(30000),     // Time units per second
+      m_frameDuration(1001)   // Duration per FRAME (for 59.94i, each frame contains 2 fields)
+                               // Frame rate = 30000/1001 = 29.97 fps
+                               // Field rate = 29.97 * 2 = 59.94 fields/sec
 {
 }
 
@@ -31,14 +32,18 @@ DeckLinkDevice::~DeckLinkDevice()
 {
     StopOutput();
     
-    // Clean up current buffer if exists
-    if (m_currentBuffer) {
-        m_currentBuffer->EndAccess(bmdBufferAccessWrite);
-        m_currentBuffer->Release();
-        m_currentBuffer = nullptr;
+    // Clean up frame queue
+    while (!m_frameQueue.empty()) {
+        IDeckLinkMutableVideoFrame* frame = m_frameQueue.front();
+        m_frameQueue.pop_front();
+        if (frame) frame->Release();
     }
     
-    SafeRelease(&m_videoFrame);
+    if (m_currentFrame) {
+        m_currentFrame->Release();
+        m_currentFrame = nullptr;
+    }
+    
     SafeRelease(&m_deckLinkOutput);
     SafeRelease(&m_deckLink);
 }
@@ -113,44 +118,62 @@ bool DeckLinkDevice::StartOutput()
 {
     if (!m_deckLinkOutput) return false;
 
-    // Create a reusable frame - ARGB for External Key (Dual Port)
-    // 1920x1080, 4 Bytes per pixel (ARGB = 32bpp) -> RowBytes = 1920 * 4
-    // UltraStudio HD Mini will output:
-    //   SDI Out: Fill (RGB)
-    //   SDI Out 2: Key (Alpha)
-    if (!m_videoFrame)
+    // Create Frame Queue (DeckLink SDK pattern - use 10 frames)
+    const int kFrameQueueSize = 10;
+    
+    for (int i = 0; i < kFrameQueueSize; i++)
     {
+        IDeckLinkMutableVideoFrame* frame = nullptr;
         HRESULT hr = m_deckLinkOutput->CreateVideoFrame(
             1920, 1080,
             1920 * 4,  // ARGB = 4 bytes per pixel
             bmdFormat8BitARGB, 
             bmdFrameFlagDefault, 
-            &m_videoFrame);
+            &frame);
             
-        if (FAILED(hr)) return false;
+        if (FAILED(hr)) {
+            // Clean up frames created so far
+            while (!m_frameQueue.empty()) {
+                m_frameQueue.front()->Release();
+                m_frameQueue.pop_front();
+            }
+            return false;
+        }
 
-        // Fill with opaque black
+        // Initialize with opaque black
         void* pBuffer = nullptr;
         IDeckLinkVideoBuffer* videoBuffer = nullptr;
-        if (m_videoFrame->QueryInterface(IID_IDeckLinkVideoBuffer, (void**)&videoBuffer) == S_OK)
+        if (frame->QueryInterface(IID_IDeckLinkVideoBuffer, (void**)&videoBuffer) == S_OK)
         {
             if (videoBuffer->GetBytes(&pBuffer) == S_OK)
             {
                 uint32_t* p32 = (uint32_t*)pBuffer;
                 long pixels = 1920 * 1080;
-                for(long i=0; i<pixels; ++i) {
+                for(long j=0; j<pixels; ++j) {
                     *p32++ = 0xFF000000; // A=255, R=0, G=0, B=0 (opaque black)
                 }
             }
             videoBuffer->Release();
         }
+        
+        m_frameQueue.push_back(frame);
     }
 
-    // Preroll 10 frames to prevent initial underflow
-    for (int i = 0; i < 10; i++)
+    // Preroll frames (schedule first batch)
+    for (int i = 0; i < kFrameQueueSize; i++)
     {
-         m_deckLinkOutput->ScheduleVideoFrame(m_videoFrame, m_totalFramesScheduled * m_frameDuration, m_frameDuration, m_timeScale);
-         m_totalFramesScheduled++;
+        // Get frame from queue
+        IDeckLinkMutableVideoFrame* frame = m_frameQueue.front();
+        m_frameQueue.pop_front();
+        m_frameQueue.push_back(frame);  // Return to back of queue
+        
+        // Schedule it
+        m_deckLinkOutput->ScheduleVideoFrame(
+            frame, 
+            m_totalFramesScheduled * m_frameDuration, 
+            m_frameDuration, 
+            m_timeScale);
+        m_totalFramesScheduled++;
     }
 
     m_deckLinkOutput->StartScheduledPlayback(0, m_timeScale, 1.0);
@@ -245,47 +268,69 @@ HRESULT DeckLinkDevice::ScheduledPlaybackHasStopped()
 
 bool DeckLinkDevice::GetFrameBuffer(void** pBuffer)
 {
-    if (!m_videoFrame) return false;
+    if (!m_deckLinkOutput || !pBuffer || m_frameQueue.empty()) return false;
 
-    // Release previous buffer if exists
-    if (m_currentBuffer) {
-        m_currentBuffer->EndAccess(bmdBufferAccessWrite);
-        m_currentBuffer->Release();
-        m_currentBuffer = nullptr;
+    // Get next frame from queue (DeckLink SDK pattern)
+    m_currentFrame = m_frameQueue.front();
+    m_frameQueue.pop_front();
+    
+    // Get buffer access
+    IDeckLinkVideoBuffer* videoBuffer = nullptr;
+    if (m_currentFrame->QueryInterface(IID_IDeckLinkVideoBuffer, (void**)&videoBuffer) != S_OK)
+    {
+        // Return frame to queue on failure
+        m_frameQueue.push_front(m_currentFrame);
+        m_currentFrame = nullptr;
+        return false;
     }
 
-    IDeckLinkVideoBuffer* videoBuffer = nullptr;
-    if (m_videoFrame->QueryInterface(IID_IDeckLinkVideoBuffer, (void**)&videoBuffer) != S_OK)
-        return false;
-
-    // Start access before getting bytes
+    // Start access
     if (videoBuffer->StartAccess(bmdBufferAccessWrite) != S_OK) {
         videoBuffer->Release();
+        m_frameQueue.push_front(m_currentFrame);
+        m_currentFrame = nullptr;
         return false;
     }
 
+    // Get bytes
     if (videoBuffer->GetBytes(pBuffer) != S_OK) {
         videoBuffer->EndAccess(bmdBufferAccessWrite);
         videoBuffer->Release();
+        m_frameQueue.push_front(m_currentFrame);
+        m_currentFrame = nullptr;
         return false;
     }
 
-    // Keep reference for EndAccess later
-    m_currentBuffer = videoBuffer;
+    // Release buffer interface (we're done with query)
+    videoBuffer->EndAccess(bmdBufferAccessWrite);
+    videoBuffer->Release();
+    
     return true;
 }
 
 bool DeckLinkDevice::ScheduleNextFrame()
 {
-    if (m_deckLinkOutput && m_videoFrame)
-    {
-         HRESULT hr = m_deckLinkOutput->ScheduleVideoFrame(m_videoFrame, m_totalFramesScheduled * m_frameDuration, m_frameDuration, m_timeScale);
-         if (SUCCEEDED(hr))
-         {
-             m_totalFramesScheduled++;
-             return true;
-         }
+    if (!m_deckLinkOutput || !m_currentFrame) return false;
+    
+    // Schedule the frame (DeckLink SDK pattern)
+    HRESULT hr = m_deckLinkOutput->ScheduleVideoFrame(
+        m_currentFrame, 
+        m_totalFramesScheduled * m_frameDuration, 
+        m_frameDuration, 
+        m_timeScale
+    );
+    
+    if (SUCCEEDED(hr)) {
+        m_totalFramesScheduled++;
+        // Return frame to back of queue
+        m_frameQueue.push_back(m_currentFrame);
+        m_currentFrame = nullptr;
+        return true;
     }
+    
+    // On failure, return frame to front of queue
+    m_frameQueue.push_front(m_currentFrame);
+    m_currentFrame = nullptr;
     return false;
 }
 

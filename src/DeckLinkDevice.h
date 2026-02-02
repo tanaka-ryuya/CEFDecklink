@@ -4,6 +4,7 @@
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
+#include <deque>
 #include <functional>
 
 // Forward declarations to avoid including heavy DeckLink headers here if possible
@@ -56,9 +57,9 @@ private:
     std::condition_variable m_cv;
     bool m_frameCompletedSignal;
 
-    // Output State
-    IDeckLinkMutableVideoFrame* m_videoFrame; // Reusable frame for sync
-    IDeckLinkVideoBuffer* m_currentBuffer;    // Current buffer for EndAccess
+    // Output State - Frame Queue Pattern (DeckLink SDK)
+    std::deque<IDeckLinkMutableVideoFrame*> m_frameQueue;
+    IDeckLinkMutableVideoFrame* m_currentFrame;  // Frame currently being written
     long long m_totalFramesScheduled;
     BMDTimeScale m_timeScale;
     BMDTimeValue m_frameDuration;
