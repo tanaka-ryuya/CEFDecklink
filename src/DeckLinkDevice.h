@@ -46,6 +46,11 @@ public:
     // Schedule the frame after writing to it
     bool ScheduleNextFrame();
 
+    // Callback-driven architecture (Reference Pattern)
+    // Application provides a function to render into the buffer
+    using RenderCallback = std::function<void(void* pBuffer)>;
+    void SetRenderCallback(RenderCallback callback);
+
 private:
     std::atomic<ULONG> m_refCount;
     
@@ -56,6 +61,7 @@ private:
     std::mutex m_mutex;
     std::condition_variable m_cv;
     bool m_frameCompletedSignal;
+    BMDOutputFrameCompletionResult m_lastCompletionResult; // Store result for main loop
 
     // Output State - Frame Queue Pattern (DeckLink SDK)
     std::deque<IDeckLinkMutableVideoFrame*> m_frameQueue;
@@ -63,4 +69,6 @@ private:
     long long m_totalFramesScheduled;
     BMDTimeScale m_timeScale;
     BMDTimeValue m_frameDuration;
+    
+    RenderCallback m_renderCallback;
 };

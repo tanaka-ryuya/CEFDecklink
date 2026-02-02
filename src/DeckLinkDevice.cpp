@@ -20,12 +20,17 @@ DeckLinkDevice::DeckLinkDevice()
       m_deckLinkOutput(nullptr),
       m_currentFrame(nullptr),
       m_frameCompletedSignal(false),
+      m_lastCompletionResult(bmdOutputFrameCompleted),
       m_totalFramesScheduled(0),
       m_timeScale(30000),     // Time units per second
-      m_frameDuration(1001)   // Duration per FRAME (for 59.94i, each frame contains 2 fields)
-                               // Frame rate = 30000/1001 = 29.97 fps
-                               // Field rate = 29.97 * 2 = 59.94 fields/sec
+      m_frameDuration(1001),  // Duration per FRAME (for 59.94i)
+      m_renderCallback(nullptr)
 {
+}
+
+void DeckLinkDevice::SetRenderCallback(RenderCallback callback)
+{
+    m_renderCallback = callback;
 }
 
 DeckLinkDevice::~DeckLinkDevice()
@@ -118,8 +123,8 @@ bool DeckLinkDevice::StartOutput()
 {
     if (!m_deckLinkOutput) return false;
 
-    // Create Frame Queue (DeckLink SDK pattern - use 10 frames)
-    const int kFrameQueueSize = 10;
+    // Create Frame Queue (DeckLink SDK pattern - use 5 frames like reference)
+    const int kFrameQueueSize = 5;
     
     for (int i = 0; i < kFrameQueueSize; i++)
     {
@@ -192,13 +197,15 @@ void DeckLinkDevice::StopOutput()
 
 bool DeckLinkDevice::WaitForNextFrame(unsigned int timeoutMs)
 {
+    (void)timeoutMs; // Unused - wait indefinitely for perfect sync
+    
     std::unique_lock<std::mutex> lock(m_mutex);
-    if (m_cv.wait_for(lock, std::chrono::milliseconds(timeoutMs), [this]{ return m_frameCompletedSignal; }))
-    {
-        m_frameCompletedSignal = false; // Reset
-        return true;
-    }
-    return false; // Timeout
+    
+    // Wait for callback signal (no timeout - sync exactly to DeckLink)
+    m_cv.wait(lock, [this]{ return m_frameCompletedSignal; });
+    
+    m_frameCompletedSignal = false; // Reset
+    return true;
 }
 
 // IUnknown Implementation
@@ -248,14 +255,65 @@ ULONG DeckLinkDevice::Release()
 // Callback
 HRESULT DeckLinkDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame *completedFrame, BMDOutputFrameCompletionResult result)
 {
-    (void)completedFrame;  // Unused
-    (void)result;          // Unused
+    (void)completedFrame;
     
-    // Signal main loop that a frame completed
+    // Store result
+    m_lastCompletionResult = result;
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    
+    // 1. Get next frame from queue
+    if (m_frameQueue.empty()) return S_OK; // Should not happen with preroll
+    
+    m_currentFrame = m_frameQueue.front();
+    m_frameQueue.pop_front();
+    
+    // 2. Render to frame (if callback provided)
+    if (m_renderCallback)
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_frameCompletedSignal = true;
+        IDeckLinkVideoBuffer* videoBuffer = nullptr;
+        if (m_currentFrame->QueryInterface(IID_IDeckLinkVideoBuffer, (void**)&videoBuffer) == S_OK)
+        {
+            void* pBuffer = nullptr;
+            
+            // Start Access -> GetBytes -> CALLBACK -> EndAccess -> Release
+            if (videoBuffer->StartAccess(bmdBufferAccessWrite) == S_OK)
+            {
+                if (videoBuffer->GetBytes(&pBuffer) == S_OK)
+                {
+                    // === EXECUTE APP RENDERING HERE ===
+                    m_renderCallback(pBuffer);
+                }
+                videoBuffer->EndAccess(bmdBufferAccessWrite);
+            }
+            videoBuffer->Release();
+        }
     }
+    
+    // 3. Late/Dropped Frame Compensation (Reference Logic)
+    if (m_lastCompletionResult == bmdOutputFrameDisplayedLate || m_lastCompletionResult == bmdOutputFrameDropped) {
+        m_totalFramesScheduled += 2; // Skip ahead to catch up
+    }
+
+    // 4. Schedule Frame
+    HRESULT hr = m_deckLinkOutput->ScheduleVideoFrame(
+        m_currentFrame, 
+        m_totalFramesScheduled * m_frameDuration, 
+        m_frameDuration, 
+        m_timeScale
+    );
+    
+    if (SUCCEEDED(hr)) {
+        m_totalFramesScheduled++;
+        m_frameQueue.push_back(m_currentFrame); // Return to back
+    } else {
+        m_frameQueue.push_front(m_currentFrame); // Return to front on failure
+    }
+    
+    m_currentFrame = nullptr;
+    
+    // Signal main loop (just for logging/status now)
+    m_frameCompletedSignal = true;
     m_cv.notify_one();
     
     return S_OK;
@@ -284,7 +342,7 @@ bool DeckLinkDevice::GetFrameBuffer(void** pBuffer)
         return false;
     }
 
-    // Start access
+    // Start access - KEEP IT LOCKED for writing!
     if (videoBuffer->StartAccess(bmdBufferAccessWrite) != S_OK) {
         videoBuffer->Release();
         m_frameQueue.push_front(m_currentFrame);
@@ -301,8 +359,8 @@ bool DeckLinkDevice::GetFrameBuffer(void** pBuffer)
         return false;
     }
 
-    // Release buffer interface (we're done with query)
-    videoBuffer->EndAccess(bmdBufferAccessWrite);
+    // NOTE: Do NOT call EndAccess here! Buffer must stay locked until ScheduleNextFrame()
+    // Release the query interface (but buffer stays locked)
     videoBuffer->Release();
     
     return true;
@@ -312,7 +370,21 @@ bool DeckLinkDevice::ScheduleNextFrame()
 {
     if (!m_deckLinkOutput || !m_currentFrame) return false;
     
-    // Schedule the frame (DeckLink SDK pattern)
+    // EndAccess BEFORE scheduling (DeckLink SDK pattern)
+    IDeckLinkVideoBuffer* videoBuffer = nullptr;
+    if (m_currentFrame->QueryInterface(IID_IDeckLinkVideoBuffer, (void**)&videoBuffer) == S_OK)
+    {
+        videoBuffer->EndAccess(bmdBufferAccessWrite);
+        videoBuffer->Release();
+    }
+    
+    // Check for late/dropped frames from previous completion (Reference Logic)
+    // If the last completed frame was late or dropped, bump the scheduled time further into the future
+    if (m_lastCompletionResult == bmdOutputFrameDisplayedLate || m_lastCompletionResult == bmdOutputFrameDropped) {
+        m_totalFramesScheduled += 2; // Skip ahead to catch up
+    }
+
+    // Schedule the frame
     HRESULT hr = m_deckLinkOutput->ScheduleVideoFrame(
         m_currentFrame, 
         m_totalFramesScheduled * m_frameDuration, 

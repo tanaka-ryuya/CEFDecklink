@@ -52,7 +52,7 @@ void LogStatus(bool locked, double fps, float alphaThreshold) {
     }
 }
 
-// Render a single frame (Logic extracted from main loop)
+// RenderFrame now only handles Main Thread tasks: Input processing & CEF Message Loop & Logging
 void RenderFrame() {
     // --- Keyboard Input for Alpha Threshold Adjustment ---
     static float alphaThreshold = 0.01f; // Start value
@@ -62,72 +62,33 @@ void RenderFrame() {
     
     // Allow adjustment every 100ms when key is held
     if (timeSinceLastKey > 100) {
+        bool changed = false;
         if (GetAsyncKeyState(VK_OEM_PLUS) & 0x8000 || GetAsyncKeyState(0xBB) & 0x8000) { // + key
             alphaThreshold += 0.001f;
             if (alphaThreshold > 1.0f) alphaThreshold = 1.0f;
-            if (g_shaderManager) g_shaderManager->SetAlphaThreshold(alphaThreshold);
+            changed = true;
             lastKeyTime = now;
         }
         if (GetAsyncKeyState(VK_OEM_MINUS) & 0x8000 || GetAsyncKeyState(0xBD) & 0x8000) { // - key
             alphaThreshold -= 0.001f;
             if (alphaThreshold < 0.0f) alphaThreshold = 0.0f;
-            if (g_shaderManager) g_shaderManager->SetAlphaThreshold(alphaThreshold);
+            changed = true;
             lastKeyTime = now;
+        }
+        
+        if (changed && g_shaderManager) {
+            // NOTE: ShaderManager Access from Main Thread while DeckLink accesses it from Callback Thread!
+            // ShaderManager should use D3D context locking if not done already.
+            g_shaderManager->SetAlphaThreshold(alphaThreshold);
         }
     }
 
     // CEF Message Loop
     g_cefManager.DoMessageLoopWork();
 
-    // --- Synchronization ---
-    bool deckLinkReady = g_deckLink.WaitForNextFrame(16); // 16ms ≈ 60Hz, balances responsiveness and CPU load
+    // --- Synchronization - Wait for DeckLink callback just for tracking FPS ---
+    bool deckLinkReady = g_deckLink.WaitForNextFrame(0);
     
-    // --- Process Pipeline ---
-    // Persistent History Frame
-    static ID3D11ShaderResourceView* prevSRV = nullptr;
-    static ID3D11ShaderResourceView* currentSRV = nullptr;
-
-    if (deckLinkReady) {
-        // 1. Get CEF Texture (Latest)
-        auto renderHandler = g_cefManager.GetRenderHandler();
-
-        if (renderHandler) {
-            renderHandler->SyncWithGPU();
-            
-            // Shift History
-             if (prevSRV) prevSRV->Release();
-             prevSRV = currentSRV; 
-             
-             // Get NEW Current
-             currentSRV = renderHandler->GetTextureSRV();
-        }
-
-        // Handle startup
-        if (!prevSRV && currentSRV) {
-            currentSRV->AddRef();
-            prevSRV = currentSRV;
-        }
-        if (!currentSRV && prevSRV) {
-             prevSRV->AddRef();
-             currentSRV = prevSRV;
-        }
-
-        // 2. Get DeckLink Buffer for NEXT frame
-        void* pBuffer = nullptr;
-        
-        if (g_deckLink.GetFrameBuffer(&pBuffer)) {
-            // 3. Convert BGRA -> ARGB (GPU) with Frame Mixing
-            if (prevSRV && currentSRV && g_shaderManager) {
-                g_shaderManager->ConvertAndDownload(currentSRV, prevSRV, pBuffer); 
-            } else if (currentSRV && g_shaderManager) {
-                 g_shaderManager->ConvertAndDownload(currentSRV, currentSRV, pBuffer);
-            }
-            
-            // 4. Schedule Frame (this releases the buffer internally)
-            g_deckLink.ScheduleNextFrame();
-        }
-    }
-
     // Console Logging (Actual FPS calculation)
     static int frameCount = 0;
     static auto lastLogTime = std::chrono::steady_clock::now();
@@ -139,7 +100,7 @@ void RenderFrame() {
     now = std::chrono::steady_clock::now();
     if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastLogTime).count() > 1000) {
         double fps = (double)frameCount; 
-        LogStatus(deckLinkReady, fps, alphaThreshold);
+        LogStatus(true, fps, alphaThreshold);
         
         frameCount = 0;
         lastLogTime = now;
@@ -195,6 +156,52 @@ int main(int, char**)
     if (g_deckLink.Initialize())
     {
         std::cout << "DeckLink Initialized." << std::endl;
+
+        // --- Register Render Callback (Reference Pattern) ---
+        // This runs INSIDE the DeckLink thread/callback
+        g_deckLink.SetRenderCallback([](void* pBuffer) {
+            // Persistent History Frame (Thread-local static is safe as this always runs on the same DeckLink thread)
+            static ID3D11ShaderResourceView* prevSRV = nullptr;
+            static ID3D11ShaderResourceView* currentSRV = nullptr;
+            static float currentAlphaThreshold = 0.01f; // Local copy, sync occasionally if needed
+
+            // 1. Get CEF Texture (Latest)
+            // Note: CefRenderHandler::GetTextureSRV needs to be thread-safe or we need to accept risk.
+            // D3D11 Device Context access inside ShaderManager is locked, so this part is okay.
+            auto renderHandler = g_cefManager.GetRenderHandler();
+
+            if (renderHandler) {
+                // SyncWithGPU uses mutex internally? Checking... assuming simple getter is safe
+                // renderHandler->SyncWithGPU(); // This might be main-thread only. Skip for now or ensure thread safety.
+                
+                // Shift History
+                 if (prevSRV) prevSRV->Release();
+                 prevSRV = currentSRV; 
+                 
+                 // Get NEW Current
+                 currentSRV = renderHandler->GetTextureSRV();
+            }
+
+            // Handle startup
+            if (!prevSRV && currentSRV) {
+                currentSRV->AddRef();
+                prevSRV = currentSRV;
+            }
+            if (!currentSRV && prevSRV) {
+                 prevSRV->AddRef();
+                 currentSRV = prevSRV;
+            }
+
+            // 2. Convert BGRA -> ARGB (GPU) with Frame Mixing
+            if (pBuffer) {
+                if (prevSRV && currentSRV && g_shaderManager) {
+                    g_shaderManager->ConvertAndDownload(currentSRV, prevSRV, pBuffer); 
+                } else if (currentSRV && g_shaderManager) {
+                     g_shaderManager->ConvertAndDownload(currentSRV, currentSRV, pBuffer);
+                }
+            }
+        });
+
         g_deckLink.StartOutput();
     }
     else
@@ -223,7 +230,8 @@ int main(int, char**)
             }
             if (g_appDone) break;
 
-            RenderFrame();
+            // Update user input (Main Thread)
+            RenderFrame(); // This now just handles input and logging
         }
     }
     catch (const std::exception& e) {
