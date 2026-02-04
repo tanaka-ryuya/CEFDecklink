@@ -25,17 +25,16 @@ private:
 // Application Handler
 class CefAppImpl : public CefApp, public CefBrowserProcessHandler {
 public:
-    CefAppImpl() {}
+    CefAppImpl(CefManager* manager) : m_manager(manager) {}
     
     CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler() override {
         return this;
     }
     
-    void OnContextInitialized() override {
-        // Called on the browser process UI thread immediately after the CEF context has been initialized.
-    }
+    void OnContextInitialized() override;
 
 private:
+    CefManager* m_manager;
     IMPLEMENT_REFCOUNTING(CefAppImpl);
 };
 
@@ -50,20 +49,24 @@ bool CefManager::Initialize(HINSTANCE hInstance) {
     CefMainArgs main_args(hInstance);
     
     // CEF App
-    CefRefPtr<CefApp> app = new CefAppImpl;
+    CefRefPtr<CefApp> app = new CefAppImpl(this);
 
     // Execute the sub-process logic. This checks the command line to see if we are a sub-process.
     // If not, it returns -1 and we proceed to initialize the main browser process.
     int exit_code = CefExecuteProcess(main_args, app, nullptr);
     if (exit_code >= 0) {
-        // Sub-process executed
-        exit(exit_code);
+        return false; // Suppress further initialization in sub-process
     }
 
     CefSettings settings;
     settings.no_sandbox = true;
     settings.windowless_rendering_enabled = true;
     settings.log_severity = LOGSEVERITY_WARNING;
+    settings.remote_debugging_port = 9222;
+
+    // Set cache path for persistent features and DevTools stability
+    CefString(&settings.cache_path).FromASCII("cache");
+    CefString(&settings.root_cache_path).FromASCII("cache");
     
     // Important for transparent background
     settings.background_color = 0x00000000; 
@@ -94,11 +97,23 @@ void CefManager::Shutdown() {
 }
 
 void CefManager::CreateBrowser(HWND parentHwnd, const std::string& url, ID3D11Device* device) {
+    m_parentHwnd = parentHwnd;
+    m_initialUrl = url;
+    m_d3dDevice = device;
+
+    // If already initialized, create immediately. 
+    // Otherwise, OnContextInitialized will handle it.
+    if (m_initialized) {
+        ExecuteCreateBrowser();
+    }
+}
+
+void CefManager::ExecuteCreateBrowser() {
     CefWindowInfo window_info;
-    window_info.SetAsWindowless(parentHwnd); 
+    window_info.SetAsWindowless(m_parentHwnd); 
     
     // Create Render Handler
-    m_renderHandler = new CefRenderHandlerImpl(device);
+    m_renderHandler = new CefRenderHandlerImpl(m_d3dDevice);
     
     // Create Client
     CefRefPtr<CefClient> client = new CefClientImpl(m_renderHandler);
@@ -108,5 +123,11 @@ void CefManager::CreateBrowser(HWND parentHwnd, const std::string& url, ID3D11De
     browser_settings.windowless_frame_rate = 60; // Sync with DeckLink 59.94i/60p
     
     // Create Browser
-    CefBrowserHost::CreateBrowser(window_info, client, url, browser_settings, nullptr, nullptr);
+    CefBrowserHost::CreateBrowser(window_info, client, m_initialUrl, browser_settings, nullptr, nullptr);
+}
+
+void CefAppImpl::OnContextInitialized() {
+    if (m_manager) {
+        m_manager->ExecuteCreateBrowser();
+    }
 }

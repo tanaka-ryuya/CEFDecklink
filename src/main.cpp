@@ -111,10 +111,13 @@ void RenderFrame() {
 // Main code
 int main(int, char**)
 {
-    // Ensure Console Handling
-    // If built as Console Subsystem, stdout works. 
-    // If user runs from existing terminal, it attaches.
-    
+    // 1. CEF Sub-process check (MUST be the absolute first thing)
+    CefMainArgs main_args(GetModuleHandle(nullptr));
+    int exit_code = CefExecuteProcess(main_args, nullptr, nullptr);
+    if (exit_code >= 0) {
+        return exit_code;
+    }
+
     std::cout << "--- DeckLink + CEF CUI Application ---" << std::endl;
     std::cout << "Initializing..." << std::endl;
 

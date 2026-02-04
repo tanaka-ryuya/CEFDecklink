@@ -24,6 +24,7 @@ public:
 
     // Create a browser
     void CreateBrowser(HWND parentHwnd, const std::string& url, ID3D11Device* device);
+    void ExecuteCreateBrowser();
 
     // Access to render handler for texture access
     CefRefPtr<CefRenderHandlerImpl> GetRenderHandler() const { return m_renderHandler; }
@@ -31,4 +32,9 @@ public:
 private:
     CefRefPtr<CefRenderHandlerImpl> m_renderHandler;
     bool m_initialized = false;
+
+    // Deferred Creation Data
+    HWND m_parentHwnd = nullptr;
+    std::string m_initialUrl;
+    ID3D11Device* m_d3dDevice = nullptr;
 };
