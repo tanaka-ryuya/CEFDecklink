@@ -97,7 +97,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_BINARY_DIR}
     ${CEF_ROOT}
     ${CMAKE_BINARY_DIR}
-    ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.dir/Debug
+    ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.dir/$<CONFIG>
 )
 
 # Link Directories
