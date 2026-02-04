@@ -8,6 +8,8 @@
 #include <iostream>
 #include <iomanip>
 #include <chrono>
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
 
 #include "DeckLinkDevice.h"
 
@@ -132,6 +134,9 @@ int main(int, char**)
 
     // Initialize Crash Handler for debugging
     CrashHandler::Initialize();
+
+    // High Resolution Timer for accurate 60fps pacing
+    timeBeginPeriod(1);
 
     // Initialize CEF early
     if (!g_cefManager.Initialize(GetModuleHandle(nullptr))) {

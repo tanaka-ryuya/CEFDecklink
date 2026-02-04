@@ -148,7 +148,8 @@ void CefManager::ExecuteCreateBrowser() {
     
     // Browser Settings
     CefBrowserSettings browser_settings;
-    browser_settings.windowless_frame_rate = 60; 
+    // Set to 120 to prevent CEF from throttling 59.94 internal loops logic (safeguard)
+    browser_settings.windowless_frame_rate = 120; 
     
     // Create Browser
     CefBrowserHost::CreateBrowser(window_info, client, m_initialUrl, browser_settings, nullptr, nullptr);
@@ -168,8 +169,10 @@ void CefManager::ScheduleFrames() {
     
     runner->PostTask(new FunctionTask([this]{ TriggerBeginFrame(); }));
     
-    // Trigger 2nd Frame (Delayed ~17ms)
-    runner->PostDelayedTask(new FunctionTask([this]{ TriggerBeginFrame(); }), 17);
+    // Trigger 2nd Frame (Target interval for 59.94p is ~16.68ms)
+    // We use 14ms to ensure we don't overshoot if system is slightly busy.
+    // Timer resolution is improved by timeBeginPeriod(1).
+    runner->PostDelayedTask(new FunctionTask([this]{ TriggerBeginFrame(); }), 14);
 }
 
 void CefManager::TriggerBeginFrame() {

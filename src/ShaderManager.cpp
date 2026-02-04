@@ -151,13 +151,6 @@ void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D
             uint8_t* src = (uint8_t*)mapped.pData;
             uint8_t* dst = (uint8_t*)outputBuffer;
             
-            // Check if output is all black (debug) for the READBACK frame
-            if (doLog) {
-                uint32_t* pHead = (uint32_t*)src;
-                uint32_t sample = pHead[1920*540 + 960]; // Center pixel
-                std::cout << "[Shader] Readback OK (Idx " << readbackIdx << "). Center: 0x" << std::hex << sample << std::dec << std::endl;
-            }
-
             for (int y = 0; y < m_height; ++y) {
                  memcpy(dst + y * (m_width * 4), src + y * mapped.RowPitch, m_width * 4);
             }
