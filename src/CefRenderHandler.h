@@ -24,6 +24,9 @@ public:
     // Call from Main Thread to upload pending data
     void SyncWithGPU();
 
+    // Diagnostics
+    int GetAndResetFrameCount() { return m_frameCount.exchange(0); }
+
 private:
     int m_width = 1920;
     int m_height = 1080;
@@ -48,6 +51,8 @@ private:
     // m_readIndex:  Incremented by SyncWithGPU (Consumer)
     std::atomic<size_t> m_writeIndex{ 0 };
     std::atomic<size_t> m_readIndex{ 0 };
+    
+    std::atomic<int> m_frameCount{ 0 };
 
     // Use IMPLEMENT_REFCOUNTING macro
     IMPLEMENT_REFCOUNTING(CefRenderHandlerImpl);

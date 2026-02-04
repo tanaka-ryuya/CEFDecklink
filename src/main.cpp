@@ -37,17 +37,18 @@ void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // Console Output Helper
-void LogStatus(bool locked, double fps, float alphaThreshold) {
+void LogStatus(bool locked, double deckLinkFps, int cefFps, float alphaThreshold) {
     static auto lastTime = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
     
     // Log every 1 second
     if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTime).count() > 1000) {
         std::cout << "\r" // Carriage return to overwrite line
-                  << "[Status] Sync: " << (locked ? "LOCKED (59.94i)" : "SEARCHING...")
-                  << " | Rate: " << std::fixed << std::setprecision(2) << fps << " fps (" << fps * 2.0 << " fields)"
-                  << " | Alpha Threshold: " << std::setprecision(4) << alphaThreshold
-                  << " | +/- to adjust | Ctrl+C to Exit."
+                  << "[Status] Sync: " << (locked ? "LOCKED" : "SEARCHING")
+                  << " | DeckLink: " << std::fixed << std::setprecision(2) << deckLinkFps << " fps"
+                  << " | CEF: " << cefFps << " fps"
+                  << " | Alpha: " << std::setprecision(4) << alphaThreshold
+                  << " | Ctrl+C to Exit.   " // Extra spaces to clear line
                   << std::flush;
         lastTime = now;
     }
@@ -101,7 +102,15 @@ void RenderFrame() {
     now = std::chrono::steady_clock::now();
     if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastLogTime).count() > 1000) {
         double fps = (double)frameCount; 
-        LogStatus(true, fps, alphaThreshold);
+        
+        // Get CEF Rate
+        int cefFps = 0;
+        auto handler = g_cefManager.GetRenderHandler();
+        if (handler) {
+            cefFps = handler->GetAndResetFrameCount();
+        }
+
+        LogStatus(true, fps, cefFps, alphaThreshold);
         
         frameCount = 0;
         lastLogTime = now;
@@ -213,6 +222,11 @@ int main(int, char**)
             // Release References
             if (srvTop) srvTop->Release();
             if (srvBottom) srvBottom->Release();
+            
+            // --- DeckLink Pacing Trigger ---
+            // Trigger CEF to render next frames for the *future* buffer slot.
+            // This aligns CEF generation with DeckLink heartbeat.
+            g_cefManager.ScheduleFrames();
         });
 
         g_deckLink.StartOutput();

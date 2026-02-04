@@ -49,6 +49,7 @@ void CefRenderHandlerImpl::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementTy
     
     // Commit
     m_writeIndex++;
+    m_frameCount++;
 }
 
 void CefRenderHandlerImpl::Resize(int width, int height) {

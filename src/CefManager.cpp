@@ -1,17 +1,34 @@
 #include "CefManager.h"
 #include "CefRenderHandler.h"
 #include <iostream>
+#include <include/cef_task.h> // For CefPostTask
 
-// Minimal Client
-class CefClientImpl : public CefClient {
+// Helper for CefPostTask
+class FunctionTask : public CefTask {
 public:
-    CefClientImpl(CefRefPtr<CefRenderHandler> renderHandler) : m_renderHandler(renderHandler) {}
+    using Callback = std::function<void()>;
+    FunctionTask(Callback callback) : m_callback(callback) {}
+    void Execute() override { m_callback(); }
+    IMPLEMENT_REFCOUNTING(FunctionTask);
+private:
+    Callback m_callback;
+};
+
+// Minimal Client with LifeSpanHandler
+class CefClientImpl : public CefClient, public CefLifeSpanHandler {
+public:
+    CefClientImpl(CefManager* manager, CefRefPtr<CefRenderHandler> renderHandler) 
+        : m_manager(manager), m_renderHandler(renderHandler) {}
     
-    CefRefPtr<CefRenderHandler> GetRenderHandler() override {
-        return m_renderHandler;
+    CefRefPtr<CefRenderHandler> GetRenderHandler() override { return m_renderHandler; }
+    CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override { return this; }
+    
+    void OnAfterCreated(CefRefPtr<CefBrowser> browser) override {
+        if (m_manager) m_manager->SetBrowser(browser);
     }
 
 private:
+    CefManager* m_manager;
     CefRefPtr<CefRenderHandler> m_renderHandler;
     IMPLEMENT_REFCOUNTING(CefClientImpl);
 };
@@ -121,20 +138,50 @@ void CefManager::CreateBrowser(HWND parentHwnd, const std::string& url, ID3D11De
 void CefManager::ExecuteCreateBrowser() {
     CefWindowInfo window_info;
     window_info.SetAsWindowless(m_parentHwnd); 
-    
+    window_info.external_begin_frame_enabled = true; // Driven by DeckLink
+
     // Create Render Handler
     m_renderHandler = new CefRenderHandlerImpl(m_d3dDevice);
     
     // Create Client
-    CefRefPtr<CefClient> client = new CefClientImpl(m_renderHandler);
+    CefRefPtr<CefClient> client = new CefClientImpl(this, m_renderHandler);
     
     // Browser Settings
     CefBrowserSettings browser_settings;
-    browser_settings.windowless_frame_rate = 60; // Sync with DeckLink 59.94i/60p
+    browser_settings.windowless_frame_rate = 60; 
     
     // Create Browser
     CefBrowserHost::CreateBrowser(window_info, client, m_initialUrl, browser_settings, nullptr, nullptr);
 }
+
+void CefManager::ScheduleFrames() {
+    if (!m_initialized) return;
+
+    // Trigger 1st Frame (Immediate)
+    // Execute on UI Thread
+    CefRefPtr<CefTaskRunner> runner = CefTaskRunner::GetForThread(TID_UI);
+    if (!runner) return;
+
+    // Use a simple static helper or lambda if wrapper supports it. 
+    // CEF C++ wrapper CefTask is usually an interface. 
+    // We can use CefCreateClosureTask with std::function/lambda.
+    
+    runner->PostTask(new FunctionTask([this]{ TriggerBeginFrame(); }));
+    
+    // Trigger 2nd Frame (Delayed ~17ms)
+    runner->PostDelayedTask(new FunctionTask([this]{ TriggerBeginFrame(); }), 17);
+}
+
+void CefManager::TriggerBeginFrame() {
+    if (m_browser) {
+        m_browser->GetHost()->SendExternalBeginFrame();
+    }
+}
+
+void CefManager::SetBrowser(CefRefPtr<CefBrowser> browser) {
+    m_browser = browser;
+}
+
 
 void CefAppImpl::OnContextInitialized() {
     if (m_manager) {
