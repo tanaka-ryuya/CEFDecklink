@@ -65,8 +65,18 @@ bool CefManager::Initialize(HINSTANCE hInstance) {
     settings.remote_debugging_port = 9222;
 
     // Set cache path for persistent features and DevTools stability
-    CefString(&settings.cache_path).FromASCII("cache");
-    CefString(&settings.root_cache_path).FromASCII("cache");
+    // Must be absolute path
+    char exePath[MAX_PATH];
+    if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) > 0) {
+        std::string sPath(exePath);
+        size_t pos = sPath.find_last_of("\\/");
+        if (pos != std::string::npos) {
+            sPath = sPath.substr(0, pos);
+        }
+        std::string cachePath = sPath + "\\cache";
+        CefString(&settings.cache_path).FromString(cachePath);
+        CefString(&settings.root_cache_path).FromString(cachePath);
+    }
     
     // Important for transparent background
     settings.background_color = 0x00000000; 
