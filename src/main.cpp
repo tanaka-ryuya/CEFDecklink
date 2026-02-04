@@ -161,65 +161,55 @@ int main(int, char**)
         // --- Register Render Callback (Reference Pattern) ---
         // This runs INSIDE the DeckLink thread/callback
         g_deckLink.SetRenderCallback([](void* pBuffer) {
-            // Persistent History Frame (Thread-local static is safe as this always runs on the same DeckLink thread)
-            static ID3D11ShaderResourceView* prevSRV = nullptr;
-            static ID3D11ShaderResourceView* currentSRV = nullptr;
-            static float currentAlphaThreshold = 0.01f; // Local copy, sync occasionally if needed
+            // New Logic for 60p -> 60i Conversion (Double Fetch)
+            // We need to fetch TWO source frames for every ONE output frame.
+            // Frame T   -> Top Field
+            // Frame T+1 -> Bottom Field
 
-            // 1. Get CEF Texture (Latest)
-            // Note: CefRenderHandler::GetTextureSRV needs to be thread-safe or we need to accept risk.
-            // D3D11 Device Context access inside ShaderManager is locked, so this part is okay.
+            ID3D11ShaderResourceView* srvTop = nullptr;
+            ID3D11ShaderResourceView* srvBottom = nullptr;
+
             auto renderHandler = g_cefManager.GetRenderHandler();
             
-            static int debugLogCounter = 0;
-            // if (debugLogCounter++ % 60 == 0) { // Log once per second (approx)
-                 // std::cout << "[Callback] RenderHandler: " << (renderHandler ? "OK" : "NULL") << std::endl;
-            // }
-
             if (renderHandler) {
-                // SyncWithGPU uses mutex internally and GetImmediateContext.
-                // Since we are single-threaded regarding D3D access (Main thread does nothing), this is safe-ish.
-                // Ideally use ID3D11Multithread, but for now this enables the transfer.
+                // 1. Fetch Top Field Source (Frame T)
+                // This advances the read pointer by 1
                 renderHandler->SyncWithGPU(); 
+                srvTop = renderHandler->GetTextureSRV();
                 
-                // Shift History
-                 if (prevSRV) prevSRV->Release();
-                 prevSRV = currentSRV; 
-                 
-                 // Get NEW Current
-                 currentSRV = renderHandler->GetTextureSRV();
-                 
-                 // if (debugLogCounter % 60 == 0 && currentSRV == nullptr) {
-                 //    std::cout << "[Callback] currentSRV is NULL! CEF not rendering?" << std::endl;
-                 // }
+                // 2. Fetch Bottom Field Source (Frame T+1)
+                // This advances the read pointer by 1 again
+                renderHandler->SyncWithGPU();
+                srvBottom = renderHandler->GetTextureSRV();
             }
 
-            // Handle startup
-            if (!prevSRV && currentSRV) {
-                currentSRV->AddRef();
-                prevSRV = currentSRV;
+            // Fallback: If we only got one frame (e.g. startup or starvation), duplicate it.
+            // This effectively creates a progressive frame (Field 0 == Field 1)
+            // Note: GetTextureSRV already AddRef'd srvTop, so if we copy pointer we must AddRef again.
+            if (srvTop && !srvBottom) {
+                srvBottom = srvTop;
+                srvBottom->AddRef();
             }
-            if (!currentSRV && prevSRV) {
-                 prevSRV->AddRef();
-                 currentSRV = prevSRV;
+            // Sanity check (inverse case unlikely via ring buffer but safe to handle)
+            if (!srvTop && srvBottom) {
+                srvTop = srvBottom;
+                srvTop->AddRef();
             }
 
-            // 2. Convert BGRA -> ARGB (GPU) with Frame Mixing
+            // 3. Dispatch Shader (Interlace Combine)
             if (pBuffer) {
-                if (prevSRV && currentSRV && g_shaderManager) {
-                    g_shaderManager->ConvertAndDownload(currentSRV, prevSRV, pBuffer); 
-                } else if (currentSRV && g_shaderManager) {
-                     g_shaderManager->ConvertAndDownload(currentSRV, currentSRV, pBuffer);
+                if (srvTop && srvBottom && g_shaderManager) {
+                    g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer); 
                 } else if (g_shaderManager) {
-                     // No texture yet - Clear to Blue to verify shader manager works
-                     // To do this, we need a Clear function or just memset pBuffer
-                     // if (debugLogCounter % 60 == 0) std::cout << "[Callback] No textures available. Clearing buffer." << std::endl;
-                     
-                     // Fill Blue for debug
-                     // uint32_t* p32 = (uint32_t*)pBuffer;
-                     // for(int i=0; i<1920*1080; ++i) *p32++ = 0xFF0000FF; // Blue
+                     // No source frames available - Output Black
+                     // Assuming ARGB 4 bytes per pixel for now based on previous context
+                     memset(pBuffer, 0, 1920 * 1080 * 4);
                 }
             }
+            
+            // Release References
+            if (srvTop) srvTop->Release();
+            if (srvBottom) srvBottom->Release();
         });
 
         g_deckLink.StartOutput();

@@ -47,80 +47,63 @@ graph LR
 ### ステージ 1: CEF レンダリング (Producer)
 - **担当クラス**: `CefRenderHandlerImpl`
 - **実行スレッド**: CEF UI Thread
-- **駆動トリガー**: Chromiumコンポジターからの `OnPaint` コールバック
-    - ブラウザ内部の描画更新（DOM変更、CSSアニメーション、`requestAnimationFrame`）により発火。
-    - 基本的にWindowsのVSync (60Hz) に同期しようとするが、負荷により変動する。
-- **動作レート**: 可変 (Max 60fps)
+- **駆動トリガー**: Chromiumコンポジター (`OnPaint`)
+- **動作レート**: **59.94 fps (Progressive)**
+    - 滑らかなインターレース出力 (59.94i) を実現するため、ソースは **59.94p** でレンダリングされる必要がある。
+    - 29.97fpsで描画した場合、DeckLink出力はカクつく（Double Framing）ことになるため、前段は倍速で動く必要がある。
 - **ロジック**:
     - `OnPaint` にて、描画されたピクセルデータ (BGRA) を受け取る。
-    - **インデックス管理**:
-        - `m_writeIndex` (Atomic): 現在書き込むべきバッファのインデックス（単調増加）。
-        - `m_readIndex` (Atomic): GPU側が処理を開始したインデックス。
-    - **オーバーフロー保護**:
-        - `(m_writeIndex - m_readIndex) >= 6` の場合、リングバッファが満杯である。
-        - **処理**: 最新のフレームをドロップし、Producer側で待機は行わない（Non-blocking）。
-    - **データコピー**:
-        - `m_cpuBuffers[m_writeIndex % 6]` に `memcpy` を行う。
-        - コピー完了後、`m_writeIndex` をインクリメント (Release Semantics)。
+    - **インデックス管理**: `m_writeIndex` (Atomic) を毎フレーム進める。
+    - **データコピー**: 常に新しいフレームをリングバッファ `m_cpuBuffers` へ書き込む。
 
 ---
 
 ### ステージ 2: GPU アップロード (Consumer 1)
 - **担当関数**: `CefRenderHandlerImpl::SyncWithGPU()`
-- **実行スレッド**: DeckLink Video Output Thread (High Priority)
-- **駆動トリガー**: `IDeckLinkVideoOutputCallback::ScheduledFrameCompleted`
-    - DeckLinkハードウェアの水晶発振器（ハードウェアクロック）に基づく正確な割り込み。
-- **動作レート**: 固定 29.97fps (59.94 fields/sec)
-    - 放送規格に厳密に従う。CEF側が遅くても速くても、このリズムは絶対である。
+- **実行スレッド**: DeckLink Video Output Thread
+- **駆動トリガー**: `DeckLinkDevice` コールバック (29.97Hz)
+- **動作レート**: **スループット 59.94 fps相当** (1コールバックにつき2フレーム処理)
+    - DeckLinkからの1回の呼び出しにつき、**2枚のソースフレーム** を処理・アップロードする必要がある。
+    - 例: Output Frame N を作るために、Source Frame 2N と 2N+1 を使用する。
 - **ロジック**:
-    - **キャッチアップ戦略 (Frame Skipping/Duplication)**:
-        - `m_writeIndex > m_readIndex` (新データあり): キューにある未処理フレームを消費する。
-        - `m_writeIndex == m_readIndex` (新データなし): 前回のフレームを再送する（実質的にフリーズ画）。
-        - アニメーションの滑らかさを維持するため、1回のコールバックにつき1フレームずつ進める (`m_readIndex` + 1)。
-    - **H2D 転送**:
-        - `ID3D11DeviceContext::Map` (`D3D11_MAP_WRITE_DISCARD`) でテクスチャ転送。
-    - **Safe SRV更新**:
-        - 転送完了後、変数 `m_lastUploadedSRV` を更新。これはアトミック操作ではないが、DeckLinkスレッド内での順序性が保証されているため安全。
+    - `m_writeIndex` が十分進んでいる場合、2フレーム分のテクスチャをアップロードする。
+    - **Safe SRV更新**: 最新の2枚のSRV (`Current`, `Previous`) を確保し、シェーダーへ渡す準備をする。
 
 ---
 
 ### ステージ 3: シェーダー処理 & パイプライン・リードバック (Consumer 2)
 - **担当クラス**: `ShaderManager`
-- **実行スレッド**: DeckLink Video Output Thread (ステージ2と同一)
-- **駆動トリガー**: ステージ2の完了直後 (同期待ちなしで連続実行)
-- **動作レート**: 固定 29.97fps
+- **実行スレッド**: DeckLink Video Output Thread
+- **駆動トリガー**: ステージ2完了後
+- **動作レート**: **29.97 fps (Interlaced Frame Generation)**
 - **ロジック**:
     1.  **Compute Shader Dispatch**:
-        - 入力: CEF画像 (`t0`) + 前フレーム画像 (`t1`: インターレース生成用)
-        - 出力: `m_outputTextures[frame % 6]` (UAV `u0`)
-        - 処理: 色変換 (BGRA -> ARGB)、インターレース処理など。
+        - **入力**: 連続する2枚のプログレッシブフレーム (59.94p)
+            - `t0`: Frame T (Top Field用)
+            - `t1`: Frame T+0.5 (Bottom Field用)
+        - **出力**: 1枚のインターレースフレーム (59.94i)
+            - 偶数ラインには `t0` のピクセル、奇数ラインには `t1` のピクセルを採用して合成する。
+            - これにより、時間解像度が 59.94Hz となり、滑らかな放送品質のモーションが得られる。
     2.  **VRAM内コピー**:
-        - `CopyResource` を発行 (UAV -> Staging)。GPUコマンドキューに積まれるのみで、CPUはこの時点ではブロックされない。
-    3.  **遅延リードバック (Pipelined Readback) - 同期の肝**:
-        - **戦略**: 「2フレーム前」のステージングテクスチャ (`frame - 2`) をマップする。
-        - **同期の仕組み**:
-            - D3D11の `Map` は、GPUがそのリソースへの書き込みを終えるまでCPUをブロックする仕様である。
-            - 直前のフレームをMapするとCPUが数ミリ秒停止してしまう。
-            - 2フレーム前のリソースであれば、GPU処理は（高負荷でない限り）確実に完了しているため、`Map` は即座にリターンする。
-            - これにより、DeckLinkコールバック内での処理時間を最小化し、音声ドロップやフレーム遅延を防ぐ。
+        - Output (Interlaced) -> Staging
+    3.  **遅延リードバック (Pipelined Readback)**:
+        - 2フレーム前（出力フレーム換算）のデータを読み出す。
 
 ---
 
 ## 3. フレームレイテンシとシーケンス
 
-このパイプライン構成における、ある1フレーム "N" のライフサイクルとレイテンシ。
+**59.94p -> 59.94i 変換フロー**
 
-| 時間軸 (DeckLink Tick) | アクション | トリガー | バッファの状態 |
+| 時間軸 (DL Tick) | ソースフレーム (59.94p) | アクション | 出力 (59.94i) |
 | :--- | :--- | :--- | :--- |
-| **T = 0** | **CEF描画** | Browser VSync | CEFが `CPUBuffer[0]` にフレームNを書き込み (Writer=1) |
-| **T = 1** | **GPUアップロード** | DeckLink IRQ | D3Dが `CPUBuffer[0]` を `Texture[0]` に転送 (Reader=1) |
-| **T = 1** | **GPU計算** | (Sequential) | シェーダーが `Texture[0]` を処理 → `Staging[0]` へコピー命令 |
-| **T = 1** | **(Readback)** | (Sequential) | *フレーム N-2* を読み出し中 (フレームNはまだGPU内にあるため触らない) |
-| **T = 2** | ... | DeckLink IRQ | 他のフレームの処理 ... |
-| **T = 3** | **CPUリードバック** | DeckLink IRQ | `m_frameIndex` が進み、`Staging[0]` (フレームN) が対象になる。<br>この時点で `Staging[0]` のGPU書き込みは完了しており、即座にメモリ取得可能。DeckLinkへ出力。 |
+| **Tick 0** | Frame 0, 1 生成 | CEF描画 | - |
+| **Tick 1** | Frame 2, 3 生成 | **Upload**: Frame 0, 1 -> Texture 0, 1<br>**Shader**: Mix(Tex0, Tex1) -> Out 0 | Out 0 生成中 (GPU) |
+| **Tick 2** | Frame 4, 5 生成 | **Upload**: Frame 2, 3 -> Texture 2, 3<br>**Shader**: Mix(Tex2, Tex3) -> Out 1 | Out 1 生成中 |
+| **Tick 3** | Frame 6, 7 生成 | **Readback**: Out 0 (Tick 1の結果) | **DeckLink Output**: Out 0 |
 
 **合計レイテンシ**:
-CEFでの描画完了からDeckLink出力まで、**約 2〜3 フレーム (約66ms〜100ms)** の遅延が発生する。これは放送用途としては許容範囲内であり、引き換えに **高い安定性（ジッター耐性）** を獲得している。
+インターレース合成のため2枚揃うのを待つ必要があり、さらにGPUパイプラインの遅延が加わるため、入力(T=0)から出力まで **約3 Tick (約100ms)** の遅延となる。しかし、これにより **完全な59.94モーション** が保証される。
 
 ---
 

@@ -22,13 +22,16 @@ void main(uint3 DTid : SV_DispatchThreadID)
     if (x >= width || y >= height) return;
 
     // --- Interlaced Sampling ---
+    // [Field Order: Top Field First (TFF)]
+    // Even Lines (0, 2, 4...) -> Top Field    -> Frame T   (InputTextureFrame1)
+    // Odd Lines  (1, 3, 5...) -> Bottom Field -> Frame T+1 (InputTextureFrame2)
     float4 pixel;
     
     if ((y % 2) == 0) {
-        // Top Field -> Frame 1
+        // Top Field -> Current Frame (T)
         pixel = InputTextureFrame1.Load(int3(x, y, 0));
     } else {
-        // Bottom Field -> Frame 2
+        // Bottom Field -> Next Frame (T+1)
         pixel = InputTextureFrame2.Load(int3(x, y, 0));
     }
 
