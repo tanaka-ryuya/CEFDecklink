@@ -28,12 +28,15 @@ private:
     
     ComPtr<ID3D11ComputeShader> m_computeShader;
     
-    // GPU Buffers for Output
-    ComPtr<ID3D11Texture2D> m_outputTexture; // ARGB
-    ComPtr<ID3D11UnorderedAccessView> m_outputUAV;
+    // GPU Buffers for Output (Sextuple Buffering)
+    static const int kBufferCount = 6;
+    ComPtr<ID3D11Texture2D> m_outputTextures[kBufferCount]; // ARGB
+    ComPtr<ID3D11UnorderedAccessView> m_outputUAVs[kBufferCount];
     
-    // CPU Readback Buffer (Staging)
-    ComPtr<ID3D11Texture2D> m_stagingOutput;
+    // CPU Readback Buffer (Staging) (Triple Buffering)
+    ComPtr<ID3D11Texture2D> m_stagingOutputs[kBufferCount];
+    
+    uint64_t m_frameIndex = 0;
 
     // Constant Buffer for Parameters
     ComPtr<ID3D11Buffer> m_constantBuffer;

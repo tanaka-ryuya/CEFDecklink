@@ -2,13 +2,15 @@
 #include <iostream>
 
 CefRenderHandlerImpl::CefRenderHandlerImpl(ID3D11Device* device) : m_device(device) {
-    // Initial Resize to allocate texture
+    // Initial Resize to allocate textures
     Resize(1920, 1080);
 }
 
 CefRenderHandlerImpl::~CefRenderHandlerImpl() {
-    if (m_textureSRV) m_textureSRV->Release();
-    if (m_texture) m_texture->Release();
+    for (int i = 0; i < kBufferCount; ++i) {
+        if (m_textureSRVs[i]) m_textureSRVs[i]->Release();
+        if (m_textures[i]) m_textures[i]->Release();
+    }
 }
 
 void CefRenderHandlerImpl::GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect) {
@@ -20,32 +22,47 @@ void CefRenderHandlerImpl::GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& r
 
 void CefRenderHandlerImpl::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type, const RectList& dirtyRects, const void* buffer, int width, int height) {
     // This runs on CEF UI/Render thread.
-    // CRITICAL: Do NOT use ID3D11DeviceContext here. It is not thread safe.
-    // Instead, copy to a CPU buffer.
-    
     std::lock_guard<std::mutex> lock(m_mutex);
     
     if (width != m_width || height != m_height) return;
 
-    // Allocate if needed (or if size changed, though Resize handles that)
+    size_t writeIdx = m_writeIndex.load();
+    size_t readIdx = m_readIndex.load();
+
+    // Check Overlap: If next write would overtake read by full buffer size, drop frame.
+    // Allow effectively (kBufferCount - 1) frames ahead.
+    if (writeIdx - readIdx >= kBufferCount) {
+        // Drop frame to prevent overwriting data currently being uploaded
+        return; 
+    }
+
+    // Allocate if needed
     size_t size = width * height * 4;
-    if (m_cpuBuffer.size() != size) {
-        m_cpuBuffer.resize(size);
+    int bufferIdx = writeIdx % kBufferCount;
+    
+    if (m_cpuBuffers[bufferIdx].size() != size) {
+        m_cpuBuffers[bufferIdx].resize(size);
     }
 
     // Copy buffer
-    memcpy(m_cpuBuffer.data(), buffer, size);
-    m_cpuBufferHasNewData = true;
+    memcpy(m_cpuBuffers[bufferIdx].data(), buffer, size);
+    
+    // Commit
+    m_writeIndex++;
 }
 
 void CefRenderHandlerImpl::Resize(int width, int height) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_width = width;
     m_height = height;
-    m_cpuBuffer.resize(width * height * 4);
     
-    if (m_textureSRV) { m_textureSRV->Release(); m_textureSRV = nullptr; }
-    if (m_texture) { m_texture->Release(); m_texture = nullptr; }
+    for (int i = 0; i < kBufferCount; ++i) {
+        m_cpuBuffers[i].resize(width * height * 4);
+        
+        if (m_textureSRVs[i]) { m_textureSRVs[i]->Release(); m_textureSRVs[i] = nullptr; }
+        if (m_textures[i]) { m_textures[i]->Release(); m_textures[i] = nullptr; }
+    }
+    m_lastUploadedSRV = nullptr; // Reset safe SRV
 
     if (!m_device) return;
 
@@ -61,42 +78,65 @@ void CefRenderHandlerImpl::Resize(int width, int height) {
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
     desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-    m_device->CreateTexture2D(&desc, nullptr, &m_texture);
-
-    if (m_texture) {
-        m_device->CreateShaderResourceView(m_texture, nullptr, &m_textureSRV);
+    for (int i = 0; i < kBufferCount; ++i) {
+        m_device->CreateTexture2D(&desc, nullptr, &m_textures[i]);
+        if (m_textures[i]) {
+            m_device->CreateShaderResourceView(m_textures[i], nullptr, &m_textureSRVs[i]);
+        }
     }
 }
 
-// Call this from Main Thread
+// Call this from Main Thread / DeckLink Thread
 void CefRenderHandlerImpl::SyncWithGPU() {
     std::lock_guard<std::mutex> lock(m_mutex);
-    if (!m_cpuBufferHasNewData || !m_texture || !m_device) return;
-
-    ID3D11DeviceContext* context = nullptr;
-    m_device->GetImmediateContext(&context);
     
-    if (context) {
-        D3D11_MAPPED_SUBRESOURCE mapped;
-        if (SUCCEEDED(context->Map(m_texture, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
-            const uint8_t* src = m_cpuBuffer.data();
-            uint8_t* dst = (uint8_t*)mapped.pData;
-            
-            for (int y = 0; y < m_height; ++y) {
-                memcpy(dst + y * mapped.RowPitch, src + y * m_width * 4, m_width * 4);
+    size_t writeIdx = m_writeIndex.load();
+    size_t readIdx = m_readIndex.load();
+
+    if (!m_device) return;
+
+    // Process all pending frames up to writeIndex (Resulting in "Catch Up")
+    // OR just process the next one. 
+    // Optimization: Just process the *latest* completable one to reduce latency
+    // BUT since we are on the DeckLink thread which drives output, we should consume one per call if possible,
+    // or skip if we are way behind.
+    // For now, let's just consume the NEXT sequential frame to ensure smooth animation.
+    
+    if (writeIdx > readIdx) {
+        int bufferIdx = readIdx % kBufferCount;
+        
+        ID3D11Texture2D* tex = m_textures[bufferIdx];
+        if (!tex) return;
+
+        ID3D11DeviceContext* context = nullptr;
+        m_device->GetImmediateContext(&context);
+        
+        if (context) {
+            D3D11_MAPPED_SUBRESOURCE mapped;
+            if (SUCCEEDED(context->Map(tex, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
+                const uint8_t* src = m_cpuBuffers[bufferIdx].data();
+                uint8_t* dst = (uint8_t*)mapped.pData;
+                
+                for (int y = 0; y < m_height; ++y) {
+                    memcpy(dst + y * mapped.RowPitch, src + y * m_width * 4, m_width * 4);
+                }
+                context->Unmap(tex, 0);
+                
+                // CRITICAL: Now that upload is complete, update the Safe SRV
+                m_lastUploadedSRV = m_textureSRVs[bufferIdx];
             }
-            context->Unmap(m_texture, 0);
+            context->Release();
         }
-        context->Release();
+        
+        m_readIndex++;
     }
-    m_cpuBufferHasNewData = false;
 }
 
 ID3D11ShaderResourceView* CefRenderHandlerImpl::GetTextureSRV() {
     std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_textureSRV) {
-        m_textureSRV->AddRef();
-        return m_textureSRV; 
+    if (m_lastUploadedSRV) {
+        m_lastUploadedSRV->AddRef();
+        return m_lastUploadedSRV; 
     }
     return nullptr;
 }

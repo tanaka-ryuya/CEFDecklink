@@ -58,16 +58,20 @@ bool ShaderManager::CreateBuffers(int width, int height) {
     desc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
     desc.CPUAccessFlags = 0;
     
-    // Output Texture (1920x1080 ARGB)
-    if (FAILED(m_device->CreateTexture2D(&desc, nullptr, &m_outputTexture))) return false;
-    if (FAILED(m_device->CreateUnorderedAccessView(m_outputTexture.Get(), nullptr, &m_outputUAV))) return false;
-    
-    // Staging Texture
-    desc.Usage = D3D11_USAGE_STAGING;
-    desc.BindFlags = 0;
-    desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-    
-    if (FAILED(m_device->CreateTexture2D(&desc, nullptr, &m_stagingOutput))) return false;
+    // Staging Texture Desc
+    D3D11_TEXTURE2D_DESC stagingDesc = desc;
+    stagingDesc.Usage = D3D11_USAGE_STAGING;
+    stagingDesc.BindFlags = 0;
+    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+
+    for (int i = 0; i < kBufferCount; ++i) {
+        // Output Textures
+        if (FAILED(m_device->CreateTexture2D(&desc, nullptr, &m_outputTextures[i]))) return false;
+        if (FAILED(m_device->CreateUnorderedAccessView(m_outputTextures[i].Get(), nullptr, &m_outputUAVs[i]))) return false;
+        
+        // Staging Textures
+        if (FAILED(m_device->CreateTexture2D(&stagingDesc, nullptr, &m_stagingOutputs[i]))) return false;
+    }
 
     // Constant Buffer
     D3D11_BUFFER_DESC cbDesc = {};
@@ -85,7 +89,9 @@ void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D
     if (!m_computeShader || !inputSRV1 || !inputSRV2) return;
 
     static int logCounter = 0;
-    bool doLog = (++logCounter % 120 == 0); // Log every ~4 seconds at 30fps
+    bool doLog = (++logCounter % 120 == 0); 
+    
+    int bufferIdx = m_frameIndex % kBufferCount;
 
     // Update Constant Buffer
     D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -113,7 +119,8 @@ void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D
     ID3D11ShaderResourceView* srvs[] = { inputSRV1, inputSRV2 };
     m_context->CSSetShaderResources(0, 2, srvs);
     
-    ID3D11UnorderedAccessView* uavs[] = { m_outputUAV.Get() };
+    // Process CURRENT Frame
+    ID3D11UnorderedAccessView* uavs[] = { m_outputUAVs[bufferIdx].Get() };
     m_context->CSSetUnorderedAccessViews(0, 1, uavs, nullptr);
     
     // Dispatch
@@ -126,31 +133,46 @@ void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D
     ID3D11ShaderResourceView* nullSRVs[] = { nullptr, nullptr };
     m_context->CSSetShaderResources(0, 2, nullSRVs);
 
-    // Copy to Staging
-    m_context->CopyResource(m_stagingOutput.Get(), m_outputTexture.Get());
+    // Copy to Staging (Schedule Copy)
+    m_context->CopyResource(m_stagingOutputs[bufferIdx].Get(), m_outputTextures[bufferIdx].Get());
     
-    // Map and Download (ARGB)
-    D3D11_MAPPED_SUBRESOURCE mapped;
-    hr = m_context->Map(m_stagingOutput.Get(), 0, D3D11_MAP_READ, 0, &mapped);
-    if (SUCCEEDED(hr)) {
-        uint8_t* src = (uint8_t*)mapped.pData;
-        uint8_t* dst = (uint8_t*)outputBuffer;
+    // === READBACK (Pipelined) ===
+    // Option B: Map the staging buffer from 2 frames ago
+    if (m_frameIndex >= 2) {
+        int readbackIdx = (m_frameIndex - 2) % kBufferCount;
         
-        // Check if output is all black (debug)
-        if (doLog) {
-            uint32_t* pHead = (uint32_t*)src;
-            uint32_t sample = pHead[1920*540 + 960]; // Center pixel
-            std::cout << "[Shader] Map OK. Center Pixel: 0x" << std::hex << sample << std::dec << std::endl;
-        }
+        // Map and Download (ARGB)
+        D3D11_MAPPED_SUBRESOURCE mapped;
+        // Optimization: Use D3D11_MAP_FLAG_DO_NOT_WAIT? 
+        // For now, normal map, as pipeline should ensure it's ready.
+        hr = m_context->Map(m_stagingOutputs[readbackIdx].Get(), 0, D3D11_MAP_READ, 0, &mapped);
+        
+        if (SUCCEEDED(hr)) {
+            uint8_t* src = (uint8_t*)mapped.pData;
+            uint8_t* dst = (uint8_t*)outputBuffer;
+            
+            // Check if output is all black (debug) for the READBACK frame
+            if (doLog) {
+                uint32_t* pHead = (uint32_t*)src;
+                uint32_t sample = pHead[1920*540 + 960]; // Center pixel
+                std::cout << "[Shader] Readback OK (Idx " << readbackIdx << "). Center: 0x" << std::hex << sample << std::dec << std::endl;
+            }
 
-        for (int y = 0; y < m_height; ++y) {
-             memcpy(dst + y * (m_width * 4), src + y * mapped.RowPitch, m_width * 4);
+            for (int y = 0; y < m_height; ++y) {
+                 memcpy(dst + y * (m_width * 4), src + y * mapped.RowPitch, m_width * 4);
+            }
+            
+            m_context->Unmap(m_stagingOutputs[readbackIdx].Get(), 0);
+        } else {
+            if (doLog) std::cerr << "[Shader] Failed to map staging texture: " << std::hex << hr << std::endl;
         }
-        
-        m_context->Unmap(m_stagingOutput.Get(), 0);
     } else {
-        if (doLog) std::cerr << "[Shader] Failed to map staging texture: " << std::hex << hr << std::endl;
+        // First 2 frames: output buffer is not filled with valid data yet.
+        // Option: Clear to Black to avoid garbage
+        memset(outputBuffer, 0, m_width * m_height * 4);
     }
+
+    m_frameIndex++;
 }
 
 void ShaderManager::SetAlphaThreshold(float threshold) {
