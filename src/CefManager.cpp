@@ -178,6 +178,8 @@ void CefManager::ScheduleFrames() {
 void CefManager::TriggerBeginFrame() {
     if (m_browser) {
         m_browser->GetHost()->SendExternalBeginFrame();
+        // Force redraw even if content thinks it is static (important for video sync)
+        m_browser->GetHost()->Invalidate(PET_VIEW);
     }
 }
 

@@ -21,35 +21,41 @@ void CefRenderHandlerImpl::GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& r
 }
 
 void CefRenderHandlerImpl::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type, const RectList& dirtyRects, const void* buffer, int width, int height) {
-    // This runs on CEF UI/Render thread.
-    std::lock_guard<std::mutex> lock(m_mutex);
-    
-    if (width != m_width || height != m_height) return;
+    // Phase 1: Reserve Buffer (Short Lock)
+    int bufferIdx = -1;
+    size_t size = 0;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (width != m_width || height != m_height) return;
 
-    size_t writeIdx = m_writeIndex.load();
-    size_t readIdx = m_readIndex.load();
+        size_t writeIdx = m_writeIndex.load();
+        size_t readIdx = m_readIndex.load();
 
-    // Check Overlap: If next write would overtake read by full buffer size, drop frame.
-    // Allow effectively (kBufferCount - 1) frames ahead.
-    if (writeIdx - readIdx >= kBufferCount) {
-        // Drop frame to prevent overwriting data currently being uploaded
-        return; 
+        if (writeIdx - readIdx >= kBufferCount) {
+             // Drop frame
+             return;
+        }
+
+        bufferIdx = writeIdx % kBufferCount;
+        size = width * height * 4;
+        
+        // Ensure allocation (vector resize is fast if capacity exists, but safer to do under lock or pre-alloc)
+        if (m_cpuBuffers[bufferIdx].size() != size) {
+            m_cpuBuffers[bufferIdx].resize(size);
+        }
+    } // Unlock
+
+    // Phase 2: Copy (No Lock)
+    if (bufferIdx >= 0) {
+        memcpy(m_cpuBuffers[bufferIdx].data(), buffer, size);
+        
+        // Phase 3: Commit (Short Lock needed? Or just atomic write?)
+        // m_writeIndex needs to be monotonic and observed by consumer.
+        // SyncWithGPU relies on m_writeIndex.
+        // We can just atomic increment.
+        m_writeIndex++; 
+        m_frameCount++;
     }
-
-    // Allocate if needed
-    size_t size = width * height * 4;
-    int bufferIdx = writeIdx % kBufferCount;
-    
-    if (m_cpuBuffers[bufferIdx].size() != size) {
-        m_cpuBuffers[bufferIdx].resize(size);
-    }
-
-    // Copy buffer
-    memcpy(m_cpuBuffers[bufferIdx].data(), buffer, size);
-    
-    // Commit
-    m_writeIndex++;
-    m_frameCount++;
 }
 
 void CefRenderHandlerImpl::Resize(int width, int height) {
@@ -89,47 +95,62 @@ void CefRenderHandlerImpl::Resize(int width, int height) {
 
 // Call this from Main Thread / DeckLink Thread
 void CefRenderHandlerImpl::SyncWithGPU() {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    int bufferIdx = -1;
+    ID3D11Texture2D* tex = nullptr;
     
-    size_t writeIdx = m_writeIndex.load();
-    size_t readIdx = m_readIndex.load();
-
-    if (!m_device) return;
-
-    // Process all pending frames up to writeIndex (Resulting in "Catch Up")
-    // OR just process the next one. 
-    // Optimization: Just process the *latest* completable one to reduce latency
-    // BUT since we are on the DeckLink thread which drives output, we should consume one per call if possible,
-    // or skip if we are way behind.
-    // For now, let's just consume the NEXT sequential frame to ensure smooth animation.
-    
-    if (writeIdx > readIdx) {
-        int bufferIdx = readIdx % kBufferCount;
+    // Phase 1: Check for pending frames (Short Lock)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
         
-        ID3D11Texture2D* tex = m_textures[bufferIdx];
-        if (!tex) return;
+        size_t writeIdx = m_writeIndex.load();
+        size_t readIdx = m_readIndex.load();
 
-        ID3D11DeviceContext* context = nullptr;
-        m_device->GetImmediateContext(&context);
-        
-        if (context) {
-            D3D11_MAPPED_SUBRESOURCE mapped;
-            if (SUCCEEDED(context->Map(tex, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
-                const uint8_t* src = m_cpuBuffers[bufferIdx].data();
-                uint8_t* dst = (uint8_t*)mapped.pData;
-                
-                for (int y = 0; y < m_height; ++y) {
-                    memcpy(dst + y * mapped.RowPitch, src + y * m_width * 4, m_width * 4);
+        if (writeIdx > readIdx && m_device) {
+             bufferIdx = readIdx % kBufferCount;
+             tex = m_textures[bufferIdx];
+             if (tex) tex->AddRef(); // Keep alive while unlocked
+        }
+    } // Unlock
+
+    // Phase 2: Upload (No Lock)
+    // We own "readIdx" slot implicitly because OnPaint checks (write - read < k).
+    // As long as we don't increment readIdx, OnPaint won't overwrite this slot.
+    bool uploadSuccess = false;
+    if (tex) {
+        if (bufferIdx >= 0) {
+            ID3D11DeviceContext* context = nullptr;
+            m_device->GetImmediateContext(&context);
+            if (context) {
+                D3D11_MAPPED_SUBRESOURCE mapped;
+                if (SUCCEEDED(context->Map(tex, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
+                    // Safe to read cpuBuffer[bufferIdx] because OnPaint won't touch it until readIdx increments
+                    const uint8_t* src = m_cpuBuffers[bufferIdx].data(); 
+                    uint8_t* dst = (uint8_t*)mapped.pData;
+                    
+                    for (int y = 0; y < m_height; ++y) {
+                        memcpy(dst + y * mapped.RowPitch, src + y * m_width * 4, m_width * 4);
+                    }
+                    context->Unmap(tex, 0);
+                    uploadSuccess = true;
                 }
-                context->Unmap(tex, 0);
-                
-                // CRITICAL: Now that upload is complete, update the Safe SRV
-                m_lastUploadedSRV = m_textureSRVs[bufferIdx];
+                context->Release();
             }
-            context->Release();
+        }
+    }
+
+    // Phase 3: Commit (Short Lock)
+    if (tex) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (uploadSuccess) {
+            // Update Safe SRV (it points to the texture we just uploaded)
+            // Note: m_textureSRVs are immutable/stable once created
+             m_lastUploadedSRV = m_textureSRVs[bufferIdx];
         }
         
+        // Advance Consumer
         m_readIndex++;
+        
+        tex->Release();
     }
 }
 
