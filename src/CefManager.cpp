@@ -50,6 +50,17 @@ public:
     
     void OnContextInitialized() override;
 
+    void OnBeforeCommandLineProcessing(const CefString& process_type, CefRefPtr<CefCommandLine> command_line) override {
+        // Disable VSync to allow unlimited frame rate (controlled by our external trigger)
+        command_line->AppendSwitch("disable-gpu-vsync");
+        command_line->AppendSwitch("disable-frame-rate-limit");
+        
+        // Prevent throttling when window is hidden/background
+        command_line->AppendSwitch("disable-renderer-backgrounding");
+        command_line->AppendSwitch("disable-background-timer-throttling");
+        command_line->AppendSwitch("disable-backgrounding-occluded-windows");
+    }
+
 private:
     CefManager* m_manager;
     IMPLEMENT_REFCOUNTING(CefAppImpl);

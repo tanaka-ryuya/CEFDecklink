@@ -197,12 +197,17 @@ void DeckLinkDevice::StopOutput()
 
 bool DeckLinkDevice::WaitForNextFrame(unsigned int timeoutMs)
 {
-    (void)timeoutMs; // Unused - wait indefinitely for perfect sync
-    
     std::unique_lock<std::mutex> lock(m_mutex);
     
-    // Wait for callback signal (no timeout - sync exactly to DeckLink)
-    m_cv.wait(lock, [this]{ return m_frameCompletedSignal; });
+    // Wait for callback signal with timeout
+    if (timeoutMs == 0) {
+        // Non-blocking check
+        if (!m_frameCompletedSignal) return false;
+    } else {
+        if (!m_cv.wait_for(lock, std::chrono::milliseconds(timeoutMs), [this]{ return m_frameCompletedSignal; })) {
+            return false;
+        }
+    }
     
     m_frameCompletedSignal = false; // Reset
     return true;

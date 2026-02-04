@@ -138,6 +138,9 @@ int main(int, char**)
     // High Resolution Timer for accurate 60fps pacing
     timeBeginPeriod(1);
 
+    // Boost Priority to Real-Time-ish (High) to avoid scheduler starvation
+    SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+
     // Initialize CEF early
     if (!g_cefManager.Initialize(GetModuleHandle(nullptr))) {
         std::cerr << "Failed to initialize CEF." << std::endl;
