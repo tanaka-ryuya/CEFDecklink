@@ -111,6 +111,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     dbghelp.lib
     libcef_dll_wrapper
     "${CEF_ROOT}/Release/libcef.lib"
+    gdi32.lib
+    user32.lib
 )
 
 # Unicode support for Win32

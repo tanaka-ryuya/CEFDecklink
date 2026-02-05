@@ -1,0 +1,767 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{6E882610-F82C-33DE-ABE1-1056E8C675A4}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.22621.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>ceftests</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\ryuya\CEFDecklink\cef_build\tests\ceftests\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ceftests.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ceftests</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <LocalDebuggerCommand Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/ceftests.exe</LocalDebuggerCommand>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\ryuya\CEFDecklink\cef_build\tests\ceftests\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ceftests.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ceftests</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+    <LocalDebuggerCommand Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/ceftests.exe</LocalDebuggerCommand>
+  </PropertyGroup>
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\Users\ryuya\CEFDecklink\vender\Blackmagic DeckLink SDK 15.3\Win\include;C:\Users\ryuya\CEFDecklink\vender\cef;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4100;4127;4244;4324;4481;4512;4701;4702;4996</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;_WIN32;UNICODE;_UNICODE;WINVER=0x0A00;_WIN32_WINNT=0x0A00;NTDDI_VERSION=NTDDI_WIN10_FE;NOMINMAX;WIN32_LEAN_AND_MEAN;_HAS_EXCEPTIONS=0;CEF_USE_BOOTSTRAP;UNIT_TEST;CMAKE_INTDIR="Debug";ceftests_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;_WIN32;UNICODE;_UNICODE;WINVER=0x0A00;_WIN32_WINNT=0x0A00;NTDDI_VERSION=NTDDI_WIN10_FE;NOMINMAX;WIN32_LEAN_AND_MEAN;_HAS_EXCEPTIONS=0;CEF_USE_BOOTSTRAP;UNIT_TEST;CMAKE_INTDIR=\"Debug\";ceftests_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Users\ryuya\CEFDecklink\vender\Blackmagic DeckLink SDK 15.3\Win\include;C:\Users\ryuya\CEFDecklink\vender\cef;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\Users\ryuya\CEFDecklink\vender\Blackmagic DeckLink SDK 15.3\Win\include;C:\Users\ryuya\CEFDecklink\vender\cef;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <PostBuildEvent>
+      <Message>																					Setting LPAC ACLs...</Message>
+      <Command>setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Debug/bootstrapc.exe C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/ceftests.exe
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Debug/chrome_elf.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/chrome_elf.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Debug/d3dcompiler_47.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/d3dcompiler_47.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Debug/libcef.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/libcef.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Debug/libEGL.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/libEGL.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Debug/libGLESv2.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/libGLESv2.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Debug/v8_context_snapshot.bin C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/v8_context_snapshot.bin
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Debug/vk_swiftshader.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/vk_swiftshader.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Debug/vk_swiftshader_icd.json C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/vk_swiftshader_icd.json
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Debug/vulkan-1.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/vulkan-1.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Debug/dxil.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/dxil.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Debug/dxcompiler.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/dxcompiler.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Resources/chrome_100_percent.pak C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/chrome_100_percent.pak
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Resources/chrome_200_percent.pak C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/chrome_200_percent.pak
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Resources/resources.pak C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/resources.pak
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Resources/icudtl.dat C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/icudtl.dat
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_directory C:/Users/ryuya/CEFDecklink/vender/cef/Resources/locales C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/locales
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/tests/ceftests/resources/net/data/ssl/certificates/expired_cert.pem C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/ceftests_files/net/data/ssl/certificates/expired_cert.pem
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/tests/ceftests/resources/net/data/ssl/certificates/localhost_cert.pem C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/ceftests_files/net/data/ssl/certificates/localhost_cert.pem
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/tests/ceftests/resources/net/data/ssl/certificates/ok_cert.pem C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/ceftests_files/net/data/ssl/certificates/ok_cert.pem
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/tests/ceftests/resources/net/data/ssl/certificates/root_ca_cert.pem C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/ceftests_files/net/data/ssl/certificates/root_ca_cert.pem
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+icacls C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug /grant *S-1-15-2-2:(OI)(CI)(RX)
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalDependencies>..\..\..\vender\cef\Debug\libcef.lib;..\..\libcef_dll_wrapper\Debug\libcef_dll_wrapper.lib;..\gtest\Debug\cef_gtest.lib;comctl32.lib;crypt32.lib;delayimp.lib;gdi32.lib;rpcrt4.lib;shlwapi.lib;wintrust.lib;ws2_32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DelayLoadDLLs>libcef.dll;api-ms-win-core-synch-l1-2-0.dll;api-ms-win-core-winrt-error-l1-1-0.dll;api-ms-win-core-winrt-l1-1-0.dll;api-ms-win-core-winrt-string-l1-1-0.dll;advapi32.dll;bcryptprimitives.dll;comctl32.dll;comdlg32.dll;credui.dll;cryptui.dll;d3d11.dll;d3d12.dll;d3d9.dll;dbghelp.dll;dcomp.dll;dwmapi.dll;dxgi.dll;dxva2.dll;esent.dll;fontsub.dll;gdi32.dll;hid.dll;imagehlp.dll;imm32.dll;mmdevapi.dll;msi.dll;netapi32.dll;ncrypt.dll;ole32.dll;oleacc.dll;oleaut32.dll;pdh.dll;propsys.dll;psapi.dll;rpcrt4.dll;rstrtmgr.dll;setupapi.dll;shell32.dll;shlwapi.dll;uiautomationcore.dll;urlmon.dll;user32.dll;usp10.dll;uxtheme.dll;wer.dll;wevtapi.dll;wininet.dll;winusb.dll;wsock32.dll;wtsapi32.dll;crypt32.dll;dhcpcsvc.dll;dwrite.dll;iphlpapi.dll;secur32.dll;userenv.dll;winhttp.dll;winmm.dll;winspool.drv;wintrust.dll;ws2_32.dll</DelayLoadDLLs>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/ceftests.lib</ImportLibrary>
+      <ProgramDataBaseFile>C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Debug/ceftests.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\Users\ryuya\CEFDecklink\vender\Blackmagic DeckLink SDK 15.3\Win\include;C:\Users\ryuya\CEFDecklink\vender\cef;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4100;4127;4244;4324;4481;4512;4701;4702;4996</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StringPooling>true</StringPooling>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;_WIN32;UNICODE;_UNICODE;WINVER=0x0A00;_WIN32_WINNT=0x0A00;NTDDI_VERSION=NTDDI_WIN10_FE;NOMINMAX;WIN32_LEAN_AND_MEAN;_HAS_EXCEPTIONS=0;CEF_USE_BOOTSTRAP;_NDEBUG;UNIT_TEST;CMAKE_INTDIR="Release";ceftests_EXPORTS</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;_WIN32;UNICODE;_UNICODE;WINVER=0x0A00;_WIN32_WINNT=0x0A00;NTDDI_VERSION=NTDDI_WIN10_FE;NOMINMAX;WIN32_LEAN_AND_MEAN;_HAS_EXCEPTIONS=0;CEF_USE_BOOTSTRAP;_NDEBUG;UNIT_TEST;CMAKE_INTDIR=\"Release\";ceftests_EXPORTS</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Users\ryuya\CEFDecklink\vender\Blackmagic DeckLink SDK 15.3\Win\include;C:\Users\ryuya\CEFDecklink\vender\cef;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\Users\ryuya\CEFDecklink\vender\Blackmagic DeckLink SDK 15.3\Win\include;C:\Users\ryuya\CEFDecklink\vender\cef;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <PostBuildEvent>
+      <Message>																					Setting LPAC ACLs...</Message>
+      <Command>setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Release/bootstrapc.exe C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/ceftests.exe
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Release/chrome_elf.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/chrome_elf.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Release/d3dcompiler_47.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/d3dcompiler_47.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Release/libcef.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/libcef.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Release/libEGL.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/libEGL.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Release/libGLESv2.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/libGLESv2.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Release/v8_context_snapshot.bin C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/v8_context_snapshot.bin
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Release/vk_swiftshader.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/vk_swiftshader.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Release/vk_swiftshader_icd.json C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/vk_swiftshader_icd.json
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Release/vulkan-1.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/vulkan-1.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Release/dxil.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/dxil.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Release/dxcompiler.dll C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/dxcompiler.dll
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Resources/chrome_100_percent.pak C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/chrome_100_percent.pak
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Resources/chrome_200_percent.pak C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/chrome_200_percent.pak
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Resources/resources.pak C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/resources.pak
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/Resources/icudtl.dat C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/icudtl.dat
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_directory C:/Users/ryuya/CEFDecklink/vender/cef/Resources/locales C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/locales
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/tests/ceftests/resources/net/data/ssl/certificates/expired_cert.pem C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/ceftests_files/net/data/ssl/certificates/expired_cert.pem
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/tests/ceftests/resources/net/data/ssl/certificates/localhost_cert.pem C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/ceftests_files/net/data/ssl/certificates/localhost_cert.pem
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/tests/ceftests/resources/net/data/ssl/certificates/ok_cert.pem C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/ceftests_files/net/data/ssl/certificates/ok_cert.pem
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E copy_if_different C:/Users/ryuya/CEFDecklink/vender/cef/tests/ceftests/resources/net/data/ssl/certificates/root_ca_cert.pem C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/ceftests_files/net/data/ssl/certificates/root_ca_cert.pem
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+icacls C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release /grant *S-1-15-2-2:(OI)(CI)(RX)
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalDependencies>..\..\..\vender\cef\Release\libcef.lib;..\..\libcef_dll_wrapper\Release\libcef_dll_wrapper.lib;..\gtest\Release\cef_gtest.lib;comctl32.lib;crypt32.lib;delayimp.lib;gdi32.lib;rpcrt4.lib;shlwapi.lib;wintrust.lib;ws2_32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DelayLoadDLLs>libcef.dll;api-ms-win-core-synch-l1-2-0.dll;api-ms-win-core-winrt-error-l1-1-0.dll;api-ms-win-core-winrt-l1-1-0.dll;api-ms-win-core-winrt-string-l1-1-0.dll;advapi32.dll;bcryptprimitives.dll;comctl32.dll;comdlg32.dll;credui.dll;cryptui.dll;d3d11.dll;d3d12.dll;d3d9.dll;dbghelp.dll;dcomp.dll;dwmapi.dll;dxgi.dll;dxva2.dll;esent.dll;fontsub.dll;gdi32.dll;hid.dll;imagehlp.dll;imm32.dll;mmdevapi.dll;msi.dll;netapi32.dll;ncrypt.dll;ole32.dll;oleacc.dll;oleaut32.dll;pdh.dll;propsys.dll;psapi.dll;rpcrt4.dll;rstrtmgr.dll;setupapi.dll;shell32.dll;shlwapi.dll;uiautomationcore.dll;urlmon.dll;user32.dll;usp10.dll;uxtheme.dll;wer.dll;wevtapi.dll;wininet.dll;winusb.dll;wsock32.dll;wtsapi32.dll;crypt32.dll;dhcpcsvc.dll;dwrite.dll;iphlpapi.dll;secur32.dll;userenv.dll;winhttp.dll;winmm.dll;winspool.drv;wintrust.dll;ws2_32.dll</DelayLoadDLLs>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/ceftests.lib</ImportLibrary>
+      <ProgramDataBaseFile>C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/Release/ceftests.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/ryuya/CEFDecklink/vender/cef/tests/ceftests/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SC:/Users/ryuya/CEFDecklink -BC:/Users/ryuya/CEFDecklink --check-stamp-file C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\ryuya\CEFDecklink\cef_build\tests\ceftests\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Users/ryuya/CEFDecklink/vender/cef/tests/ceftests/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SC:/Users/ryuya/CEFDecklink -BC:/Users/ryuya/CEFDecklink --check-stamp-file C:/Users/ryuya/CEFDecklink/cef_build/tests/ceftests/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\ryuya\CEFDecklink\cef_build\tests\ceftests\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\api_version_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\audio_output_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\browser_info_map_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\browser_settings_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\certificate_error_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\client_app_delegates.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\command_line_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\cookie_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\cors_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\devtools_message_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\dialog_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\display_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\dom_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\download_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\draggable_regions_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\file_util_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\find_handler_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\frame_handler_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\frame_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\hsts_redirect_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\image_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\image_util.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\image_util.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\jsdialog_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\life_span_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\media_access_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\message_router_binary_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\message_router_harness_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\message_router_multi_query_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\message_router_single_query_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\message_router_threshold_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\message_router_unittest_utils.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\message_router_unittest_utils.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\navigation_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\os_rendering_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\osr_accessibility_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\osr_display_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\parser_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\pdf_viewer_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\permission_prompt_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\preference_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\print_to_pdf_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\print_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\process_message_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\request_context_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\request_handler_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\request_unittest.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\resource.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\resource_manager_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\resource_request_handler_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\response_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\routing_test_handler.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\routing_test_handler.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\run_all_unittests.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\scheme_handler_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\scoped_temp_dir_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\send_shared_process_message_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\server_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\shared_process_message_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\stream_resource_handler_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\stream_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\string_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\task_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_handler.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_handler.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_request.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_request.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_server.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_server.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_server_manager.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_server_manager.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_server_observer.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_server_observer.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_server_observer_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_server_runner.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_server_runner.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_server_runner_normal.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_server_runner_test.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_server_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_suite.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_suite.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_util.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\test_util.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\thread_helper.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\thread_helper.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\thread_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\time_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\tracing_unittest.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\track_callback.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\translator_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\urlrequest_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\v8_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\values_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\version_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\waitable_event_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\webui_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\xml_reader_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\zip_reader_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\resource_util_win_dir.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\resource_util_win_idmap.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\client_app_browser.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\client_app_browser.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\file_util.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\file_util.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\geometry_util.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\geometry_util.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\main_message_loop.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\main_message_loop.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\main_message_loop_external_pump.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\main_message_loop_external_pump.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\main_message_loop_std.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\main_message_loop_std.h" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\resource_util.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\main_message_loop_external_pump_win.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\resource_util_win.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\util_win.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\browser\util_win.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\common\binary_value_utils.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\common\binary_value_utils.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\common\client_app.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\common\client_app.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\common\client_app_other.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\common\client_app_other.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\common\client_switches.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\common\client_switches.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\common\string_util.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\common\string_util.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\renderer\client_app_renderer.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\renderer\client_app_renderer.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\views\browser_view_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\views\button_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\views\panel_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\views\scroll_view_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\views\test_window_delegate.cc" />
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\views\test_window_delegate.h" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\views\textfield_unittest.cc" />
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\views\window_unittest.cc" />
+    <ResourceCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\ceftests\win\ceftests.rc" />
+    <None Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\resources\osr_test.html">
+    </None>
+    <None Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\resources\pdf.html">
+    </None>
+    <None Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\resources\pdf.pdf">
+    </None>
+    <Image Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\resources\window_icon.1x.png">
+    </Image>
+    <Image Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\shared\resources\window_icon.2x.png">
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="C:\Users\ryuya\CEFDecklink\ZERO_CHECK.vcxproj">
+      <Project>{1B441C01-1C87-3C18-A510-4E4141AEC413}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\ryuya\CEFDecklink\cef_build\tests\gtest\cef_gtest.vcxproj">
+      <Project>{6834B9C3-174F-3F87-9969-7257BFFA90E5}</Project>
+      <Name>cef_gtest</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\ryuya\CEFDecklink\cef_build\libcef_dll_wrapper\libcef_dll_wrapper.vcxproj">
+      <Project>{A60C8571-304B-3B7B-AD9F-D888E5DC99F0}</Project>
+      <Name>libcef_dll_wrapper</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

@@ -1,0 +1,15 @@
+--- DeckLink + CEF CUI Application ---
+Initializing...
+[CrashHandler] Initialized. Crash dumps will be written to current directory.
+[GPU] Enumerating available adapters:
+  [0] Intel(R) UHD Graphics 630 (Vendor: 0x8086, VRAM: 128 MB)
+  [1] NVIDIA GeForce RTX 3070 (Vendor: 0x10de, VRAM: 8018 MB)
+  -> NVIDIA GPU detected, selecting this adapter
+  [2] NVIDIA GeForce RTX 3070 (Vendor: 0x10de, VRAM: 8018 MB)
+  -> NVIDIA GPU detected, selecting this adapter
+  [3] Microsoft Basic Render Driver (Vendor: 0x1414, VRAM: 0 MB)
+[GPU] Selected adapter [2]: NVIDIA GeForce RTX 3070
+DeckLink Initialized.
+[DeckLink] Started SIMULATOR Mode (29.97fps)
+Starting Main Loop...
+[Status] Sync: LOCKED | DeckLink: 30.00 fps | CEF: 0 fps | Alpha: 0.0100 | Ctrl+C to Exit.   [Status] Sync: LOCKED | DeckLink: 30.00 fps | CEF: 31 fps | Alpha: 0.0100 | Ctrl+C to Exit.   [Status] Sync: LOCKED | DeckLink: 30.00 fps | CEF: 60 fps | Alpha: 0.0100 | Ctrl+C to Exit.   [Status] Sync: LOCKED | DeckLink: 30.00 fps | CEF: 60 fps | Alpha: 0.0100 | Ctrl+C to Exit.   [Status] Sync: LOCKED | DeckLink: 30.00 fps | CEF: 60 fps | Alpha: 0.0100 | Ctrl+C to Exit.   [Status] Sync: LOCKED | DeckLink: 30.00 fps | CEF: 60 fps | Alpha: 0.0100 | Ctrl+C to Exit.   [Status] Sync: LOCKED | DeckLink: 30.00 fps | CEF: 60 fps | Alpha: 0.0100 | Ctrl+C to Exit.   

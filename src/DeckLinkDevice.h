@@ -6,6 +6,8 @@
 #include <condition_variable>
 #include <deque>
 #include <functional>
+#include <thread>
+#include <vector>
 
 // Forward declarations to avoid including heavy DeckLink headers here if possible
 // But we usually need them for inheritance.
@@ -26,6 +28,9 @@ public:
     // Wait for the next VBlank / Frame Completion
     // Returns false if timeout or error
     bool WaitForNextFrame(unsigned int timeoutMs = 100);
+    
+    // Simulator Mode
+    bool IsSimulated() const { return m_isSimulated; }
 
     // IUnknown
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv);
@@ -71,4 +76,10 @@ private:
     BMDTimeValue m_frameDuration;
     
     RenderCallback m_renderCallback;
+
+    // Simulation Mode
+    bool m_isSimulated;
+    std::thread m_simulationThread;
+    std::atomic<bool> m_simulationRunning;
+    void SimulationLoop();
 };

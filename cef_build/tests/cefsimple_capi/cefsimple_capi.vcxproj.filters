@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\simple_app.c">
+      <Filter>cefsimple_capi</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\simple_browser_list.c">
+      <Filter>cefsimple_capi</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\simple_display_handler.c">
+      <Filter>cefsimple_capi</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\simple_handler.c">
+      <Filter>cefsimple_capi</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\simple_life_span_handler.c">
+      <Filter>cefsimple_capi</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\simple_load_handler.c">
+      <Filter>cefsimple_capi</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\simple_views.c">
+      <Filter>cefsimple_capi</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\cefsimple_win.c">
+      <Filter>cefsimple_capi</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\simple_handler_win.c">
+      <Filter>cefsimple_capi</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\ref_counted.h">
+      <Filter>cefsimple_capi</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\simple_app.h">
+      <Filter>cefsimple_capi</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\simple_browser_list.h">
+      <Filter>cefsimple_capi</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\simple_handler.h">
+      <Filter>cefsimple_capi</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\simple_utils.h">
+      <Filter>cefsimple_capi</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\simple_views.h">
+      <Filter>cefsimple_capi</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\resource.h">
+      <Filter>cefsimple_capi</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple_capi\win\cefsimple.rc">
+      <Filter>cefsimple_capi\win</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="cefsimple_capi">
+      <UniqueIdentifier>{B5C66099-3805-37D6-8777-D7576135BEC4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cefsimple_capi\win">
+      <UniqueIdentifier>{5D7E7DDC-4456-3FE7-8BA0-1D3B1A809155}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

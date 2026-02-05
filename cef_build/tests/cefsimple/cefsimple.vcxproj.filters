@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple\simple_app.cc">
+      <Filter>cefsimple</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple\simple_handler.cc">
+      <Filter>cefsimple</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple\cefsimple_win.cc">
+      <Filter>cefsimple</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple\simple_handler_win.cc">
+      <Filter>cefsimple</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple\simple_app.h">
+      <Filter>cefsimple</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple\simple_handler.h">
+      <Filter>cefsimple</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple\resource.h">
+      <Filter>cefsimple</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="C:\Users\ryuya\CEFDecklink\vender\cef\tests\cefsimple\win\cefsimple.rc">
+      <Filter>cefsimple\win</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="cefsimple">
+      <UniqueIdentifier>{07319525-099E-3DF3-BE16-8C17DD88F211}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cefsimple\win">
+      <UniqueIdentifier>{57525CE0-70C0-34DD-AE23-C9BD07755639}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

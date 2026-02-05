@@ -49,8 +49,12 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, float alphaThreshold
                   << "[Status] Sync: " << (locked ? "LOCKED" : "SEARCHING")
                   << " | DeckLink: " << std::fixed << std::setprecision(2) << deckLinkFps << " fps"
                   << " | CEF: " << cefFps << " fps"
-                  << " | Alpha: " << std::setprecision(4) << alphaThreshold
-                  << " | Ctrl+C to Exit.   " // Extra spaces to clear line
+                  << " | Alpha: " << std::setprecision(4) << alphaThreshold;
+        
+        // Extended Sync info
+        // Simple visual indicator of phase if possible, or just raw tick delta?
+        // For now just basic stats.
+        std::cout << " | Ctrl+C to Exit.   " // Extra spaces to clear line
                   << std::flush;
         lastTime = now;
     }
@@ -170,8 +174,8 @@ int main(int, char**)
 
     // Don't show window!
     // ::ShowWindow(hwnd, SW_SHOWDEFAULT); 
-    ::ShowWindow(hwnd, SW_HIDE);
-    ::UpdateWindow(hwnd);
+    // ::ShowWindow(hwnd, SW_HIDE);
+    // ::UpdateWindow(hwnd);
 
     // Initialize DeckLink
     if (g_deckLink.Initialize())
@@ -230,6 +234,26 @@ int main(int, char**)
             // Release References
             if (srvTop) srvTop->Release();
             if (srvBottom) srvBottom->Release();
+
+            // Preview for Simulator (Copy simulated buffer to Window)
+            if (g_deckLink.IsSimulated() && pBuffer) {
+                 HWND previewHwnd = FindWindowW(L"DeckLinkApp", L"Native DeckLink + CEF");
+                 if (previewHwnd) {
+                     HDC hdc = GetDC(previewHwnd);
+                     if (hdc) {
+                         BITMAPINFO bmi = {0};
+                         bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+                         bmi.bmiHeader.biWidth = 1920;
+                         bmi.bmiHeader.biHeight = -1080; // Top-down
+                         bmi.bmiHeader.biPlanes = 1;
+                         bmi.bmiHeader.biBitCount = 32;
+                         bmi.bmiHeader.biCompression = BI_RGB;
+                         
+                         SetDIBitsToDevice(hdc, 0, 0, 1920, 1080, 0, 0, 0, 1080, pBuffer, &bmi, DIB_RGB_COLORS);
+                         ReleaseDC(previewHwnd, hdc);
+                     }
+                 }
+            }
             
             // --- DeckLink Pacing Trigger ---
             // Trigger CEF to render next frames for the *future* buffer slot.
@@ -238,6 +262,14 @@ int main(int, char**)
         });
 
         g_deckLink.StartOutput();
+
+        if (g_deckLink.IsSimulated()) {
+            // Show window for Preview in Simulator Mode
+            ::ShowWindow(hwnd, SW_SHOW);
+            ::UpdateWindow(hwnd);
+        } else {
+            ::ShowWindow(hwnd, SW_HIDE);
+        }
     }
     else
     {
