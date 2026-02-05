@@ -8,30 +8,32 @@
 ## 1. システムアーキテクチャ概要
 
 本システムは、可変レートで動作するWebレンダリングエンジン (CEF) と、厳密な固定フレームレート (59.94i) を要求する放送用ハードウェア (DeckLink) を接続するためのブリッジアプリケーションである。
-
-この2つの非同期なドメインを調停するため、以下の3段階のリングバッファ構造を採用している。
-
-1.  **CPU Ring Buffer**: CEFの描画データを一時保持 (System Memory)
-2.  **Input Texture Ring**: GPUへのアップロード先 (VRAM - Dynamic Texture)
-3.  **Output Texture Ring**: シェーダー処理後の出力結果 (VRAM - Staging Texture)
+**DeckLinkからのハードウェアクロックに位相同期**し、CEFに対して正確なタイミングで描画要求を行う「Pacing」メカニズムを特徴とする。
 
 ### データフロー図 (概念)
 
 ```mermaid
 graph LR
-    subgraph "CEF Thread (Producer)"
-        CEF[CEF Rendering] -->|Write| CPU_BUF[m_cpuBuffers (System Mem)]
+    subgraph "DeckLink Thread (30Hz)"
+        DL[DeckLink Callback] -->|Signal| MAIN[Main Thread Loop]
+        DL -->|SyncWithGPU| VRAM_IN[Texture Upload]
     end
 
-    subgraph "DeckLink Thread (Consumer / GPU Dispatch)"
-        CPU_BUF -->|Upload (Map/Unmap)| VRAM_IN[m_textures (Next Frame)]
-        VRAM_IN -->|Dispatch Compute Shader| VRAM_OUT[m_outputTextures (Current Frame)]
-        VRAM_OUT -->|CopyResource| STAGING[m_stagingOutputs (Current Frame)]
-        STAGING -->|Readback (Map - 2 Frames Old)| DL_BUF[DeckLink Buffer]
+    subgraph "Main Thread (Pacing Control)"
+        MAIN -->|Schedule (T)| CEF_T1[Task 1: Immediate]
+        MAIN -->|Schedule (T+0.5)| CEF_T2[Task 2: Delayed 14ms]
     end
 
-    style CEF fill:#f9f,stroke:#333,stroke-width:2px
-    style DL_BUF fill:#9cf,stroke:#333,stroke-width:2px
+    subgraph "CEF UI Thread (60Hz)"
+        CEF_T1 -->|Trigger| PAINT1[OnPaint (Frame T)]
+        CEF_T2 -->|Trigger| PAINT2[OnPaint (Frame T+1)]
+        PAINT1 -->|Write| CPU_BUF[m_cpuBuffers]
+        PAINT2 -->|Write| CPU_BUF
+    end
+
+    style DL fill:#9cf,stroke:#333
+    style CEF_T1 fill:#f9f,stroke:#333
+    style VRAM_IN fill:#fc9,stroke:#333
 ```
 
 ---
@@ -45,29 +47,18 @@ graph LR
 ---
 
 ### ステージ 1: CEF レンダリング (Producer)
-- **担当クラス**: `CefRenderHandlerImpl`
-- **実行スレッド**: CEF UI Thread
-- **駆動トリガー**: Chromiumコンポジター (`OnPaint`)
-- **動作レート**: **59.94 fps (Progressive)**
-    - 滑らかなインターレース出力 (59.94i) を実現するため、ソースは **59.94p** でレンダリングされる必要がある。
-    - 29.97fpsで描画した場合、DeckLink出力はカクつく（Double Framing）ことになるため、前段は倍速で動く必要がある。
-- **ロジック**:
-    - `OnPaint` にて、描画されたピクセルデータ (BGRA) を受け取る。
-    - **インデックス管理**: `m_writeIndex` (Atomic) を毎フレーム進める。
-    - **データコピー**: 常に新しいフレームをリングバッファ `m_cpuBuffers` へ書き込む。
+- **担当クラス**: `CefManager`, `CefRenderHandlerImpl`
+- **駆動トリガー**: **DeckLink Pacing Mechanism**
+    - DeckLinkの1回のコールバック (29.97Hz) に対し、`CefManager::ScheduleFrames()` が2回描画要求を発行する。
+    1.  **即時要求**: `SendExternalBeginFrame()` + `Invalidate()`
+    2.  **遅延要求 (14ms後)**: 次のVSyncスロット用 (高精度タイマー `timeBeginPeriod(1)` 使用)
+- **強制再描画 (Forced Redraw)**:
+    - 静止画やアニメーションがない場合でも、`Invalidate(PET_VIEW)` を呼び出すことで強制的に `OnPaint` を駆動し、60fpsのストリームを維持する。
 
----
-
-### ステージ 2: GPU アップロード (Consumer 1)
-- **担当関数**: `CefRenderHandlerImpl::SyncWithGPU()`
-- **実行スレッド**: DeckLink Video Output Thread
-- **駆動トリガー**: `DeckLinkDevice` コールバック (29.97Hz)
-- **動作レート**: **スループット 59.94 fps相当** (1コールバックにつき2フレーム処理)
-    - DeckLinkからの1回の呼び出しにつき、**2枚のソースフレーム** を処理・アップロードする必要がある。
-    - 例: Output Frame N を作るために、Source Frame 2N と 2N+1 を使用する。
-- **ロジック**:
-    - `m_writeIndex` が十分進んでいる場合、2フレーム分のテクスチャをアップロードする。
-    - **Safe SRV更新**: 最新の2枚のSRV (`Current`, `Previous`) を確保し、シェーダーへ渡す準備をする。
+### ステージ 2: GPU アップロード (Consumer)
+- **最適化されたロック機構**:
+    - `OnPaint` (書き込み) と `SyncWithGPU` (読み出し) は、バッファ確保とコミット時のみ短時間のロックを行う。
+    - **メモリコピー (memcpy) はロック外で実行** されるため、CEFの描画とDeckLinkのアップロードが並列動作可能。
 
 ---
 
@@ -107,18 +98,21 @@ graph LR
 
 ---
 
-## 4. 同期とスレッドセーフティ
+## 4. 安定化とパフォーマンス最適化 (Stability)
 
-### 使用している同期プリミティブ
-- **std::mutex**:
-    - `CefRenderHandler` 内のメンバ変数 (`m_width`, `m_height` 等) およびSRVポインタの保護に使用。
-    - CEFスレッドとDeckLinkスレッドの競合を防ぐ。
-- **std::atomic<size_t>**:
-    - `m_writeIndex`, `m_readIndex` に使用。
-    - ロックフリーに近い形でプロデューサー・コンシューマー間の進捗を確認する。
+### フリーズ防止・FPS低下対策
+1.  **プロセス優先度 (Process Priority)**:
+    - `HIGH_PRIORITY_CLASS` に設定し、OSスケジューラによる優先的なCPU割り当てを確保。
+2.  **バックグラウンド抑制の無効化**:
+    - CEFに対し以下のフラグを適用し、ウィンドウ非表示時でもフルスピードで動作させる。
+        - `--disable-renderer-backgrounding`
+        - `--disable-background-timer-throttling`
+        - `--disable-gpu-vsync` (内部リミッター解除)
+3.  **待機ロジックの改善**:
+    - `WaitForNextFrame` はメインループをブロッキングせず、適切なタイムアウトまたは非ブロッキングチェックを行い、CEFメッセージループの回転速度を維持する。
 
-### D3D11 リソースフラグ
-- **m_textures**: `D3D11_USAGE_DYNAMIC` + `D3D11_CPU_ACCESS_WRITE`
-    - CPU（System Memory）から頻繁に書き換える用途に最適化されている。
-- **m_stagingOutputs**: `D3D11_USAGE_STAGING` + `D3D11_CPU_ACCESS_READ`
-    - GPUからCPUへのデータ転送専用。GPUはこのリソースに対してレンダリングできないが、`CopyResource` の宛先にはなれる。
+## 5. モニタリング
+- コンソール出力にて、以下のレートを監視可能:
+    - `DeckLink`: ハードウェア割り込みレート (理想値: 29.97 / 30.00 fps)
+    - `CEF`: 実際の描画完了レート (理想値: 59.94 / 60.00 fps)
+- `CEF` の値が `DeckLink` の **ちょうど2倍** であれば、完全な同期状態 (Locked) である。
