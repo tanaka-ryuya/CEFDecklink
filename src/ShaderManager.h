@@ -22,6 +22,9 @@ public:
     // Set alpha threshold for unpremultiply
     void SetAlphaThreshold(float threshold);
 
+    // Toggle Diff Mode
+    void SetDiffMode(bool enabled);
+
 private:
     ComPtr<ID3D11Device> m_device;
     ComPtr<ID3D11DeviceContext> m_context;
@@ -41,6 +44,7 @@ private:
     // Constant Buffer for Parameters
     ComPtr<ID3D11Buffer> m_constantBuffer;
     float m_alphaThreshold = 0.01f; // Default threshold
+    bool m_diffMode = false;
 
     int m_width = 0;
     int m_height = 0;

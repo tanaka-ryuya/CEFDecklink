@@ -14,14 +14,24 @@ private:
     Callback m_callback;
 };
 
-// Minimal Client with LifeSpanHandler
-class CefClientImpl : public CefClient, public CefLifeSpanHandler {
+// Minimal Client with LifeSpanHandler & CefDisplayHandler
+class CefClientImpl : public CefClient,
+                      public CefLifeSpanHandler,
+                      public CefDisplayHandler {
 public:
     CefClientImpl(CefManager* manager, CefRefPtr<CefRenderHandler> renderHandler) 
         : m_manager(manager), m_renderHandler(renderHandler) {}
     
     CefRefPtr<CefRenderHandler> GetRenderHandler() override { return m_renderHandler; }
     CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override { return this; }
+    CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
+    
+    // CefDisplayHandler methods
+    void OnFullscreenModeChange(CefRefPtr<CefBrowser> browser, bool fullscreen) override {
+        if (m_manager) {
+            m_manager->TriggerFullscreen(fullscreen);
+        }
+    }
     
     void OnAfterCreated(CefRefPtr<CefBrowser> browser) override {
         if (m_manager) m_manager->SetBrowser(browser);
@@ -196,6 +206,25 @@ void CefManager::TriggerBeginFrame() {
 
 void CefManager::SetBrowser(CefRefPtr<CefBrowser> browser) {
     m_browser = browser;
+}
+
+void CefManager::SetOnFullscreenCallback(FullscreenCallback callback) {
+    m_fullscreenCallback = callback;
+}
+
+void CefManager::TriggerFullscreen(bool fullscreen) {
+    if (m_fullscreenCallback) {
+        m_fullscreenCallback(fullscreen);
+    }
+}
+
+void CefManager::Resize(int width, int height) {
+    if (m_renderHandler) {
+        m_renderHandler->Resize(width, height);
+    }
+    if (m_browser) {
+        m_browser->GetHost()->WasResized();
+    }
 }
 
 

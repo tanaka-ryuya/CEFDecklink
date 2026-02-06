@@ -8,6 +8,8 @@
 class CefRenderHandlerImpl;
 struct ID3D11Device;
 
+using FullscreenCallback = std::function<void(bool)>;
+
 class CefManager {
 public:
     CefManager();
@@ -29,6 +31,13 @@ public:
     void ScheduleFrames();
     void SetBrowser(CefRefPtr<CefBrowser> browser);
 
+    // Callbacks
+    void SetOnFullscreenCallback(FullscreenCallback callback);
+    void TriggerFullscreen(bool fullscreen);
+    
+    // Resize
+    void Resize(int width, int height);
+
     // Access to render handler for texture access
     CefRefPtr<CefRenderHandlerImpl> GetRenderHandler() const { return m_renderHandler; }
 
@@ -40,7 +49,9 @@ private:
     // Deferred Creation Data
     HWND m_parentHwnd = nullptr;
     std::string m_initialUrl;
+
     ID3D11Device* m_d3dDevice = nullptr;
+    FullscreenCallback m_fullscreenCallback;
     
     void TriggerBeginFrame();
 };

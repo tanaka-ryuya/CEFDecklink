@@ -7,7 +7,8 @@ RWTexture2D<uint> OutputBuffer : register(u0); // ARGB Packed (32-bit per pixel)
 cbuffer Parameters : register(b0)
 {
     float alphaThreshold; // Threshold to avoid division by zero
-    float3 padding;
+    float diffMode;       // 1.0 = Diff Mode, 0.0 = Normal Interlace
+    float2 padding;
 };
 
 [numthreads(16, 16, 1)]
@@ -21,23 +22,39 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
     if (x >= width || y >= height) return;
 
-    // --- Interlaced Sampling ---
-    // [Field Order: Top Field First (TFF)]
-    // Even Lines (0, 2, 4...) -> Top Field    -> Frame T   (InputTextureFrame1)
-    // Odd Lines  (1, 3, 5...) -> Bottom Field -> Frame T+1 (InputTextureFrame2)
     float4 pixel;
-    
-    if ((y % 2) == 0) {
-        // Top Field -> Current Frame (T)
-        pixel = InputTextureFrame1.Load(int3(x, y, 0));
-    } else {
-        // Bottom Field -> Next Frame (T+1)
-        pixel = InputTextureFrame2.Load(int3(x, y, 0));
-    }
 
-    // --- Unpremultiply: RGB /= Alpha ---
-    if (pixel.a > alphaThreshold) {
-        pixel.rgb /= pixel.a;
+    // --- Mode Selection ---
+    if (diffMode > 0.5f) {
+        // --- Diff Mode ---
+        // Sample both frames at the same location
+        float4 p1 = InputTextureFrame1.Load(int3(x, y, 0));
+        float4 p2 = InputTextureFrame2.Load(int3(x, y, 0));
+        
+        // Calculate absolute difference
+        float4 diff = abs(p1 - p2);
+        
+        // boost alpha to 1.0 so it's visible even if diff is small (or just show RGB diff)
+        // Also ensure we don't have transparency issues in preview
+        pixel = float4(diff.rgb, 1.0f); 
+    } else {
+        // --- Interlaced Sampling (Normal) ---
+        // [Field Order: Top Field First (TFF)]
+        // Even Lines (0, 2, 4...) -> Top Field    -> Frame T   (InputTextureFrame1)
+        // Odd Lines  (1, 3, 5...) -> Bottom Field -> Frame T+1 (InputTextureFrame2)
+        
+        if ((y % 2) == 0) {
+            // Top Field -> Current Frame (T)
+            pixel = InputTextureFrame1.Load(int3(x, y, 0));
+        } else {
+            // Bottom Field -> Next Frame (T+1)
+            pixel = InputTextureFrame2.Load(int3(x, y, 0));
+        }
+        
+        // --- Unpremultiply: RGB /= Alpha ---
+        if (pixel.a > alphaThreshold) {
+            pixel.rgb /= pixel.a;
+        }
     }
 
     // --- Output ARGB for Dual-Port External Key ---

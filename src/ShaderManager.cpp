@@ -99,7 +99,7 @@ void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D
     if (SUCCEEDED(hr)) {
         float* data = (float*)mappedResource.pData;
         data[0] = m_alphaThreshold;
-        data[1] = 0.0f; // padding
+        data[1] = m_diffMode ? 1.0f : 0.0f; // Diff Mode
         data[2] = 0.0f; // padding
         data[3] = 0.0f; // padding
         m_context->Unmap(m_constantBuffer.Get(), 0);
@@ -170,4 +170,8 @@ void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D
 
 void ShaderManager::SetAlphaThreshold(float threshold) {
     m_alphaThreshold = threshold;
+}
+
+void ShaderManager::SetDiffMode(bool enabled) {
+    m_diffMode = enabled;
 }

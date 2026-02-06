@@ -37,6 +37,7 @@ void CleanupDeviceD3D();
 void CreateRenderTarget();
 void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+void ToggleFullscreen(HWND hWnd);
 
 // Console Output Helper
 void LogStatus(bool locked, double deckLinkFps, int cefFps, float alphaThreshold) {
@@ -61,16 +62,35 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, float alphaThreshold
 }
 
 // RenderFrame now only handles Main Thread tasks: Input processing & CEF Message Loop & Logging
-void RenderFrame() {
-    // --- Keyboard Input for Alpha Threshold Adjustment ---
+void RenderFrame(HWND hWnd) {
+    // --- Keyboard Input for Alpha Threshold Adjustment & Fullscreen ---
     static float alphaThreshold = 0.01f; // Start value
     static auto lastKeyTime = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
     auto timeSinceLastKey = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastKeyTime).count();
     
-    // Allow adjustment every 100ms when key is held
-    if (timeSinceLastKey > 100) {
+    // Allow adjustment every 200ms when key is held to prevent bouncing
+    if (timeSinceLastKey > 200) {
         bool changed = false;
+        
+        // F11 for Fullscreen
+        if (GetAsyncKeyState(VK_F11) & 0x8000) {
+            ToggleFullscreen(hWnd);
+            lastKeyTime = now;
+            std::cout << "\n[Input] F11 Pressed -> Toggle Fullscreen" << std::endl;
+        }
+
+        // 'D' Key for Diff Mode Toggle
+        if (GetAsyncKeyState('D') & 0x8000) {
+            static bool diffMode = false;
+            diffMode = !diffMode;
+            if (g_shaderManager) {
+                g_shaderManager->SetDiffMode(diffMode);
+            }
+            lastKeyTime = now;
+            std::cout << "\n[Input] 'D' Pressed -> Diff Mode: " << (diffMode ? "ON" : "OFF") << std::endl;
+        }
+
         if (GetAsyncKeyState(VK_OEM_PLUS) & 0x8000 || GetAsyncKeyState(0xBB) & 0x8000) { // + key
             alphaThreshold += 0.001f;
             if (alphaThreshold > 1.0f) alphaThreshold = 1.0f;
@@ -235,12 +255,17 @@ int main(int, char**)
             if (srvTop) srvTop->Release();
             if (srvBottom) srvBottom->Release();
 
-            // Preview for Simulator (Copy simulated buffer to Window)
+             // Preview for Simulator (Copy simulated buffer to Window)
             if (g_deckLink.IsSimulated() && pBuffer) {
                  HWND previewHwnd = FindWindowW(L"DeckLinkApp", L"Native DeckLink + CEF");
                  if (previewHwnd) {
                      HDC hdc = GetDC(previewHwnd);
                      if (hdc) {
+                         RECT rcClient;
+                         GetClientRect(previewHwnd, &rcClient);
+                         int winW = rcClient.right - rcClient.left;
+                         int winH = rcClient.bottom - rcClient.top;
+
                          BITMAPINFO bmi = {0};
                          bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
                          bmi.bmiHeader.biWidth = 1920;
@@ -249,7 +274,12 @@ int main(int, char**)
                          bmi.bmiHeader.biBitCount = 32;
                          bmi.bmiHeader.biCompression = BI_RGB;
                          
-                         SetDIBitsToDevice(hdc, 0, 0, 1920, 1080, 0, 0, 0, 1080, pBuffer, &bmi, DIB_RGB_COLORS);
+                         SetStretchBltMode(hdc, COLORONCOLOR);
+                         StretchDIBits(hdc, 
+                             0, 0, winW, winH,          // Destination
+                             0, 0, 1920, 1080,          // Source
+                             pBuffer, &bmi, DIB_RGB_COLORS, SRCCOPY);
+                             
                          ReleaseDC(previewHwnd, hdc);
                      }
                  }
@@ -280,6 +310,17 @@ int main(int, char**)
     // Note: URL from user request
     g_cefManager.CreateBrowser(hwnd, "http://localhost:9090/graphics/on_air.html", g_pd3dDevice);
 
+    // Register Fullscreen Callback
+    g_cefManager.SetOnFullscreenCallback([hwnd](bool fullscreen) {
+        // We can just rely on logic to toggle based on current state vs requested state
+        // But simply calling ToggleFullscreen wraps the logic nicely.
+        // However, we should check if state matches to avoid flip-flopping if not needed.
+        // For simplicity, we just Force it if we knew the target state, but Toggle is requested.
+        // Let's implement a SetFullscreen(bool) ideally, but for now Toggle is fine 
+        // if we assume this event only fires on transition.
+        ToggleFullscreen(hwnd);
+    });
+
     std::cout << "Starting Main Loop..." << std::endl;
 
     // Main loop
@@ -298,7 +339,7 @@ int main(int, char**)
             if (g_appDone) break;
 
             // Update user input (Main Thread)
-            RenderFrame(); // This now just handles input and logging
+            RenderFrame(hwnd); // This now just handles input and logging
         }
     }
     catch (const std::exception& e) {
@@ -480,14 +521,55 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_SIZE:
         if (g_pd3dDevice != nullptr && wParam != SIZE_MINIMIZED)
         {
+            int width = (UINT)LOWORD(lParam);
+            int height = (UINT)HIWORD(lParam);
+
             CleanupRenderTarget();
-            g_pSwapChain->ResizeBuffers(0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), DXGI_FORMAT_UNKNOWN, 0);
+            g_pSwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
             CreateRenderTarget();
+
+            // Note: We DO NOT resize CEF here. 
+            // The broadcast output MUST remain 1920x1080.
+            // The window resizing only affects the Preview scaling (handled in RenderCallback).
         }
+
         return 0;
+    
+    // Removed WM_KEYDOWN for F11 since we poll it in RenderFrame for better responsiveness/reliability
+    // case WM_KEYDOWN:
+    //    if (wParam == VK_F11) {
+    //        ToggleFullscreen(hWnd);
+    //    }
+    //    break;
+
     case WM_DESTROY:
         ::PostQuitMessage(0);
         return 0;
     }
     return ::DefWindowProcW(hWnd, msg, wParam, lParam);
+}
+
+// Helper to toggle borderless fullscreen
+void ToggleFullscreen(HWND hWnd) {
+    // static variables to save window state
+    static WINDOWPLACEMENT g_wpPrev = { sizeof(g_wpPrev) };
+
+    DWORD dwStyle = GetWindowLong(hWnd, GWL_STYLE);
+    if (dwStyle & WS_OVERLAPPEDWINDOW) {
+        MONITORINFO mi = { sizeof(mi) };
+        if (GetWindowPlacement(hWnd, &g_wpPrev) &&
+            GetMonitorInfo(MonitorFromWindow(hWnd, MONITOR_DEFAULTTOPRIMARY), &mi)) {
+            SetWindowLong(hWnd, GWL_STYLE, dwStyle & ~WS_OVERLAPPEDWINDOW);
+            SetWindowPos(hWnd, HWND_TOP,
+                mi.rcMonitor.left, mi.rcMonitor.top,
+                mi.rcMonitor.right - mi.rcMonitor.left,
+                mi.rcMonitor.bottom - mi.rcMonitor.top,
+                SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+        }
+    } else {
+        SetWindowLong(hWnd, GWL_STYLE, dwStyle | WS_OVERLAPPEDWINDOW);
+        SetWindowPlacement(hWnd, &g_wpPrev);
+        SetWindowPos(hWnd, NULL, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+    }
 }
