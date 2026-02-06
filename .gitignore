@@ -1,7 +1,22 @@
-# CMake Build
+# CMake Build Artifacts (Root)
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.vcxproj
+*.vcxproj.filters
+*.sln
+*.vcxproj.user
+*.dir/
+cef_build/
+
+# Build Directories
 build/
 out/
 bin/
+x64/
+Debug/
+Release/
 
 # Visual Studio
 .vs/
@@ -20,17 +35,30 @@ bin/
 *.tlog
 *.idb
 
-# CEF (Downloaded)
+# Dependencies
 vender/cef/
 vender/cef_binary_*
+vender/Blackmagic DeckLink SDK*
+vender/Blackmagic*
 
 # Temporary files
 *.tmp
 *.log
 *.bak
+*.swp
+*~
+*.DS_Store
 
 # Large media files
 *.avi
 *.tar.bz2
 *.zip
 *.7z
+
+# Crash Dumps
+*.dmp
+
+# Documentation Logs (Keep .md files)
+docs/*.txt
+docs/*.log
+!docs/*.md

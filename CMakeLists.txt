@@ -63,7 +63,7 @@ else()
 endif()
 
 # --- Sources ---
-file(GLOB SOURCES "src/*.cpp" "src/*.h")
+file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h")
 
 # Console App (Removed WIN32 flag)
 add_executable(${PROJECT_NAME} 
@@ -90,11 +90,19 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMENT "Copying CEF Binaries..."
 )
 
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_SOURCE_DIR}/src/render/shaders"
+    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders"
+    COMMENT "Copying Shaders..."
+)
+
 # Include Directories
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
-    ${CEF_ROOT}
-    ${CMAKE_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/src/core
+    ${CMAKE_SOURCE_DIR}/src/render
+    ${CMAKE_SOURCE_DIR}/src/decklink
+    ${CMAKE_SOURCE_DIR}/src/cef
     ${CEF_ROOT}
     ${CMAKE_BINARY_DIR}
     ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.dir/$<CONFIG>

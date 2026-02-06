@@ -1,3 +1,0 @@
-MSBuild のバージョン 17.12.6+db5f6012c (.NET Framework)
-
-C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\Microsoft.Common.CurrentVersion.targets(844,5): error : The BaseOutputPath/OutputPath property is not set for project 'ZERO_CHECK.vcxproj'.  Please check to make sure that you have specified a valid combination of Configuration and Platform for this project.  Configuration='Release'  Platform='x64'.  You may be seeing this message because you are trying to build a project without a solution file, and have specified a non-default Configuration or Platform that doesn't exist for this project. [C:\Users\ryuya\CEFDecklink\ZERO_CHECK.vcxproj]

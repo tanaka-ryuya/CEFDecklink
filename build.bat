@@ -37,6 +37,13 @@ if exist "!CMAKE_DIR!\cmake.exe" (
 )
 
 :: --- 3. Build Solution ---
+echo [Setup] Configuring project...
+"!CMAKE_DIR!\cmake.exe" -S . -B build
+if %ERRORLEVEL% NEQ 0 (
+    echo [Setup] Configuration Failed!
+    exit /b %ERRORLEVEL%
+)
+
 echo [Build] Building Release via CMake...
 "!CMAKE_DIR!\cmake.exe" --build build --config Release -v
 if %ERRORLEVEL% NEQ 0 (

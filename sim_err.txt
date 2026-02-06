@@ -1,4 +1,0 @@
-
-DevTools listening on ws://127.0.0.1:9222/devtools/browser/43785907-c206-459a-ab7e-35b53fe227ee
-DeckLink drivers may not be installed. Switching to SIMULATOR MODE.
-[12956:13196:0205/161327.433:ERROR:google_apis\gcm\engine\registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
