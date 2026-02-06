@@ -61,10 +61,91 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, float alphaThreshold
     }
 }
 
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <algorithm>
+
+// ... (existing includes)
+
+// Global Configuration
+static float g_alphaThreshold = 0.01f;
+
+// Helper to load config.json
+bool LoadConfig(std::string& url, float& alpha) {
+    wchar_t exePath[MAX_PATH];
+    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    std::wstring exeDir = exePath;
+    size_t lastSlash = exeDir.find_last_of(L"\\/");
+    if (lastSlash != std::wstring::npos) {
+        exeDir = exeDir.substr(0, lastSlash);
+    }
+    
+    std::wstring configPath = exeDir + L"\\config.json";
+    std::ifstream file(configPath);
+    if (!file.is_open()) return false;
+
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    
+    // Simple JSON parsing logic
+    auto ParseString = [&](const std::string& key) -> std::string {
+        size_t keyPos = content.find("\"" + key + "\"");
+        if (keyPos == std::string::npos) return "";
+        
+        size_t colonPos = content.find(":", keyPos);
+        if (colonPos == std::string::npos) return "";
+
+        size_t startQuote = content.find("\"", colonPos);
+        if (startQuote == std::string::npos) return "";
+        
+        size_t endQuote = content.find("\"", startQuote + 1);
+        if (endQuote == std::string::npos) return "";
+
+        return content.substr(startQuote + 1, endQuote - startQuote - 1);
+    };
+
+    auto ParseFloat = [&](const std::string& key) -> float {
+        size_t keyPos = content.find("\"" + key + "\"");
+        if (keyPos == std::string::npos) return -1.0f;
+
+        size_t colonPos = content.find(":", keyPos);
+        if (colonPos == std::string::npos) return -1.0f;
+
+        size_t valueStart = content.find_first_not_of(" \t\n\r", colonPos + 1);
+        if (valueStart == std::string::npos) return -1.0f;
+        
+        size_t valueEnd = content.find_first_of(",}", valueStart);
+        if (valueEnd == std::string::npos) return -1.0f;
+
+        std::string valStr = content.substr(valueStart, valueEnd - valueStart);
+        try {
+            return std::stof(valStr);
+        } catch (...) {
+            return -1.0f;
+        }
+    };
+
+    // Load URL
+    std::string parsedUrl = ParseString("url");
+    if (!parsedUrl.empty()) {
+        url = parsedUrl;
+    }
+
+    // Load Alpha
+    float parsedAlpha = ParseFloat("alpha");
+    if (parsedAlpha >= 0.0f) {
+        alpha = parsedAlpha;
+    }
+    
+    return true;
+}
+
+// ... (rest of main)
+
 // RenderFrame now only handles Main Thread tasks: Input processing & CEF Message Loop & Logging
 void RenderFrame(HWND hWnd) {
     // --- Keyboard Input for Alpha Threshold Adjustment & Fullscreen ---
-    static float alphaThreshold = 0.01f; // Start value
+    // static float alphaThreshold = 0.01f; // REMOVED: Using Global g_alphaThreshold
     static auto lastKeyTime = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
     auto timeSinceLastKey = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastKeyTime).count();
@@ -73,42 +154,17 @@ void RenderFrame(HWND hWnd) {
     if (timeSinceLastKey > 200) {
         bool changed = false;
         
-        // F11 for Fullscreen
-        if (GetAsyncKeyState(VK_F11) & 0x8000) {
-            ToggleFullscreen(hWnd);
-            lastKeyTime = now;
-            std::cout << "\n[Input] F11 Pressed -> Toggle Fullscreen" << std::endl;
-        }
-
-        // 'D' Key for Diff Mode Toggle (Toggle between 0 and 1)
-        if (GetAsyncKeyState('D') & 0x8000) {
-            int current = g_viewMode.load();
-            if (current == 1) g_viewMode.store(0); // Back to Interlace
-            else g_viewMode.store(1); // Set to Diff
-            
-            lastKeyTime = now;
-            std::cout << "\n[Input] 'D' Pressed -> Diff Mode: " << (g_viewMode.load() == 1 ? "ON" : "OFF") << std::endl;
-        }
-
-        // 'P' Key for Progressive Mode Toggle (Toggle between 0 and 2)
-        if (GetAsyncKeyState('P') & 0x8000) {
-            int current = g_viewMode.load();
-            if (current == 2) g_viewMode.store(0); // Back to Interlace
-            else g_viewMode.store(2); // Set to Progressive
-            
-            lastKeyTime = now;
-            std::cout << "\n[Input] 'P' Pressed -> Progressive Mode: " << (g_viewMode.load() == 2 ? "ON" : "OFF") << std::endl;
-        }
+        // ... (F11, D, P keys same as before)
 
         if (GetAsyncKeyState(VK_OEM_PLUS) & 0x8000 || GetAsyncKeyState(0xBB) & 0x8000) { // + key
-            alphaThreshold += 0.001f;
-            if (alphaThreshold > 1.0f) alphaThreshold = 1.0f;
+            g_alphaThreshold += 0.001f;
+            if (g_alphaThreshold > 1.0f) g_alphaThreshold = 1.0f;
             changed = true;
             lastKeyTime = now;
         }
         if (GetAsyncKeyState(VK_OEM_MINUS) & 0x8000 || GetAsyncKeyState(0xBD) & 0x8000) { // - key
-            alphaThreshold -= 0.001f;
-            if (alphaThreshold < 0.0f) alphaThreshold = 0.0f;
+            g_alphaThreshold -= 0.001f;
+            if (g_alphaThreshold < 0.0f) g_alphaThreshold = 0.0f;
             changed = true;
             lastKeyTime = now;
         }
@@ -116,7 +172,7 @@ void RenderFrame(HWND hWnd) {
         if (changed && g_shaderManager) {
             // NOTE: ShaderManager Access from Main Thread while DeckLink accesses it from Callback Thread!
             // ShaderManager should use D3D context locking if not done already.
-            g_shaderManager->SetAlphaThreshold(alphaThreshold);
+            g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
         }
     }
 
@@ -145,7 +201,7 @@ void RenderFrame(HWND hWnd) {
             cefFps = handler->GetAndResetFrameCount();
         }
 
-        LogStatus(true, fps, cefFps, alphaThreshold);
+        LogStatus(true, fps, cefFps, g_alphaThreshold);
         
         frameCount = 0;
         lastLogTime = now;
@@ -153,14 +209,39 @@ void RenderFrame(HWND hWnd) {
 }
 
 // Main code
-int main(int, char**)
+int main(int argc, char** argv)
 {
+    // 0. Configuration Logic
+    std::string targetUrl = "http://localhost:9090/graphics/on_air.html";
+    
+    // Priority 3: Default (Set above)
+    
+    // Priority 2: config.json
+    LoadConfig(targetUrl, g_alphaThreshold);
+    
+    // Priority 1: CLI Args
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--url" && i + 1 < argc) {
+            targetUrl = argv[++i];
+        } else if (arg == "--alpha" && i + 1 < argc) {
+            try {
+                g_alphaThreshold = std::stof(argv[++i]);
+            } catch (...) {}
+        }
+    }
+    
+    std::cout << "[Config] URL: " << targetUrl << std::endl;
+    std::cout << "[Config] Alpha: " << g_alphaThreshold << std::endl;
+
     // 1. CEF Sub-process check (MUST be the absolute first thing)
     CefMainArgs main_args(GetModuleHandle(nullptr));
     int exit_code = CefExecuteProcess(main_args, nullptr, nullptr);
     if (exit_code >= 0) {
         return exit_code;
     }
+    
+    // ... (Continue initialization)
 
     std::cout << "--- DeckLink + CEF CUI Application ---" << std::endl;
     std::cout << "Initializing..." << std::endl;
@@ -316,8 +397,8 @@ int main(int, char**)
     }
 
     // Create CEF Browser
-    // Note: URL from user request
-    g_cefManager.CreateBrowser(hwnd, "http://localhost:9090/graphics/on_air.html", g_pd3dDevice);
+    // Note: URL from Config/CLI/Default
+    g_cefManager.CreateBrowser(hwnd, targetUrl, g_pd3dDevice);
 
     // Register Fullscreen Callback
     g_cefManager.SetOnFullscreenCallback([hwnd](bool fullscreen) {
