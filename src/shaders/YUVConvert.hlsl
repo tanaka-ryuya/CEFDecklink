@@ -7,7 +7,7 @@ RWTexture2D<uint> OutputBuffer : register(u0); // ARGB Packed (32-bit per pixel)
 cbuffer Parameters : register(b0)
 {
     float alphaThreshold; // Threshold to avoid division by zero
-    float diffMode;       // 1.0 = Diff Mode, 0.0 = Normal Interlace
+    float viewMode;       // 0=Interlace, 1=Diff, 2=Prog F1, 3=Prog F2
     float2 padding;
 };
 
@@ -25,8 +25,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
     float4 pixel;
 
     // --- Mode Selection ---
-    if (diffMode > 0.5f) {
-        // --- Diff Mode ---
+    if (viewMode > 0.5f && viewMode < 1.5f) {
+        // --- Mode 1: Diff Mode ---
         // Sample both frames at the same location
         float4 p1 = InputTextureFrame1.Load(int3(x, y, 0));
         float4 p2 = InputTextureFrame2.Load(int3(x, y, 0));
@@ -35,10 +35,18 @@ void main(uint3 DTid : SV_DispatchThreadID)
         float4 diff = abs(p1 - p2);
         
         // boost alpha to 1.0 so it's visible even if diff is small (or just show RGB diff)
-        // Also ensure we don't have transparency issues in preview
         pixel = float4(diff.rgb, 1.0f); 
-    } else {
-        // --- Interlaced Sampling (Normal) ---
+    } 
+    else if (viewMode > 1.5f && viewMode < 2.5f) {
+        // --- Mode 2: Progressive Frame 1 (Top Field Source) ---
+        pixel = InputTextureFrame1.Load(int3(x, y, 0));
+    }
+    else if (viewMode > 2.5f) {
+        // --- Mode 3: Progressive Frame 2 (Bottom Field Source) ---
+        pixel = InputTextureFrame2.Load(int3(x, y, 0));
+    }
+    else {
+        // --- Mode 0: Interlaced Sampling (Normal) ---
         // [Field Order: Top Field First (TFF)]
         // Even Lines (0, 2, 4...) -> Top Field    -> Frame T   (InputTextureFrame1)
         // Odd Lines  (1, 3, 5...) -> Bottom Field -> Frame T+1 (InputTextureFrame2)

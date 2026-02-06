@@ -8,6 +8,7 @@
 #include <iostream>
 #include <iomanip>
 #include <chrono>
+#include <thread>
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
 
@@ -29,6 +30,7 @@ static bool                     g_appDone = false;
 static CefManager g_cefManager;
 static std::unique_ptr<ShaderManager> g_shaderManager;
 static DeckLinkDevice g_deckLink;
+static std::atomic<int> g_viewMode(0); // 0=Interlace, 1=Diff, 2=Progressive
 
 // Forward declarations of helper functions
 IDXGIAdapter* SelectBestAdapter();
@@ -53,8 +55,6 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, float alphaThreshold
                   << " | Alpha: " << std::setprecision(4) << alphaThreshold;
         
         // Extended Sync info
-        // Simple visual indicator of phase if possible, or just raw tick delta?
-        // For now just basic stats.
         std::cout << " | Ctrl+C to Exit.   " // Extra spaces to clear line
                   << std::flush;
         lastTime = now;
@@ -80,15 +80,24 @@ void RenderFrame(HWND hWnd) {
             std::cout << "\n[Input] F11 Pressed -> Toggle Fullscreen" << std::endl;
         }
 
-        // 'D' Key for Diff Mode Toggle
+        // 'D' Key for Diff Mode Toggle (Toggle between 0 and 1)
         if (GetAsyncKeyState('D') & 0x8000) {
-            static bool diffMode = false;
-            diffMode = !diffMode;
-            if (g_shaderManager) {
-                g_shaderManager->SetDiffMode(diffMode);
-            }
+            int current = g_viewMode.load();
+            if (current == 1) g_viewMode.store(0); // Back to Interlace
+            else g_viewMode.store(1); // Set to Diff
+            
             lastKeyTime = now;
-            std::cout << "\n[Input] 'D' Pressed -> Diff Mode: " << (diffMode ? "ON" : "OFF") << std::endl;
+            std::cout << "\n[Input] 'D' Pressed -> Diff Mode: " << (g_viewMode.load() == 1 ? "ON" : "OFF") << std::endl;
+        }
+
+        // 'P' Key for Progressive Mode Toggle (Toggle between 0 and 2)
+        if (GetAsyncKeyState('P') & 0x8000) {
+            int current = g_viewMode.load();
+            if (current == 2) g_viewMode.store(0); // Back to Interlace
+            else g_viewMode.store(2); // Set to Progressive
+            
+            lastKeyTime = now;
+            std::cout << "\n[Input] 'P' Pressed -> Progressive Mode: " << (g_viewMode.load() == 2 ? "ON" : "OFF") << std::endl;
         }
 
         if (GetAsyncKeyState(VK_OEM_PLUS) & 0x8000 || GetAsyncKeyState(0xBB) & 0x8000) { // + key
@@ -192,11 +201,6 @@ int main(int, char**)
         std::cerr << "Failed to initialize Shader Manager." << std::endl;
     }
 
-    // Don't show window!
-    // ::ShowWindow(hwnd, SW_SHOWDEFAULT); 
-    // ::ShowWindow(hwnd, SW_HIDE);
-    // ::UpdateWindow(hwnd);
-
     // Initialize DeckLink
     if (g_deckLink.Initialize())
     {
@@ -205,11 +209,38 @@ int main(int, char**)
         // --- Register Render Callback (Reference Pattern) ---
         // This runs INSIDE the DeckLink thread/callback
         g_deckLink.SetRenderCallback([](void* pBuffer) {
-            // New Logic for 60p -> 60i Conversion (Double Fetch)
-            // We need to fetch TWO source frames for every ONE output frame.
-            // Frame T   -> Top Field
-            // Frame T+1 -> Bottom Field
+            // Helper Lambda for Blitting to Window
+            auto BlitToWindow = [&](void* buffer) {
+                 if (g_deckLink.IsSimulated() && buffer) {
+                     HWND previewHwnd = FindWindowW(L"DeckLinkApp", L"Native DeckLink + CEF");
+                     if (previewHwnd) {
+                         HDC hdc = GetDC(previewHwnd);
+                         if (hdc) {
+                             RECT rcClient;
+                             GetClientRect(previewHwnd, &rcClient);
+                             int winW = rcClient.right - rcClient.left;
+                             int winH = rcClient.bottom - rcClient.top;
 
+                             BITMAPINFO bmi = {0};
+                             bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+                             bmi.bmiHeader.biWidth = 1920;
+                             bmi.bmiHeader.biHeight = -1080; // Top-down
+                             bmi.bmiHeader.biPlanes = 1;
+                             bmi.bmiHeader.biBitCount = 32;
+                             bmi.bmiHeader.biCompression = BI_RGB;
+                             
+                             SetStretchBltMode(hdc, COLORONCOLOR);
+                             StretchDIBits(hdc, 
+                                 0, 0, winW, winH,          // Destination
+                                 0, 0, 1920, 1080,          // Source
+                                 buffer, &bmi, DIB_RGB_COLORS, SRCCOPY);
+                                 
+                             ReleaseDC(previewHwnd, hdc);
+                         }
+                     }
+                 }
+            };
+            
             ID3D11ShaderResourceView* srvTop = nullptr;
             ID3D11ShaderResourceView* srvBottom = nullptr;
 
@@ -217,77 +248,55 @@ int main(int, char**)
             
             if (renderHandler) {
                 // 1. Fetch Top Field Source (Frame T)
-                // This advances the read pointer by 1
                 renderHandler->SyncWithGPU(); 
                 srvTop = renderHandler->GetTextureSRV();
                 
                 // 2. Fetch Bottom Field Source (Frame T+1)
-                // This advances the read pointer by 1 again
                 renderHandler->SyncWithGPU();
                 srvBottom = renderHandler->GetTextureSRV();
             }
 
             // Fallback: If we only got one frame (e.g. startup or starvation), duplicate it.
-            // This effectively creates a progressive frame (Field 0 == Field 1)
-            // Note: GetTextureSRV already AddRef'd srvTop, so if we copy pointer we must AddRef again.
-            if (srvTop && !srvBottom) {
-                srvBottom = srvTop;
-                srvBottom->AddRef();
-            }
-            // Sanity check (inverse case unlikely via ring buffer but safe to handle)
-            if (!srvTop && srvBottom) {
-                srvTop = srvBottom;
-                srvTop->AddRef();
-            }
+            if (srvTop && !srvBottom) { srvBottom = srvTop; srvBottom->AddRef(); }
+            if (!srvTop && srvBottom) { srvTop = srvBottom; srvTop->AddRef(); }
 
-            // 3. Dispatch Shader (Interlace Combine)
-            if (pBuffer) {
-                if (srvTop && srvBottom && g_shaderManager) {
-                    g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer); 
-                } else if (g_shaderManager) {
-                     // No source frames available - Output Black
-                     // Assuming ARGB 4 bytes per pixel for now based on previous context
-                     memset(pBuffer, 0, 1920 * 1080 * 4);
+            // --- Rendering Logic ---
+            int currentMode = g_viewMode.load();
+
+            if (currentMode == 2) {
+                // === Mode 2: Progressive Double-Pump (59.94p Window Output) ===
+                if (pBuffer && g_shaderManager) {
+                    // Pass 1: Render Frame 1 (Top Field Source)
+                    g_shaderManager->SetViewMode(2); 
+                    g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
+                    BlitToWindow(pBuffer); // Show Frame 1
+
+                    // Wait ~16.6ms to simulate 60fps pacing
+                    std::this_thread::sleep_for(std::chrono::milliseconds(16));
+
+                    // Pass 2: Render Frame 2 (Bottom Field Source)
+                    g_shaderManager->SetViewMode(3);
+                    g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
+                    BlitToWindow(pBuffer); // Show Frame 2
+                }
+            } else {
+                // === Mode 0/1: Standard Interlace / Diff (29.97fps Window Output) ===
+                if (pBuffer) {
+                    if (srvTop && srvBottom && g_shaderManager) {
+                        g_shaderManager->SetViewMode(currentMode);
+                        g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
+                        BlitToWindow(pBuffer); // Blit once
+                    } else if (g_shaderManager) {
+                         memset(pBuffer, 0, 1920 * 1080 * 4);
+                    }
                 }
             }
             
             // Release References
             if (srvTop) srvTop->Release();
             if (srvBottom) srvBottom->Release();
-
-             // Preview for Simulator (Copy simulated buffer to Window)
-            if (g_deckLink.IsSimulated() && pBuffer) {
-                 HWND previewHwnd = FindWindowW(L"DeckLinkApp", L"Native DeckLink + CEF");
-                 if (previewHwnd) {
-                     HDC hdc = GetDC(previewHwnd);
-                     if (hdc) {
-                         RECT rcClient;
-                         GetClientRect(previewHwnd, &rcClient);
-                         int winW = rcClient.right - rcClient.left;
-                         int winH = rcClient.bottom - rcClient.top;
-
-                         BITMAPINFO bmi = {0};
-                         bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-                         bmi.bmiHeader.biWidth = 1920;
-                         bmi.bmiHeader.biHeight = -1080; // Top-down
-                         bmi.bmiHeader.biPlanes = 1;
-                         bmi.bmiHeader.biBitCount = 32;
-                         bmi.bmiHeader.biCompression = BI_RGB;
-                         
-                         SetStretchBltMode(hdc, COLORONCOLOR);
-                         StretchDIBits(hdc, 
-                             0, 0, winW, winH,          // Destination
-                             0, 0, 1920, 1080,          // Source
-                             pBuffer, &bmi, DIB_RGB_COLORS, SRCCOPY);
-                             
-                         ReleaseDC(previewHwnd, hdc);
-                     }
-                 }
-            }
             
             // --- DeckLink Pacing Trigger ---
-            // Trigger CEF to render next frames for the *future* buffer slot.
-            // This aligns CEF generation with DeckLink heartbeat.
             g_cefManager.ScheduleFrames();
         });
 
@@ -312,12 +321,6 @@ int main(int, char**)
 
     // Register Fullscreen Callback
     g_cefManager.SetOnFullscreenCallback([hwnd](bool fullscreen) {
-        // We can just rely on logic to toggle based on current state vs requested state
-        // But simply calling ToggleFullscreen wraps the logic nicely.
-        // However, we should check if state matches to avoid flip-flopping if not needed.
-        // For simplicity, we just Force it if we knew the target state, but Toggle is requested.
-        // Let's implement a SetFullscreen(bool) ideally, but for now Toggle is fine 
-        // if we assume this event only fires on transition.
         ToggleFullscreen(hwnd);
     });
 
@@ -477,18 +480,6 @@ bool CreateDeviceD3D(HWND hWnd)
     if (res != S_OK)
         return false;
 
-    // --- Enable Multithread Protection ---
-    // Critical for Callback-Driven Architecture where DeckLink thread uses the Context
-    /*
-    ID3D11Multithread* pMultithread = nullptr;
-    if (SUCCEEDED(g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&pMultithread)))) {
-        pMultithread->SetMultithreadProtected(TRUE);
-        pMultithread->Release();
-        std::cout << "[D3D11] Multithread protection enabled." << std::endl;
-    } else {
-        std::cerr << "[D3D11] Failed to enable multithread protection!" << std::endl;
-    }
-    */
     CreateRenderTarget();
     return true;
 }
@@ -534,13 +525,6 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         }
 
         return 0;
-    
-    // Removed WM_KEYDOWN for F11 since we poll it in RenderFrame for better responsiveness/reliability
-    // case WM_KEYDOWN:
-    //    if (wParam == VK_F11) {
-    //        ToggleFullscreen(hWnd);
-    //    }
-    //    break;
 
     case WM_DESTROY:
         ::PostQuitMessage(0);

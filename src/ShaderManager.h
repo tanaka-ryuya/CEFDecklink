@@ -22,8 +22,9 @@ public:
     // Set alpha threshold for unpremultiply
     void SetAlphaThreshold(float threshold);
 
-    // Toggle Diff Mode
-    void SetDiffMode(bool enabled);
+    // Set View Mode
+    // 0 = Interlace, 1 = Diff, 2 = Progressive F1, 3 = Progressive F2
+    void SetViewMode(int mode);
 
 private:
     ComPtr<ID3D11Device> m_device;
@@ -44,7 +45,7 @@ private:
     // Constant Buffer for Parameters
     ComPtr<ID3D11Buffer> m_constantBuffer;
     float m_alphaThreshold = 0.01f; // Default threshold
-    bool m_diffMode = false;
+    int m_viewMode = 0;
 
     int m_width = 0;
     int m_height = 0;
