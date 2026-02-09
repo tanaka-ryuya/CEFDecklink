@@ -281,6 +281,9 @@ int main(int argc, char** argv)
     if (!g_shaderManager->Initialize(1920, 1080)) {
         std::cerr << "Failed to initialize Shader Manager." << std::endl;
     }
+    
+    // Apply initial configuration
+    g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
 
     // Initialize DeckLink
     if (g_deckLink.Initialize())

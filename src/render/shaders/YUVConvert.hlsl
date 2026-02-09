@@ -59,10 +59,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
             pixel = InputTextureFrame2.Load(int3(x, y, 0));
         }
         
-        // --- Unpremultiply: RGB /= Alpha ---
-        if (pixel.a > alphaThreshold) {
-            pixel.rgb /= pixel.a;
-        }
+    }
+
+    // --- Unpremultiply: RGB /= Alpha ---
+    if (pixel.a > alphaThreshold) {
+        pixel.rgb /= pixel.a;
     }
 
     // --- Output ARGB for Dual-Port External Key ---
