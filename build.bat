@@ -59,6 +59,14 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b %ERRORLEVEL%
 )
 
+
 echo [Build] Build Success!
 echo Executable: build\Release\DeckLinkDX11.exe
+echo.
+echo [Installer] If Inno Setup is installed, the installer will be created at:
+echo             build\CEFDecklink-Setup.exe
+echo.
+echo [Info] To install Inno Setup for automatic installer creation:
+echo        https://jrsoftware.org/isdl.php
 endlocal
+
