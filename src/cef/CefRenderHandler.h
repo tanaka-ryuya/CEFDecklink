@@ -31,14 +31,15 @@ public:
     int GetAndResetFrameCount() { return m_frameCount.exchange(0); }
     uint64_t GetTotalFrameCount() const { return m_totalFrameCount.load(); }
     bool HasPendingFrames(size_t count) const { return (m_writeIndex.load() - m_readIndex.load()) >= count; }
+    int GetPendingFrameCount() const { return (int)(m_writeIndex.load() - m_readIndex.load()); }
 
 private:
     int m_width = 1920;
     int m_height = 1080;
     ID3D11Device* m_device = nullptr;
     
-    // Triple Buffering (Ring Buffer) -> Now Sextuple Buffering
-    static const int kBufferCount = 6;
+    // Triple Buffering (Ring Buffer) -> Now Octuple Buffering
+    static const int kBufferCount = 8;
     
     ID3D11Texture2D* m_textures[kBufferCount] = { nullptr };
     ID3D11ShaderResourceView* m_textureSRVs[kBufferCount] = { nullptr };

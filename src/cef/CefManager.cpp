@@ -169,8 +169,8 @@ void CefManager::ExecuteCreateBrowser() {
     
     // Browser Settings
     CefBrowserSettings browser_settings;
-    // Set to 120 to prevent CEF from throttling 59.94 internal loops logic (safeguard)
-    browser_settings.windowless_frame_rate = 120; 
+    // Set to 128 to ensure no internal throttling
+    browser_settings.windowless_frame_rate = 128; 
     
     // Create Browser
     CefBrowserHost::CreateBrowser(window_info, client, m_initialUrl, browser_settings, nullptr, nullptr);
@@ -181,8 +181,12 @@ void CefManager::ScheduleFrames() {
     m_autoPacingStarted = true;
 
     // Start the self-perpetuating 59.94fps loop
-    CefRefPtr<CefTaskRunner> runner = CefTaskRunner::GetForThread(TID_UI);
+    CefRefPtr<CefTaskRunner> runner = CefTaskRunner::GetForThread( TID_UI);
     if (runner) {
+        if (m_browser) {
+            m_browser->GetHost()->WasHidden(false);
+            m_browser->GetHost()->WasResized();
+        }
         runner->PostTask(new FunctionTask([this]{ 
             TriggerBeginFrame(); 
         }));
@@ -195,24 +199,23 @@ void CefManager::TriggerBeginFrame() {
         m_browser->GetHost()->Invalidate(PET_VIEW);
     }
 
-    // Schedule next frame (Target interval for 59.94p is ~16.68ms)
-    // We aim for exactly 16.68ms. Alternating 16/17 works well with timeBeginPeriod(1).
-    static int frameAcc = 0;
-    int delay = 16;
-    frameAcc += 1668; // 16.68 x 100
-    if (frameAcc >= 100) {
-        // Technically this math is for a simple accumulator. 
-        // 59.94 fps = 1000/16.6833...
-        // Let's use a simpler 16/17 toggle for now or constant 16.
-        // Actually, to avoid falling behind DeckLink (29.97), slightly faster is safer.
-    }
+    // Target interval for 59.94p is ~16.6833ms (1000 / 59.94)
+    // We alternate 17, 17, 16 ... to average out properly. 
+    // Simplified: Use a 16.68ms accumulator.
+    static double accumulator = 0;
+    accumulator += 16.683333;
+    
+    int delay = (int)accumulator;
+    accumulator -= delay;
+
+    // Safety: ensure delay is at least 1ms
+    if (delay < 1) delay = 16; 
 
     CefRefPtr<CefTaskRunner> runner = CefTaskRunner::GetForThread(TID_UI);
     if (runner && m_initialized) {
-        // Use 16ms to ensure we stay ahead of 29.97Hz (33.36ms) callback
         runner->PostDelayedTask(new FunctionTask([this]{ 
             TriggerBeginFrame(); 
-        }), 16); 
+        }), delay); 
     }
 }
 

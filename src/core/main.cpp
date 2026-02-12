@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <chrono>
 #include <thread>
+#include <mutex>
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
 
@@ -22,6 +23,7 @@
 // Data
 static ID3D11Device*            g_pd3dDevice = nullptr;
 static ID3D11DeviceContext*     g_pd3dDeviceContext = nullptr;
+static std::mutex               g_d3dContextMutex;
 static IDXGISwapChain*          g_pSwapChain = nullptr;
 static ID3D11RenderTargetView*  g_mainRenderTargetView = nullptr;
 static bool                     g_appDone = false;
@@ -43,29 +45,16 @@ void ToggleFullscreen(HWND hWnd);
 BOOL WINAPI ConsoleHandler(DWORD ctrlType);
 
 // Console Output Helper
-void LogStatus(bool locked, double deckLinkFps, int cefFps, float alphaThreshold, uint64_t totalCefFrames) {
-    static auto lastTime = std::chrono::steady_clock::now();
-    static uint64_t lastTotal = 0;
-    auto now = std::chrono::steady_clock::now();
-    
-    // Log every 1 second
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTime).count() > 1000) {
-        uint64_t diff = totalCefFrames - lastTotal;
-        lastTotal = totalCefFrames;
-
-        std::cout << "\r" // Carriage return to overwrite line
-                  << "[Status] Sync: " << (locked ? "LOCKED" : "SEARCHING")
-                  << " | DL: " << std::fixed << std::setprecision(2) << deckLinkFps << " fps"
-                  << " | CEF: " << cefFps << " fps (" << diff << " unique)"
-                  << " | Mode: " << g_viewMode.load()
-                  << " | Alpha: " << std::fixed << std::setprecision(4) << alphaThreshold
-                  << " | Total: " << totalCefFrames;
-        
-        // Extended Sync info
-        std::cout << " | Ctrl+C to Exit.   " // Extra spaces to clear line
-                  << std::flush;
-        lastTime = now;
-    }
+void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval, float alphaThreshold, uint64_t totalCefFrames, int pendingCount) {
+    std::cout << "\r" // Carriage return to overwrite line
+              << "[Status] Sync: " << (locked ? "LOCKED" : "SEARCHING")
+              << " | DL: " << std::fixed << std::setprecision(2) << deckLinkFps << " fps"
+              << " | CEF: " << cefFps << " fps (" << uniqueInInterval << " unique)"
+              << " | Q: " << pendingCount
+              << " | Mode: " << g_viewMode.load()
+              << " | Alpha: " << std::fixed << std::setprecision(4) << alphaThreshold
+              << " | Total: " << totalCefFrames
+              << " | Ctrl+C to Exit.   " << std::flush;
 }
 
 #include <iostream>
@@ -198,6 +187,7 @@ void RenderFrame(HWND hWnd) {
         if (changed && g_shaderManager) {
             // NOTE: ShaderManager Access from Main Thread while DeckLink accesses it from Callback Thread!
             // ShaderManager should use D3D context locking if not done already.
+            std::lock_guard<std::mutex> lock(g_d3dContextMutex); // Protect shader manager access
             g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
         }
     }
@@ -217,19 +207,29 @@ void RenderFrame(HWND hWnd) {
     }
 
     now = std::chrono::steady_clock::now();
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastLogTime).count() > 1000) {
-        double fps = (double)frameCount; 
+    uint64_t elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastLogTime).count();
+    if (elapsedMs >= 1000) {
+        static uint64_t lastUniqueTotal = 0;
+        double deckLinkFps = (double)frameCount * 1000.0 / elapsedMs;
         
         // Get CEF Rate
-        int cefFps = 0;
+        int cefTotalInInterval = 0;
         auto handler = g_cefManager.GetRenderHandler();
         uint64_t totalCef = 0;
+        int pendingCef = 0;
         if (handler) {
-            cefFps = handler->GetAndResetFrameCount();
+            cefTotalInInterval = handler->GetAndResetFrameCount();
             totalCef = handler->GetTotalFrameCount();
+            pendingCef = handler->GetPendingFrameCount();
         }
 
-        LogStatus(true, fps, cefFps, g_alphaThreshold, totalCef);
+        uint64_t diffUnique = (totalCef >= lastUniqueTotal) ? (totalCef - lastUniqueTotal) : 0;
+        lastUniqueTotal = totalCef;
+
+        double cefFps = (double)cefTotalInInterval * 1000.0 / elapsedMs;
+        double normalizedUnique = (double)diffUnique * 1000.0 / elapsedMs;
+
+        LogStatus(true, deckLinkFps, (int)(cefFps + 0.5), (int)(normalizedUnique + 0.5), g_alphaThreshold, totalCef, pendingCef);
         
         frameCount = 0;
         lastLogTime = now;
@@ -289,6 +289,7 @@ int main(int argc, char** argv)
     // Initialize CEF early
     if (!g_cefManager.Initialize(GetModuleHandle(nullptr))) {
         std::cerr << "Failed to initialize CEF." << std::endl;
+        timeEndPeriod(1);
         return 1;
     }
 
@@ -314,7 +315,10 @@ int main(int argc, char** argv)
     }
     
     // Apply initial configuration
-    g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
+    {
+        std::lock_guard<std::mutex> lock(g_d3dContextMutex);
+        g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
+    }
 
     // Initialize DeckLink
     if (g_deckLink.Initialize())
@@ -363,7 +367,8 @@ int main(int argc, char** argv)
             auto renderHandler = g_cefManager.GetRenderHandler();
             
             if (renderHandler) {
-                // 1. Drain all pending frames from the CEF queue to GPU textures
+                // 1. Drain all pending frames from the CEF queue to GPU textures (Thread Safe)
+                std::lock_guard<std::mutex> lock(g_d3dContextMutex);
                 while (renderHandler->HasPendingFrames(1)) {
                     renderHandler->SyncWithGPU();
                 }
@@ -376,12 +381,19 @@ int main(int argc, char** argv)
             if (srvTop && !srvBottom) { srvBottom = srvTop; srvBottom->AddRef(); }
             if (!srvTop && srvBottom) { srvTop = srvBottom; srvTop->AddRef(); }
 
+            // Diagnostic: Warn if fields are identical (results in static image fields)
+            if (srvTop && srvBottom && srvTop == srvBottom) {
+                // static int dupLogCount = 0;
+                // if (dupLogCount++ % 60 == 0) std::cerr << "[Warning] Synthesizing identical fields (srvTop == srvBottom)" << std::endl;
+            }
+
             // --- Rendering Logic ---
             int currentMode = g_viewMode.load();
 
             if (currentMode == 2 && g_deckLink.IsSimulated()) {
                 // === Mode 2: Progressive Double-Pump (59.94p Window Output - DEBUG ONLY) ===
                 if (pBuffer && g_shaderManager && srvTop && srvBottom) {
+                    std::lock_guard<std::mutex> lock(g_d3dContextMutex);
                     // Pass 1: Render Frame 1 (Top Field Source)
                     g_shaderManager->SetViewMode(2); 
                     g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
@@ -399,6 +411,12 @@ int main(int argc, char** argv)
                 // === Mode 0/1/2/3: Standard Logic ===
                 if (pBuffer) {
                     if (srvTop && srvBottom && g_shaderManager) {
+                        static int lastSameFieldLog = 0;
+                        if (srvTop == srvBottom && lastSameFieldLog++ % 60 == 0) {
+                             // std::cerr << "[Warning] Identical Fields synthesized (Double Image)" << std::endl;
+                        }
+                        
+                        std::lock_guard<std::mutex> lock(g_d3dContextMutex);
                         g_shaderManager->SetViewMode(currentMode);
                         g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
                         BlitToWindow(pBuffer); // Blit once
@@ -478,6 +496,7 @@ int main(int argc, char** argv)
     
     std::cout << "\nExiting." << std::endl;
 
+    timeEndPeriod(1);
     return 0;
 }
 
