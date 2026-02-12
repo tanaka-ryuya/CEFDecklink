@@ -52,6 +52,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, float alphaThreshold
                   << "[Status] Sync: " << (locked ? "LOCKED" : "SEARCHING")
                   << " | DeckLink: " << std::fixed << std::setprecision(2) << deckLinkFps << " fps"
                   << " | CEF: " << cefFps << " fps"
+                  << " | Mode: " << g_viewMode.load()
                   << " | Alpha: " << std::setprecision(4) << alphaThreshold;
         
         // Extended Sync info
@@ -154,7 +155,26 @@ void RenderFrame(HWND hWnd) {
     if (timeSinceLastKey > 200) {
         bool changed = false;
         
-        // ... (F11, D, P keys same as before)
+        if (GetAsyncKeyState(VK_F11) & 0x8000) {
+            ToggleFullscreen(hWnd);
+            changed = true;
+            lastKeyTime = now;
+        }
+        if (GetAsyncKeyState('D') & 0x8000) {
+            g_viewMode.store(1); // Diff Mode
+            changed = true;
+            lastKeyTime = now;
+        }
+        if (GetAsyncKeyState('P') & 0x8000) {
+            g_viewMode.store(2); // Progressive Mode
+            changed = true;
+            lastKeyTime = now;
+        }
+        if (GetAsyncKeyState('I') & 0x8000) {
+            g_viewMode.store(0); // Interlace Mode
+            changed = true;
+            lastKeyTime = now;
+        }
 
         if (GetAsyncKeyState(VK_OEM_PLUS) & 0x8000 || GetAsyncKeyState(0xBB) & 0x8000) { // + key
             g_alphaThreshold += 0.001f;
