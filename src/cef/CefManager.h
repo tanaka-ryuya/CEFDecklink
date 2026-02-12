@@ -54,4 +54,6 @@ private:
     FullscreenCallback m_fullscreenCallback;
     
     void TriggerBeginFrame();
+
+    bool m_autoPacingStarted = false;
 };

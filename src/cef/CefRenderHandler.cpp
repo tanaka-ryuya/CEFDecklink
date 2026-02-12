@@ -11,6 +11,8 @@ CefRenderHandlerImpl::~CefRenderHandlerImpl() {
         if (m_textureSRVs[i]) m_textureSRVs[i]->Release();
         if (m_textures[i]) m_textures[i]->Release();
     }
+    if (m_historySRVs[0]) m_historySRVs[0]->Release();
+    if (m_historySRVs[1]) m_historySRVs[1]->Release();
 }
 
 void CefRenderHandlerImpl::GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect) {
@@ -55,6 +57,7 @@ void CefRenderHandlerImpl::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementTy
         // We can just atomic increment.
         m_writeIndex++; 
         m_frameCount++;
+        m_totalFrameCount++;
     }
 }
 
@@ -69,7 +72,8 @@ void CefRenderHandlerImpl::Resize(int width, int height) {
         if (m_textureSRVs[i]) { m_textureSRVs[i]->Release(); m_textureSRVs[i] = nullptr; }
         if (m_textures[i]) { m_textures[i]->Release(); m_textures[i] = nullptr; }
     }
-    m_lastUploadedSRV = nullptr; // Reset safe SRV
+    if (m_historySRVs[0]) { m_historySRVs[0]->Release(); m_historySRVs[0] = nullptr; }
+    if (m_historySRVs[1]) { m_historySRVs[1]->Release(); m_historySRVs[1] = nullptr; }
 
     if (!m_device) return;
 
@@ -142,9 +146,21 @@ void CefRenderHandlerImpl::SyncWithGPU() {
     if (tex) {
         std::lock_guard<std::mutex> lock(m_mutex);
         if (uploadSuccess) {
-            // Update Safe SRV (it points to the texture we just uploaded)
-            // Note: m_textureSRVs are immutable/stable once created
-             m_lastUploadedSRV = m_textureSRVs[bufferIdx];
+            // Update History
+            if (m_historySRVs[0] == nullptr) {
+                // First frame ever: populate both slots to avoid duplication fallback in consumer
+                m_historySRVs[0] = m_textureSRVs[bufferIdx];
+                if (m_historySRVs[0]) m_historySRVs[0]->AddRef();
+                
+                m_historySRVs[1] = m_textureSRVs[bufferIdx];
+                if (m_historySRVs[1]) m_historySRVs[1]->AddRef();
+            } else {
+                if (m_historySRVs[1]) m_historySRVs[1]->Release();
+                m_historySRVs[1] = m_historySRVs[0]; // Shift
+                
+                m_historySRVs[0] = m_textureSRVs[bufferIdx];
+                if (m_historySRVs[0]) m_historySRVs[0]->AddRef();
+            }
         }
         
         // Advance Consumer
@@ -154,11 +170,23 @@ void CefRenderHandlerImpl::SyncWithGPU() {
     }
 }
 
+void CefRenderHandlerImpl::GetLatestTextures(ID3D11ShaderResourceView** srv1, ID3D11ShaderResourceView** srv2) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (srv1) {
+        *srv1 = m_historySRVs[1]; // Older
+        if (*srv1) (*srv1)->AddRef();
+    }
+    if (srv2) {
+        *srv2 = m_historySRVs[0]; // Newer
+        if (*srv2) (*srv2)->AddRef();
+    }
+}
+
 ID3D11ShaderResourceView* CefRenderHandlerImpl::GetTextureSRV() {
     std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_lastUploadedSRV) {
-        m_lastUploadedSRV->AddRef();
-        return m_lastUploadedSRV; 
+    if (m_historySRVs[0]) {
+        m_historySRVs[0]->AddRef();
+        return m_historySRVs[0]; 
     }
     return nullptr;
 }

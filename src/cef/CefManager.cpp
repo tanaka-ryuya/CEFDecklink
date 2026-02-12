@@ -177,35 +177,49 @@ void CefManager::ExecuteCreateBrowser() {
 }
 
 void CefManager::ScheduleFrames() {
-    if (!m_initialized) return;
+    if (!m_initialized || m_autoPacingStarted) return;
+    m_autoPacingStarted = true;
 
-    // Trigger 1st Frame (Immediate)
-    // Execute on UI Thread
+    // Start the self-perpetuating 59.94fps loop
     CefRefPtr<CefTaskRunner> runner = CefTaskRunner::GetForThread(TID_UI);
-    if (!runner) return;
-
-    // Use a simple static helper or lambda if wrapper supports it. 
-    // CEF C++ wrapper CefTask is usually an interface. 
-    // We can use CefCreateClosureTask with std::function/lambda.
-    
-    runner->PostTask(new FunctionTask([this]{ TriggerBeginFrame(); }));
-    
-    // Trigger 2nd Frame (Target interval for 59.94p is ~16.68ms)
-    // We use 14ms to ensure we don't overshoot if system is slightly busy.
-    // Timer resolution is improved by timeBeginPeriod(1).
-    runner->PostDelayedTask(new FunctionTask([this]{ TriggerBeginFrame(); }), 14);
+    if (runner) {
+        runner->PostTask(new FunctionTask([this]{ 
+            TriggerBeginFrame(); 
+        }));
+    }
 }
 
 void CefManager::TriggerBeginFrame() {
     if (m_browser) {
         m_browser->GetHost()->SendExternalBeginFrame();
-        // Force redraw even if content thinks it is static (important for video sync)
         m_browser->GetHost()->Invalidate(PET_VIEW);
+    }
+
+    // Schedule next frame (Target interval for 59.94p is ~16.68ms)
+    // We aim for exactly 16.68ms. Alternating 16/17 works well with timeBeginPeriod(1).
+    static int frameAcc = 0;
+    int delay = 16;
+    frameAcc += 1668; // 16.68 x 100
+    if (frameAcc >= 100) {
+        // Technically this math is for a simple accumulator. 
+        // 59.94 fps = 1000/16.6833...
+        // Let's use a simpler 16/17 toggle for now or constant 16.
+        // Actually, to avoid falling behind DeckLink (29.97), slightly faster is safer.
+    }
+
+    CefRefPtr<CefTaskRunner> runner = CefTaskRunner::GetForThread(TID_UI);
+    if (runner && m_initialized) {
+        // Use 16ms to ensure we stay ahead of 29.97Hz (33.36ms) callback
+        runner->PostDelayedTask(new FunctionTask([this]{ 
+            TriggerBeginFrame(); 
+        }), 16); 
     }
 }
 
 void CefManager::SetBrowser(CefRefPtr<CefBrowser> browser) {
     m_browser = browser;
+    // Start the independent pacing loop once we have a browser handle
+    ScheduleFrames();
 }
 
 void CefManager::SetOnFullscreenCallback(FullscreenCallback callback) {

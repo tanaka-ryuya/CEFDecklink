@@ -40,20 +40,26 @@ void CreateRenderTarget();
 void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 void ToggleFullscreen(HWND hWnd);
+BOOL WINAPI ConsoleHandler(DWORD ctrlType);
 
 // Console Output Helper
-void LogStatus(bool locked, double deckLinkFps, int cefFps, float alphaThreshold) {
+void LogStatus(bool locked, double deckLinkFps, int cefFps, float alphaThreshold, uint64_t totalCefFrames) {
     static auto lastTime = std::chrono::steady_clock::now();
+    static uint64_t lastTotal = 0;
     auto now = std::chrono::steady_clock::now();
     
     // Log every 1 second
     if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTime).count() > 1000) {
+        uint64_t diff = totalCefFrames - lastTotal;
+        lastTotal = totalCefFrames;
+
         std::cout << "\r" // Carriage return to overwrite line
                   << "[Status] Sync: " << (locked ? "LOCKED" : "SEARCHING")
-                  << " | DeckLink: " << std::fixed << std::setprecision(2) << deckLinkFps << " fps"
-                  << " | CEF: " << cefFps << " fps"
+                  << " | DL: " << std::fixed << std::setprecision(2) << deckLinkFps << " fps"
+                  << " | CEF: " << cefFps << " fps (" << diff << " unique)"
                   << " | Mode: " << g_viewMode.load()
-                  << " | Alpha: " << std::setprecision(4) << alphaThreshold;
+                  << " | Alpha: " << std::fixed << std::setprecision(4) << alphaThreshold
+                  << " | Total: " << totalCefFrames;
         
         // Extended Sync info
         std::cout << " | Ctrl+C to Exit.   " // Extra spaces to clear line
@@ -217,11 +223,13 @@ void RenderFrame(HWND hWnd) {
         // Get CEF Rate
         int cefFps = 0;
         auto handler = g_cefManager.GetRenderHandler();
+        uint64_t totalCef = 0;
         if (handler) {
             cefFps = handler->GetAndResetFrameCount();
+            totalCef = handler->GetTotalFrameCount();
         }
 
-        LogStatus(true, fps, cefFps, g_alphaThreshold);
+        LogStatus(true, fps, cefFps, g_alphaThreshold, totalCef);
         
         frameCount = 0;
         lastLogTime = now;
@@ -268,6 +276,9 @@ int main(int argc, char** argv)
 
     // Initialize Crash Handler for debugging
     CrashHandler::Initialize();
+
+    // Register Console Control Handler for clean exit on Ctrl+C
+    SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
     // High Resolution Timer for accurate 60fps pacing
     timeBeginPeriod(1);
@@ -345,31 +356,32 @@ int main(int argc, char** argv)
                  }
             };
             
+            static uint64_t totalConsumedFrames = 0;
             ID3D11ShaderResourceView* srvTop = nullptr;
             ID3D11ShaderResourceView* srvBottom = nullptr;
 
             auto renderHandler = g_cefManager.GetRenderHandler();
             
             if (renderHandler) {
-                // 1. Fetch Top Field Source (Frame T)
-                renderHandler->SyncWithGPU(); 
-                srvTop = renderHandler->GetTextureSRV();
-                
-                // 2. Fetch Bottom Field Source (Frame T+1)
-                renderHandler->SyncWithGPU();
-                srvBottom = renderHandler->GetTextureSRV();
+                // 1. Drain all pending frames from the CEF queue to GPU textures
+                while (renderHandler->HasPendingFrames(1)) {
+                    renderHandler->SyncWithGPU();
+                }
+
+                // 2. Fetch the two most recent distinct textures for synthesis
+                renderHandler->GetLatestTextures(&srvTop, &srvBottom);
             }
 
-            // Fallback: If we only got one frame (e.g. startup or starvation), duplicate it.
+            // Fallback: If we only got one frame, duplicate it.
             if (srvTop && !srvBottom) { srvBottom = srvTop; srvBottom->AddRef(); }
             if (!srvTop && srvBottom) { srvTop = srvBottom; srvTop->AddRef(); }
 
             // --- Rendering Logic ---
             int currentMode = g_viewMode.load();
 
-            if (currentMode == 2) {
-                // === Mode 2: Progressive Double-Pump (59.94p Window Output) ===
-                if (pBuffer && g_shaderManager) {
+            if (currentMode == 2 && g_deckLink.IsSimulated()) {
+                // === Mode 2: Progressive Double-Pump (59.94p Window Output - DEBUG ONLY) ===
+                if (pBuffer && g_shaderManager && srvTop && srvBottom) {
                     // Pass 1: Render Frame 1 (Top Field Source)
                     g_shaderManager->SetViewMode(2); 
                     g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
@@ -384,7 +396,7 @@ int main(int argc, char** argv)
                     BlitToWindow(pBuffer); // Show Frame 2
                 }
             } else {
-                // === Mode 0/1: Standard Interlace / Diff (29.97fps Window Output) ===
+                // === Mode 0/1/2/3: Standard Logic ===
                 if (pBuffer) {
                     if (srvTop && srvBottom && g_shaderManager) {
                         g_shaderManager->SetViewMode(currentMode);
@@ -399,9 +411,6 @@ int main(int argc, char** argv)
             // Release References
             if (srvTop) srvTop->Release();
             if (srvBottom) srvBottom->Release();
-            
-            // --- DeckLink Pacing Trigger ---
-            g_cefManager.ScheduleFrames();
         });
 
         g_deckLink.StartOutput();
@@ -461,9 +470,6 @@ int main(int argc, char** argv)
     // Shutdown
     g_deckLink.StopOutput(); // Explicit stop
     
-    g_cefManager.Shutdown();
-
-    // Shutdown CEF cleanly before D3D cleanup
     g_cefManager.Shutdown();
 
     CleanupDeviceD3D();
@@ -630,11 +636,24 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
         return 0;
 
+    case WM_CLOSE:
+        ::DestroyWindow(hWnd);
+        return 0;
+
     case WM_DESTROY:
         ::PostQuitMessage(0);
+        g_appDone = true;
         return 0;
     }
     return ::DefWindowProcW(hWnd, msg, wParam, lParam);
+}
+
+BOOL WINAPI ConsoleHandler(DWORD ctrlType) {
+    if (ctrlType == CTRL_C_EVENT || ctrlType == CTRL_CLOSE_EVENT || ctrlType == CTRL_BREAK_EVENT) {
+        g_appDone = true;
+        return TRUE;
+    }
+    return FALSE;
 }
 
 // Helper to toggle borderless fullscreen

@@ -24,8 +24,13 @@ public:
     // Call from Main Thread to upload pending data
     void SyncWithGPU();
 
+    // Get the two most recent distinct textures
+    void GetLatestTextures(ID3D11ShaderResourceView** srv1, ID3D11ShaderResourceView** srv2);
+
     // Diagnostics
     int GetAndResetFrameCount() { return m_frameCount.exchange(0); }
+    uint64_t GetTotalFrameCount() const { return m_totalFrameCount.load(); }
+    bool HasPendingFrames(size_t count) const { return (m_writeIndex.load() - m_readIndex.load()) >= count; }
 
 private:
     int m_width = 1920;
@@ -38,8 +43,8 @@ private:
     ID3D11Texture2D* m_textures[kBufferCount] = { nullptr };
     ID3D11ShaderResourceView* m_textureSRVs[kBufferCount] = { nullptr };
     
-    // The SRV that is guaranteed to be fully uploaded and safe for the shader to read
-    ID3D11ShaderResourceView* m_lastUploadedSRV = nullptr;
+    // The history of recent textures for decoupled retrieval
+    ID3D11ShaderResourceView* m_historySRVs[2] = { nullptr };
 
     std::mutex m_mutex;
     
@@ -53,6 +58,7 @@ private:
     std::atomic<size_t> m_readIndex{ 0 };
     
     std::atomic<int> m_frameCount{ 0 };
+    std::atomic<uint64_t> m_totalFrameCount{ 0 };
 
     // Use IMPLEMENT_REFCOUNTING macro
     IMPLEMENT_REFCOUNTING(CefRenderHandlerImpl);
