@@ -35,6 +35,16 @@ Release/
 *.tlog
 *.idb
 
+# Block large CEF binaries from being tracked (over GitHub 100MB limit)
+build/Release/libcef.dll
+build/Release/libGLESv2.dll
+build/Release/libEGL.dll
+build/Release/chrome_elf.dll
+build/Release/vulkan-1.dll
+build/Release/vk_swiftshader.dll
+build/Release/vk_swiftshader_icd.json
+build/Release/cache/
+
 # Dependencies
 vender/cef/
 vender/cef_binary_*
