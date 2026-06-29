@@ -28,7 +28,6 @@ public:
     void CreateBrowser(HWND parentHwnd, const std::string& url, ID3D11Device* device);
     void ExecuteCreateBrowser();
 
-    void ScheduleFrames();
     void SetBrowser(CefRefPtr<CefBrowser> browser);
 
     // Callbacks
@@ -41,6 +40,9 @@ public:
     // Access to render handler for texture access
     CefRefPtr<CefRenderHandlerImpl> GetRenderHandler() const { return m_renderHandler; }
 
+    // Externally drive CEF frame generation from DeckLink thread
+    void DriveExternalBeginFrame(int mode);
+
 private:
     CefRefPtr<CefRenderHandlerImpl> m_renderHandler;
     CefRefPtr<CefBrowser> m_browser;
@@ -52,8 +54,5 @@ private:
 
     ID3D11Device* m_d3dDevice = nullptr;
     FullscreenCallback m_fullscreenCallback;
-    
-    void TriggerBeginFrame();
-
-    bool m_autoPacingStarted = false;
 };
+

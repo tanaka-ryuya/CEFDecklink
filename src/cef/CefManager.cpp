@@ -190,53 +190,41 @@ void CefManager::ExecuteCreateBrowser() {
     CefBrowserHost::CreateBrowser(window_info, client, m_initialUrl, browser_settings, nullptr, nullptr);
 }
 
-void CefManager::ScheduleFrames() {
-    if (!m_initialized || m_autoPacingStarted) return;
-    m_autoPacingStarted = true;
-
-    // Start the self-perpetuating 59.94fps loop
-    CefRefPtr<CefTaskRunner> runner = CefTaskRunner::GetForThread( TID_UI);
-    if (runner) {
-        if (m_browser) {
-            m_browser->GetHost()->WasHidden(false);
-            m_browser->GetHost()->WasResized();
-        }
-        runner->PostTask(new FunctionTask([this]{ 
-            TriggerBeginFrame(); 
-        }));
-    }
-}
-
-void CefManager::TriggerBeginFrame() {
-    if (m_browser) {
-        m_browser->GetHost()->SendExternalBeginFrame();
-        m_browser->GetHost()->Invalidate(PET_VIEW);
-    }
-
-    // Target interval for 59.94p is ~16.6833ms (1000 / 59.94)
-    // We alternate 17, 17, 16 ... to average out properly. 
-    // Simplified: Use a 16.68ms accumulator.
-    static double accumulator = 0;
-    accumulator += 16.683333;
-    
-    int delay = (int)accumulator;
-    accumulator -= delay;
-
-    // Safety: ensure delay is at least 1ms
-    if (delay < 1) delay = 16; 
+void CefManager::DriveExternalBeginFrame(int mode) {
+    if (!m_browser) return;
 
     CefRefPtr<CefTaskRunner> runner = CefTaskRunner::GetForThread(TID_UI);
-    if (runner && m_initialized) {
+    if (!runner) return;
+
+    // Frame 1: Trigger immediately
+    runner->PostTask(new FunctionTask([this]{ 
+        if (m_browser) {
+            m_browser->GetHost()->SendExternalBeginFrame();
+            m_browser->GetHost()->Invalidate(PET_VIEW);
+        }
+    }));
+
+    // If Mode is not 3 (Blend Mode), we need a 59.94fps rate.
+    // DeckLink calls this at 29.97Hz (every ~33.36ms).
+    // So we schedule the second frame 16ms later.
+    if (mode != 3) {
         runner->PostDelayedTask(new FunctionTask([this]{ 
-            TriggerBeginFrame(); 
-        }), delay); 
+            if (m_browser) {
+                m_browser->GetHost()->SendExternalBeginFrame();
+                m_browser->GetHost()->Invalidate(PET_VIEW);
+            }
+        }), 16);
     }
 }
 
 void CefManager::SetBrowser(CefRefPtr<CefBrowser> browser) {
     m_browser = browser;
-    // Start the independent pacing loop once we have a browser handle
-    ScheduleFrames();
+    // We no longer start an independent pacing loop here.
+    // DeckLink will drive CEF via DriveExternalBeginFrame.
+    if (m_browser) {
+        m_browser->GetHost()->WasHidden(false);
+        m_browser->GetHost()->WasResized();
+    }
 }
 
 void CefManager::SetOnFullscreenCallback(FullscreenCallback callback) {

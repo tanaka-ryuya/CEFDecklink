@@ -120,7 +120,7 @@ static bool                     g_appDone = false;
 static CefManager g_cefManager;
 static std::unique_ptr<ShaderManager> g_shaderManager;
 static DeckLinkDevice g_deckLink;
-static std::atomic<int> g_viewMode(0); // 0=Interlace, 1=Diff, 2=Progressive
+std::atomic<int> g_viewMode(0); // 0=Interlace, 1=Diff, 2=Progressive, 3=30pBlend
 
 // Forward declarations of helper functions
 IDXGIAdapter* SelectBestAdapter();
@@ -146,6 +146,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     int vMode = g_viewMode.load();
     if (vMode == 1) modeStr = "\x1b[33mDiff Mode (1)\x1b[0m"; // Yellow warning for Diff
     else if (vMode == 2) modeStr = "Progressive (2)";
+    else if (vMode == 3) modeStr = "\x1b[35m30p Blend (3)\x1b[0m"; // Magenta for Blend
 
     auto recentLogs = g_logger.GetRecentLogs();
 
@@ -178,7 +179,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     }
 
     oss << "\x1b[36m================================================================================\x1b[0m\n";
-    oss << "  \x1b[90mControls: Ctrl+D (Diff) | Ctrl+P (Progressive) | Ctrl+I (Interlace) | Ctrl+A / Ctrl+Z (Alpha Up/Down)\x1b[0m\n";
+    oss << "  \x1b[90mControls: Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+I(Interlace) | Ctrl+B(Blend) | Ctrl+A/Z(Alpha)\x1b[0m\n";
     oss << "\x1b[36m================================================================================\x1b[0m\n";
 
     std::cout << oss.str() << std::flush;
@@ -291,6 +292,9 @@ void RenderFrame(HWND hWnd) {
             changed = true;
         } else if ((ch == 9 && ctrlPressed) || (modified && (ch == 'i' || ch == 'I'))) {
             g_viewMode.store(0); // Interlace Mode
+            changed = true;
+        } else if (ch == 2 || (modified && (ch == 'b' || ch == 'B'))) {
+            g_viewMode.store(3); // 30p Blend Mode
             changed = true;
         } else if (ch == 1 || (modified && (ch == 'a' || ch == 'A'))) {
             g_alphaThreshold += 0.001f;
@@ -517,6 +521,11 @@ int main(int argc, char** argv)
         // --- Register Render Callback (Reference Pattern) ---
         // This runs INSIDE the DeckLink thread/callback
         g_deckLink.SetRenderCallback([](void* pBuffer) {
+            int currentMode = g_viewMode.load();
+
+            // Genlock CEF to hardware clock
+            g_cefManager.DriveExternalBeginFrame(currentMode);
+
             // Helper Lambda for Blitting to Window
             auto BlitToWindow = [&](void* buffer) {
                  if (g_deckLink.IsSimulated() && buffer) {
@@ -577,7 +586,7 @@ int main(int argc, char** argv)
             }
 
             // --- Rendering Logic ---
-            int currentMode = g_viewMode.load();
+            // currentMode is already loaded above
 
             if (currentMode == 2 && g_deckLink.IsSimulated()) {
                 // === Mode 2: Progressive Double-Pump (59.94p Window Output - DEBUG ONLY) ===
@@ -615,7 +624,9 @@ int main(int argc, char** argv)
                         }
 
                         std::lock_guard<std::mutex> lock(g_d3dContextMutex);
-                        g_shaderManager->SetViewMode(currentMode);
+                        int shaderMode = currentMode;
+                        if (currentMode == 3) shaderMode = 4; // Map TUI Mode 3 to HLSL Mode 4
+                        g_shaderManager->SetViewMode(shaderMode);
                         g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
                         BlitToWindow(pBuffer); // Blit once
                     } else if (g_shaderManager) {

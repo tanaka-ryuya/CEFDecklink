@@ -41,9 +41,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
         // --- Mode 2: Progressive Frame 1 (Top Field Source) ---
         pixel = InputTextureFrame1.Load(int3(x, y, 0));
     }
-    else if (viewMode > 2.5f) {
+    else if (viewMode > 2.5f && viewMode < 3.5f) {
         // --- Mode 3: Progressive Frame 2 (Bottom Field Source) ---
         pixel = InputTextureFrame2.Load(int3(x, y, 0));
+    }
+    else if (viewMode > 3.5f) {
+        // --- Mode 4: 30p Blend Mode ---
+        float4 p1 = InputTextureFrame1.Load(int3(x, y, 0));
+        float4 p2 = InputTextureFrame2.Load(int3(x, y, 0));
+        pixel = p1 * 0.5f + p2 * 0.5f;
     }
     else {
         // --- Mode 0: Interlaced Sampling (Normal) ---
