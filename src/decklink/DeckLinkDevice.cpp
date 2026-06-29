@@ -1,9 +1,21 @@
 #include "DeckLinkDevice.h"
 #include <comdef.h>
 #include <iostream>
+#include <sstream>
 #include "DeckLinkAPI_i.c" // Helper for GUIDs
 #include <chrono>
 #include <thread>
+
+// Shared logging helper (tag + message to stdout)
+static void DLLog(const char* tag, const std::string& msg) {
+    auto now = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t(now);
+    struct tm tm_info;
+    localtime_s(&tm_info, &t);
+    char timebuf[32];
+    strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", &tm_info);
+    std::cout << "\n" << timebuf << " " << tag << " [DeckLink] " << msg << std::endl;
+}
 
 // Helper for COM release
 template <typename T>
@@ -321,8 +333,20 @@ HRESULT DeckLinkDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame *completedFr
     }
     
     // 3. Late/Dropped Frame Compensation (Reference Logic)
-    if (m_lastCompletionResult == bmdOutputFrameDisplayedLate || m_lastCompletionResult == bmdOutputFrameDropped) {
+    if (m_lastCompletionResult == bmdOutputFrameDisplayedLate) {
         m_totalFramesScheduled += 2; // Skip ahead to catch up
+        static uint64_t lateCount = 0;
+        lateCount++;
+        std::ostringstream oss;
+        oss << "LATE frame #" << m_totalFramesScheduled << " (cumulative late=" << lateCount << ")";
+        DLLog("[WARN]", oss.str());
+    } else if (m_lastCompletionResult == bmdOutputFrameDropped) {
+        m_totalFramesScheduled += 2; // Skip ahead to catch up
+        static uint64_t dropCount = 0;
+        dropCount++;
+        std::ostringstream oss;
+        oss << "DROPPED frame #" << m_totalFramesScheduled << " (cumulative drops=" << dropCount << ")";
+        DLLog("[ERROR]", oss.str());
     }
 
     // 4. Schedule Frame
@@ -337,6 +361,11 @@ HRESULT DeckLinkDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame *completedFr
         m_totalFramesScheduled++;
         m_frameQueue.push_back(m_currentFrame); // Return to back
     } else {
+        std::ostringstream oss;
+        oss << "ScheduleVideoFrame FAILED hr=0x" << std::hex << hr
+            << " frameNum=" << std::dec << m_totalFramesScheduled
+            << " queueSize=" << m_frameQueue.size();
+        DLLog("[ERROR]", oss.str());
         m_frameQueue.push_front(m_currentFrame); // Return to front on failure
     }
     

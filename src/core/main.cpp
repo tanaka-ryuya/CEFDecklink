@@ -4,7 +4,6 @@
 #include <d3d11.h>
 #include <d3d11_1.h>
 #include <dxgi.h>
-#include <vector>
 #include <iostream>
 #include <iomanip>
 #include <chrono>
@@ -19,6 +18,95 @@
 #include "CefRenderHandler.h"
 #include "ShaderManager.h"
 #include "CrashHandler.h"
+
+#include <fstream>
+#include <sstream>
+#include <ctime>
+#include <atomic>
+#include <conio.h>
+
+// ============================================================
+// File Logger - Writes to logs/app_YYYYMMDD_HHMMSS.log
+// ============================================================
+#include <vector>
+#include <deque>
+
+// ============================================================
+// File Logger - Writes to logs/app_YYYYMMDD_HHMMSS.log
+// and buffers recent logs for TUI
+// ============================================================
+class FileLogger {
+public:
+    FileLogger() {}
+
+    bool Open(const std::string& logDir) {
+        CreateDirectoryA(logDir.c_str(), nullptr);
+
+        auto now = std::chrono::system_clock::now();
+        std::time_t t = std::chrono::system_clock::to_time_t(now);
+        struct tm tm_info;
+        localtime_s(&tm_info, &t);
+        char buf[64];
+        strftime(buf, sizeof(buf), "app_%Y%m%d_%H%M%S.log", &tm_info);
+
+        m_path = logDir + "\\" + buf;
+        m_file.open(m_path, std::ios::out | std::ios::trunc);
+        return m_file.is_open();
+    }
+
+    void Log(const std::string& tag, const std::string& msg) {
+        auto now = std::chrono::system_clock::now();
+        std::time_t t = std::chrono::system_clock::to_time_t(now);
+        struct tm tm_info;
+        localtime_s(&tm_info, &t);
+        char timebuf[32];
+        strftime(timebuf, sizeof(timebuf), "%H:%M:%S", &tm_info);
+
+        std::ostringstream oss;
+        oss << "[" << timebuf << "] " << tag << " " << msg;
+        std::string line = oss.str();
+
+        std::lock_guard<std::mutex> lock(m_mutex);
+        // Full timestamp for file
+        if (m_file.is_open()) {
+            char fulltime[32];
+            strftime(fulltime, sizeof(fulltime), "%Y-%m-%d %H:%M:%S", &tm_info);
+            m_file << fulltime << " " << tag << " " << msg << "\n";
+            m_file.flush();
+        }
+
+        // Buffer recent logs for TUI display
+        m_recentLogs.push_back(line);
+        if (m_recentLogs.size() > 5) {
+            m_recentLogs.pop_front();
+        }
+    }
+
+    std::vector<std::string> GetRecentLogs() {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return std::vector<std::string>(m_recentLogs.begin(), m_recentLogs.end());
+    }
+
+    const std::string& GetPath() const { return m_path; }
+
+private:
+    std::ofstream m_file;
+    std::mutex m_mutex;
+    std::string m_path;
+    std::deque<std::string> m_recentLogs;
+};
+
+static FileLogger g_logger;
+
+// Enable Virtual Terminal Processing for ANSI Escape Codes
+static bool EnableVTMode() {
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut == INVALID_HANDLE_VALUE) return false;
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(hOut, &dwMode)) return false;
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    return SetConsoleMode(hOut, dwMode) != 0;
+}
 
 // Data
 static ID3D11Device*            g_pd3dDevice = nullptr;
@@ -44,23 +132,68 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 void ToggleFullscreen(HWND hWnd);
 BOOL WINAPI ConsoleHandler(DWORD ctrlType);
 
-// Console Output Helper
+// TUI Dashboard Console Output Helper
 void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval, float alphaThreshold, uint64_t totalCefFrames, int pendingCount) {
-    std::cout << "\r" // Carriage return to overwrite line
-              << "[Status] Sync: " << (locked ? "LOCKED" : "SEARCHING")
-              << " | DL: " << std::fixed << std::setprecision(2) << deckLinkFps << " fps"
-              << " | CEF: " << cefFps << " fps (" << uniqueInInterval << " unique)"
-              << " | Q: " << pendingCount
-              << " | Mode: " << g_viewMode.load()
-              << " | Alpha: " << std::fixed << std::setprecision(4) << alphaThreshold
-              << " | Total: " << totalCefFrames
-              << " | Ctrl+C to Exit.   " << std::flush;
+    static bool tuiInitialized = false;
+    if (!tuiInitialized) {
+        EnableVTMode();
+        // Clear screen once on start
+        std::cout << "\x1b[2J" << std::flush;
+        tuiInitialized = true;
+    }
+
+    const char* modeStr = "Interlace (0)";
+    int vMode = g_viewMode.load();
+    if (vMode == 1) modeStr = "\x1b[33mDiff Mode (1)\x1b[0m"; // Yellow warning for Diff
+    else if (vMode == 2) modeStr = "Progressive (2)";
+
+    auto recentLogs = g_logger.GetRecentLogs();
+
+    std::ostringstream oss;
+    // Move cursor to home (0,0)
+    oss << "\x1b[H";
+    oss << "\x1b[36m================================================================================\x1b[0m\n";
+    oss << "  \x1b[1m\x1b[37mCEFDecklink Live Status Dashboard\x1b[0m\n";
+    oss << "\x1b[36m================================================================================\x1b[0m\n";
+    oss << "  \x1b[32m[System Sync]\x1b[0m   Status: \x1b[1m" << (locked ? "\x1b[32mLOCKED\x1b[0m   " : "\x1b[31mSEARCHING\x1b[0m") 
+        << " (DeckLink Output Active)\n";
+    oss << "  \x1b[32m[Performance]\x1b[0m   DeckLink: \x1b[1m" << std::fixed << std::setprecision(2) << deckLinkFps << " fps\x1b[0m | "
+        << "CEF: \x1b[1m" << cefFps << " fps\x1b[0m (" << uniqueInInterval << " unique) | "
+        << "Queue: \x1b[1m" << pendingCount << "\x1b[0m\n";
+    oss << "  \x1b[32m[Render Config]\x1b[0m ViewMode: " << modeStr << " | Alpha Threshold: " << std::fixed << std::setprecision(4) << alphaThreshold << "\n";
+    oss << "  \x1b[32m[Total Counter]\x1b[0m Total CEF Frames: \x1b[1m" << totalCefFrames << "\x1b[0m\n";
+    oss << "\x1b[36m--------------------------------------------------------------------------------\x1b[0m\n";
+    oss << "  \x1b[33mRecent Events / Logs:\x1b[0m\n";
+    
+    for (int i = 0; i < 5; ++i) {
+        if (i < (int)recentLogs.size()) {
+            // Pad line to overwrite previous long text
+            std::string line = recentLogs[i];
+            if (line.length() < 76) line.append(76 - line.length(), ' ');
+            else if (line.length() > 76) line = line.substr(0, 73) + "...";
+            oss << "   " << line << "\n";
+        } else {
+            oss << "                                                                            \n";
+        }
+    }
+
+    oss << "\x1b[36m================================================================================\x1b[0m\n";
+    oss << "  \x1b[90mControls: Ctrl+D (Diff) | Ctrl+P (Progressive) | Ctrl+I (Interlace) | Ctrl+A / Ctrl+Z (Alpha Up/Down)\x1b[0m\n";
+    oss << "\x1b[36m================================================================================\x1b[0m\n";
+
+    std::cout << oss.str() << std::flush;
 }
+
+// ============================================================
+// Blackout state tracking
+// ============================================================
+static std::atomic<bool>     g_isBlackedOut(false);
+static std::atomic<uint64_t> g_blackoutCount(0);
+static std::chrono::steady_clock::time_point g_blackoutStart;
 
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <algorithm>
 
 // ... (existing includes)
 
@@ -140,56 +273,49 @@ bool LoadConfig(std::string& url, float& alpha) {
 
 // RenderFrame now only handles Main Thread tasks: Input processing & CEF Message Loop & Logging
 void RenderFrame(HWND hWnd) {
-    // --- Keyboard Input for Alpha Threshold Adjustment & Fullscreen ---
-    // static float alphaThreshold = 0.01f; // REMOVED: Using Global g_alphaThreshold
-    static auto lastKeyTime = std::chrono::steady_clock::now();
-    auto now = std::chrono::steady_clock::now();
-    auto timeSinceLastKey = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastKeyTime).count();
-    
-    // Allow adjustment every 200ms when key is held to prevent bouncing
-    if (timeSinceLastKey > 200) {
-        bool changed = false;
-        
-        if (GetAsyncKeyState(VK_F11) & 0x8000) {
-            ToggleFullscreen(hWnd);
-            changed = true;
-            lastKeyTime = now;
-        }
-        if (GetAsyncKeyState('D') & 0x8000) {
+    // --- Console TUI Keyboard Input (_kbhit / _getch) ---
+    bool changed = false;
+    while (_kbhit()) {
+        int ch = _getch();
+        bool ctrlPressed = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+        bool shiftPressed = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+        bool altPressed = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+        bool modified = ctrlPressed || shiftPressed || altPressed;
+
+        // Requires modifier key (Ctrl/Shift/Alt or ASCII control codes) to prevent accidental triggers
+        if (ch == 4 || (modified && (ch == 'd' || ch == 'D'))) {
             g_viewMode.store(1); // Diff Mode
             changed = true;
-            lastKeyTime = now;
-        }
-        if (GetAsyncKeyState('P') & 0x8000) {
+        } else if (ch == 16 || (modified && (ch == 'p' || ch == 'P'))) {
             g_viewMode.store(2); // Progressive Mode
             changed = true;
-            lastKeyTime = now;
-        }
-        if (GetAsyncKeyState('I') & 0x8000) {
+        } else if ((ch == 9 && ctrlPressed) || (modified && (ch == 'i' || ch == 'I'))) {
             g_viewMode.store(0); // Interlace Mode
             changed = true;
-            lastKeyTime = now;
-        }
-
-        if (GetAsyncKeyState(VK_OEM_PLUS) & 0x8000 || GetAsyncKeyState(0xBB) & 0x8000) { // + key
+        } else if (ch == 1 || (modified && (ch == 'a' || ch == 'A'))) {
             g_alphaThreshold += 0.001f;
             if (g_alphaThreshold > 1.0f) g_alphaThreshold = 1.0f;
             changed = true;
-            lastKeyTime = now;
-        }
-        if (GetAsyncKeyState(VK_OEM_MINUS) & 0x8000 || GetAsyncKeyState(0xBD) & 0x8000) { // - key
+        } else if (ch == 26 || (modified && (ch == 'z' || ch == 'Z'))) {
             g_alphaThreshold -= 0.001f;
             if (g_alphaThreshold < 0.0f) g_alphaThreshold = 0.0f;
             changed = true;
-            lastKeyTime = now;
         }
-        
-        if (changed && g_shaderManager) {
-            // NOTE: ShaderManager Access from Main Thread while DeckLink accesses it from Callback Thread!
-            // ShaderManager should use D3D context locking if not done already.
-            std::lock_guard<std::mutex> lock(g_d3dContextMutex); // Protect shader manager access
-            g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
+    }
+
+    // Window Fullscreen hotkey (F11)
+    if (GetForegroundWindow() == hWnd && (GetAsyncKeyState(VK_F11) & 0x8000)) {
+        static auto lastF11Time = std::chrono::steady_clock::now();
+        auto nowF11 = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(nowF11 - lastF11Time).count() > 300) {
+            ToggleFullscreen(hWnd);
+            lastF11Time = nowF11;
         }
+    }
+    
+    if (changed && g_shaderManager) {
+        std::lock_guard<std::mutex> lock(g_d3dContextMutex);
+        g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
     }
 
     // CEF Message Loop
@@ -201,12 +327,15 @@ void RenderFrame(HWND hWnd) {
     // Console Logging (Actual FPS calculation)
     static int frameCount = 0;
     static auto lastLogTime = std::chrono::steady_clock::now();
+    static auto lastHeartbeatTime = std::chrono::steady_clock::now();
+    static uint64_t lastCefTotal = 0;
+    static int cefZeroCount = 0; // consecutive 1-sec intervals with 0 CEF fps
     
     if (deckLinkReady) {
         frameCount++;
     }
 
-    now = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
     uint64_t elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastLogTime).count();
     if (elapsedMs >= 1000) {
         static uint64_t lastUniqueTotal = 0;
@@ -230,9 +359,52 @@ void RenderFrame(HWND hWnd) {
         double normalizedUnique = (double)diffUnique * 1000.0 / elapsedMs;
 
         LogStatus(true, deckLinkFps, (int)(cefFps + 0.5), (int)(normalizedUnique + 0.5), g_alphaThreshold, totalCef, pendingCef);
+
+        // ---- CEF stall detection ----
+        if (totalCef == lastCefTotal) {
+            cefZeroCount++;
+            if (cefZeroCount == 5) { // 5 consecutive seconds with no CEF frames
+                std::ostringstream oss;
+                oss << "CEF has not produced frames for 5+ seconds! "
+                    << "cefTotal=" << totalCef
+                    << " pending=" << pendingCef
+                    << " DL_fps=" << std::fixed << std::setprecision(2) << deckLinkFps;
+                g_logger.Log("[WARN]", oss.str());
+            }
+        } else {
+            cefZeroCount = 0;
+        }
+        lastCefTotal = totalCef;
+
+        // ---- Log status to file every 10 seconds ----
+        static int statusLogCounter = 0;
+        if (++statusLogCounter >= 10) {
+            statusLogCounter = 0;
+            std::ostringstream oss;
+            oss << "DL=" << std::fixed << std::setprecision(2) << deckLinkFps << "fps"
+                << " CEF=" << (int)(cefFps + 0.5) << "fps"
+                << " unique=" << (int)(normalizedUnique + 0.5)
+                << " Q=" << pendingCef
+                << " total=" << totalCef
+                << " blackouts=" << g_blackoutCount.load();
+            g_logger.Log("[STATUS]", oss.str());
+        }
         
         frameCount = 0;
         lastLogTime = now;
+    }
+
+    // ---- Heartbeat every 60 seconds ----
+    uint64_t hbElapsedSec = std::chrono::duration_cast<std::chrono::seconds>(now - lastHeartbeatTime).count();
+    if (hbElapsedSec >= 60) {
+        lastHeartbeatTime = now;
+        auto handler = g_cefManager.GetRenderHandler();
+        uint64_t totalCef = handler ? handler->GetTotalFrameCount() : 0;
+        std::ostringstream oss;
+        oss << "alive blackouts=" << g_blackoutCount.load()
+            << " cefTotal=" << totalCef
+            << " isBlackedOut=" << (g_isBlackedOut.load() ? "YES" : "no");
+        g_logger.Log("[HEARTBEAT]", oss.str());
     }
 }
 
@@ -240,7 +412,7 @@ void RenderFrame(HWND hWnd) {
 int main(int argc, char** argv)
 {
     // 0. Configuration Logic
-    std::string targetUrl = "http://localhost:9090/graphics/on_air.html";
+    std::string targetUrl = "https://telophub.duckdns.org/graphics/preview.html?machineId=8efb67b2-2fac-418a-9bd9-0284852ccd86";
     
     // Priority 3: Default (Set above)
     
@@ -261,6 +433,23 @@ int main(int argc, char** argv)
     
     std::cout << "[Config] URL: " << targetUrl << std::endl;
     std::cout << "[Config] Alpha: " << g_alphaThreshold << std::endl;
+
+    // Open file logger
+    {
+        wchar_t exePath[MAX_PATH];
+        GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+        std::wstring exeDir = exePath;
+        size_t lastSlash = exeDir.find_last_of(L"\\/");
+        if (lastSlash != std::wstring::npos) exeDir = exeDir.substr(0, lastSlash);
+        std::string logDir(exeDir.begin(), exeDir.end());
+        logDir += "\\logs";
+        if (g_logger.Open(logDir)) {
+            g_logger.Log("[INFO]", "Application started. Log file: " + g_logger.GetPath());
+            g_logger.Log("[INFO]", "URL: " + targetUrl);
+        } else {
+            std::cerr << "[Logger] Failed to open log file in: " << logDir << std::endl;
+        }
+    }
 
     // 1. CEF Sub-process check (MUST be the absolute first thing)
     CefMainArgs main_args(GetModuleHandle(nullptr));
@@ -415,13 +604,41 @@ int main(int argc, char** argv)
                         if (srvTop == srvBottom && lastSameFieldLog++ % 60 == 0) {
                              // std::cerr << "[Warning] Identical Fields synthesized (Double Image)" << std::endl;
                         }
-                        
+
+                        // ---- Blackout recovery detection ----
+                        if (g_isBlackedOut.exchange(false)) {
+                            auto now = std::chrono::steady_clock::now();
+                            double durMs = std::chrono::duration<double, std::milli>(now - g_blackoutStart).count();
+                            std::ostringstream oss;
+                            oss << "RECOVERED after " << std::fixed << std::setprecision(0) << durMs << " ms";
+                            g_logger.Log("[BLACKOUT_END]", oss.str());
+                        }
+
                         std::lock_guard<std::mutex> lock(g_d3dContextMutex);
                         g_shaderManager->SetViewMode(currentMode);
                         g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
                         BlitToWindow(pBuffer); // Blit once
                     } else if (g_shaderManager) {
-                         memset(pBuffer, 0, 1920 * 1080 * 4);
+                        // ---- BLACKOUT: No CEF frames available ----
+                        if (!g_isBlackedOut.exchange(true)) {
+                            // First frame of blackout
+                            g_blackoutStart = std::chrono::steady_clock::now();
+                            g_blackoutCount++;
+
+                            // Detailed diagnostic
+                            auto renderHandler = g_cefManager.GetRenderHandler();
+                            int pending = renderHandler ? renderHandler->GetPendingFrameCount() : -1;
+                            uint64_t total  = renderHandler ? renderHandler->GetTotalFrameCount() : 0;
+
+                            std::ostringstream oss;
+                            oss << "count=" << g_blackoutCount.load()
+                                << " srvTop=" << (srvTop  ? "OK" : "null")
+                                << " srvBot=" << (srvBottom ? "OK" : "null")
+                                << " pending=" << pending
+                                << " cefTotal=" << total;
+                            g_logger.Log("[BLACKOUT]", oss.str());
+                        }
+                        memset(pBuffer, 0, 1920 * 1080 * 4);
                     }
                 }
             }
@@ -455,6 +672,7 @@ int main(int argc, char** argv)
         ToggleFullscreen(hwnd);
     });
 
+    g_logger.Log("[INFO]", "Starting Main Loop...");
     std::cout << "Starting Main Loop..." << std::endl;
 
     // Main loop
@@ -670,6 +888,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 BOOL WINAPI ConsoleHandler(DWORD ctrlType) {
     if (ctrlType == CTRL_C_EVENT || ctrlType == CTRL_CLOSE_EVENT || ctrlType == CTRL_BREAK_EVENT) {
         g_appDone = true;
+        g_deckLink.StopOutput();
+        ExitProcess(0);
         return TRUE;
     }
     return FALSE;

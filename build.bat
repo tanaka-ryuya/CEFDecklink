@@ -62,6 +62,19 @@ if %ERRORLEVEL% NEQ 0 (
 
 echo [Build] Build Success!
 echo Executable: build\Release\DeckLinkDX11.exe
+
+:: --- 4. Copy generated DeckLinkAPI.h for IntelliSense ---
+echo [IntelliSense] Copying generated headers to src\decklink...
+if exist "build\DeckLinkDX11.dir\Release\DeckLinkAPI.h" (
+    copy /y "build\DeckLinkDX11.dir\Release\DeckLinkAPI.h" "src\decklink\DeckLinkAPI.h" > nul
+    echo [IntelliSense] DeckLinkAPI.h copied.
+) else if exist "build\DeckLinkDX11.dir\Debug\DeckLinkAPI.h" (
+    copy /y "build\DeckLinkDX11.dir\Debug\DeckLinkAPI.h" "src\decklink\DeckLinkAPI.h" > nul
+    echo [IntelliSense] DeckLinkAPI.h copied (from Debug).
+) else (
+    echo [Warning] DeckLinkAPI.h not found in build output. IntelliSense may show errors.
+)
+
 echo.
 echo [Installer] If Inno Setup is installed, the installer will be created at:
 echo             build\CEFDecklink-Setup.exe

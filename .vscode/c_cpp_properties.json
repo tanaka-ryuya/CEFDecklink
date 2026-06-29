@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Users/tanaka/CEFDecklink/src/core",
+                "C:/Users/tanaka/CEFDecklink/src/decklink",
+                "C:/Users/tanaka/CEFDecklink/src/cef",
+                "C:/Users/tanaka/CEFDecklink/src/render",
+                "C:/Users/tanaka/CEFDecklink/vender/cef",
+                "C:/Users/tanaka/CEFDecklink/vender/cef/include",
+                "C:/Users/tanaka/CEFDecklink/vender/Blackmagic DeckLink SDK 15.3/Win/include"
+            ],
+            "defines": [
+                "UNICODE",
+                "_UNICODE",
+                "WIN32",
+                "NDEBUG"
+            ],
+            "windowsSdkVersion": "10.0.19041.0",
+            "compilerPath": "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64"
+        }
+    ],
+    "version": 4
+}

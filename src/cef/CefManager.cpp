@@ -69,6 +69,20 @@ public:
         command_line->AppendSwitch("disable-renderer-backgrounding");
         command_line->AppendSwitch("disable-background-timer-throttling");
         command_line->AppendSwitch("disable-backgrounding-occluded-windows");
+        command_line->AppendSwitchWithValue("disable-features", "CalculateNativeWinOcclusion,IntensiveWakeUpThrottling,WebBluetooth,HardwareMediaKeyHandling");
+
+        // Autoplay and audio context policies
+        command_line->AppendSwitchWithValue("autoplay-policy", "no-user-gesture-required");
+        command_line->AppendSwitch("no-user-gesture-required");
+
+        // Local file access and security relaxation for overlays
+        command_line->AppendSwitch("disable-web-security");
+        command_line->AppendSwitch("allow-file-access-from-files");
+
+        // UI cleaning and optimization
+        command_line->AppendSwitch("hide-scrollbars");
+        command_line->AppendSwitch("disable-overlay-scrollbar");
+        command_line->AppendSwitch("disable-extensions");
     }
 
 private:

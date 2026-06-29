@@ -17,4 +17,14 @@ exit /b 1
 :found
 echo Starting %FOUND_PATH%...
 cd /d "%~dp0"
+
+:: Create logs directory
+if not exist "build\Release\logs" mkdir "build\Release\logs"
+
+:: Start the application (it will write its own structured log)
 start "" "%FOUND_PATH%"
+
+echo [Monitor] To analyze logs, run:
+echo   powershell -ExecutionPolicy Bypass -File scripts\monitor.ps1
+echo [Monitor] To follow live:
+echo   powershell -ExecutionPolicy Bypass -File scripts\monitor.ps1 -Tail
