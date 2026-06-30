@@ -100,8 +100,13 @@ bool DeckLinkDevice::Initialize(const std::string& format)
 
     // Check video mode (59.94i / 1080i59.94 or 50i)
     BMDDisplayMode displayMode = bmdModeHD1080i5994;
+    m_timeScale = 30000;
+    m_frameDuration = 1001;
+
     if (format == "50i") {
         displayMode = bmdModeHD1080i50;
+        m_timeScale = 25000;
+        m_frameDuration = 1000;
     }
     
     result = m_deckLinkOutput->EnableVideoOutput(displayMode, bmdVideoOutputFlagDefault);
@@ -475,7 +480,7 @@ void DeckLinkDevice::SimulationLoop() {
     // Frame duration: 1001 / 30000 seconds = 33.3666 ms.
     
     // Target interval in seconds
-    const double targetInterval = 1001.0 / 30000.0;
+    const double targetInterval = static_cast<double>(m_frameDuration) / static_cast<double>(m_timeScale);
     const std::chrono::duration<double> intervalDuration(targetInterval);
 
     // Dummy buffer for pipeline
