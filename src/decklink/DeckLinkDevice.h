@@ -21,7 +21,7 @@ public:
     DeckLinkDevice();
     virtual ~DeckLinkDevice();
 
-    bool Initialize();
+    bool Initialize(const std::string& format = "5994i");
     bool StartOutput();
     void StopOutput();
 

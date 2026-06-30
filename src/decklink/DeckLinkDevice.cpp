@@ -69,7 +69,7 @@ DeckLinkDevice::~DeckLinkDevice()
     SafeRelease(&m_deckLink);
 }
 
-bool DeckLinkDevice::Initialize()
+bool DeckLinkDevice::Initialize(const std::string& format)
 {
     IDeckLinkIterator* deckLinkIterator = nullptr;
     HRESULT result = CoCreateInstance(CLSID_CDeckLinkIterator, nullptr, CLSCTX_ALL, IID_IDeckLinkIterator, (void**)&deckLinkIterator);
@@ -98,14 +98,16 @@ bool DeckLinkDevice::Initialize()
         return false;
     }
 
-    // Check video mode (59.94i / 1080i59.94)
-    // Mode: bmdModeHD1080i5994
+    // Check video mode (59.94i / 1080i59.94 or 50i)
     BMDDisplayMode displayMode = bmdModeHD1080i5994;
+    if (format == "50i") {
+        displayMode = bmdModeHD1080i50;
+    }
     
     result = m_deckLinkOutput->EnableVideoOutput(displayMode, bmdVideoOutputFlagDefault);
     if (FAILED(result))
     {
-        std::cerr << "Could not enable video output for 1080i59.94" << std::endl;
+        std::cerr << "Could not enable video output for " << format << std::endl;
         return false;
     }
 

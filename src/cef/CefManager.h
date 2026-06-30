@@ -25,7 +25,7 @@ public:
     void Shutdown();
 
     // Create a browser
-    void CreateBrowser(HWND parentHwnd, const std::string& url, ID3D11Device* device);
+    void CreateBrowser(HWND parentHwnd, const std::string& url, ID3D11Device* device, const std::string& format = "5994i");
     void ExecuteCreateBrowser();
 
     void SetBrowser(CefRefPtr<CefBrowser> browser);
@@ -51,8 +51,7 @@ private:
     // Deferred Creation Data
     HWND m_parentHwnd = nullptr;
     std::string m_initialUrl;
-
+    std::string m_format;
     ID3D11Device* m_d3dDevice = nullptr;
     FullscreenCallback m_fullscreenCallback;
 };
-

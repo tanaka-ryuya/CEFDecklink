@@ -158,10 +158,11 @@ void CefManager::Shutdown() {
     }
 }
 
-void CefManager::CreateBrowser(HWND parentHwnd, const std::string& url, ID3D11Device* device) {
+void CefManager::CreateBrowser(HWND parentHwnd, const std::string& url, ID3D11Device* device, const std::string& format) {
     m_parentHwnd = parentHwnd;
     m_initialUrl = url;
     m_d3dDevice = device;
+    m_format = format;
 
     // If already initialized, create immediately. 
     // Otherwise, OnContextInitialized will handle it.
@@ -183,8 +184,13 @@ void CefManager::ExecuteCreateBrowser() {
     
     // Browser Settings
     CefBrowserSettings browser_settings;
-    // Free-run at exactly 60fps
-    browser_settings.windowless_frame_rate = 60; 
+    
+    int fps = 60;
+    if (m_format == "50i") fps = 50;
+    
+    // Set transparent background and windowless frame rate (e.g. 60 or 50)
+    browser_settings.background_color = 0x00000000;
+    browser_settings.windowless_frame_rate = fps; 
     
     // Create Browser
     CefBrowserHost::CreateBrowser(window_info, client, m_initialUrl, browser_settings, nullptr, nullptr);

@@ -122,6 +122,7 @@ static std::unique_ptr<ShaderManager> g_shaderManager;
 static DeckLinkDevice g_deckLink;
 std::atomic<int> g_viewMode(0); // 0=Interlace, 1=Diff, 2=Progressive, 3=30pBlend
 static std::string g_targetUrl;
+static std::string g_format = "5994i"; // "5994i" or "50i"
 
 // Forward declarations of helper functions
 IDXGIAdapter* SelectBestAdapter();
@@ -161,7 +162,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     oss << "  \x1b[32m[Status]\x1b[0m   DeckLink: \x1b[1m" << std::fixed << std::setprecision(2) << deckLinkFps << " fps\x1b[0m | "
         << "CEF: \x1b[1m" << cefFps << " fps\x1b[0m | "
         << "Queue: \x1b[1m" << pendingCount << "\x1b[0m\n";
-    oss << "  \x1b[32m[Config]\x1b[0m   ViewMode: " << modeStr << " | Alpha: " << std::fixed << std::setprecision(4) << alphaThreshold << "\n";
+    oss << "  \x1b[32m[Config]\x1b[0m   ViewMode: " << modeStr << " | Format: " << g_format << " | Alpha: " << std::fixed << std::setprecision(4) << alphaThreshold << "\n";
     oss << "\x1b[36m--------------------------------------------------------------------------------\x1b[0m\n";
     oss << "  \x1b[33mRecent Events / Logs:\x1b[0m\n";
     
@@ -198,7 +199,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
 static float g_alphaThreshold = 0.01f;
 
 // Helper to load config.json
-bool LoadConfig(std::string& url, float& alpha) {
+bool LoadConfig(std::string& url, float& alpha, std::string& format) {
     wchar_t exePath[MAX_PATH];
     GetModuleFileNameW(nullptr, exePath, MAX_PATH);
     std::wstring exeDir = exePath;
@@ -261,6 +262,12 @@ bool LoadConfig(std::string& url, float& alpha) {
     float parsedAlpha = ParseFloat("alpha");
     if (parsedAlpha >= 0.0f) {
         alpha = parsedAlpha;
+    }
+    
+    // Load Format
+    std::string parsedFormat = ParseString("format");
+    if (!parsedFormat.empty()) {
+        format = parsedFormat;
     }
     
     return true;
@@ -400,7 +407,7 @@ int main(int argc, char** argv)
     // Priority 3: Default (Set above)
     
     // Priority 2: config.json
-    LoadConfig(g_targetUrl, g_alphaThreshold);
+    LoadConfig(g_targetUrl, g_alphaThreshold, g_format);
     
     // Priority 1: CLI Args
     for (int i = 1; i < argc; ++i) {
@@ -411,10 +418,13 @@ int main(int argc, char** argv)
             try {
                 g_alphaThreshold = std::stof(argv[++i]);
             } catch (...) {}
+        } else if (arg == "--format" && i + 1 < argc) {
+            g_format = argv[++i];
         }
     }
     
     std::cout << "[Config] URL: " << g_targetUrl << std::endl;
+    std::cout << "[Config] Format: " << g_format << std::endl;
     std::cout << "[Config] Alpha: " << g_alphaThreshold << std::endl;
 
     // Open file logger
@@ -493,7 +503,7 @@ int main(int argc, char** argv)
     }
 
     // Initialize DeckLink
-    if (g_deckLink.Initialize())
+    if (g_deckLink.Initialize(g_format))
     {
         std::cout << "DeckLink Initialized." << std::endl;
 
@@ -631,7 +641,7 @@ int main(int argc, char** argv)
 
     // Create CEF Browser
     // Note: URL from Config/CLI/Default
-    g_cefManager.CreateBrowser(hwnd, g_targetUrl, g_pd3dDevice);
+    g_cefManager.CreateBrowser(hwnd, g_targetUrl, g_pd3dDevice, g_format);
 
     // Register Fullscreen Callback
     g_cefManager.SetOnFullscreenCallback([hwnd](bool fullscreen) {
