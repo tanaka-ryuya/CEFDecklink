@@ -8,7 +8,8 @@ cbuffer Parameters : register(b0)
 {
     float alphaThreshold; // Threshold to avoid division by zero
     float viewMode;       // 0=Interlace, 1=Diff, 2=Prog F1, 3=Prog F2
-    float2 padding;
+    float isLicensed;     // 1.0 = valid, 0.0 = invalid/expired
+    float padding;
 };
 
 [numthreads(16, 16, 1)]
@@ -27,14 +28,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
     // --- Mode Selection ---
     if (viewMode > 0.5f && viewMode < 1.5f) {
         // --- Mode 1: Diff Mode ---
-        // Sample both frames at the same location
         float4 p1 = InputTextureFrame1.Load(int3(x, y, 0));
         float4 p2 = InputTextureFrame2.Load(int3(x, y, 0));
-        
-        // Calculate absolute difference
         float4 diff = abs(p1 - p2);
-        
-        // boost alpha to 1.0 so it's visible even if diff is small (or just show RGB diff)
         pixel = float4(diff.rgb, 1.0f); 
     } 
     else if (viewMode > 1.5f && viewMode < 2.5f) {
@@ -53,18 +49,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
     }
     else {
         // --- Mode 0: Interlaced Sampling (Normal) ---
-        // [Field Order: Top Field First (TFF)]
-        // Even Lines (0, 2, 4...) -> Top Field    -> Frame T   (InputTextureFrame1)
-        // Odd Lines  (1, 3, 5...) -> Bottom Field -> Frame T+1 (InputTextureFrame2)
-        
         if ((y % 2) == 0) {
-            // Top Field -> Current Frame (T)
             pixel = InputTextureFrame1.Load(int3(x, y, 0));
         } else {
-            // Bottom Field -> Next Frame (T+1)
             pixel = InputTextureFrame2.Load(int3(x, y, 0));
         }
-        
     }
 
     // --- Unpremultiply: RGB /= Alpha ---
@@ -72,19 +61,23 @@ void main(uint3 DTid : SV_DispatchThreadID)
         pixel.rgb /= pixel.a;
     }
 
+    // --- Watermark for Unlicensed/Expired ---
+    if (isLicensed < 0.5f) {
+        // Draw a single diagonal red line across the screen
+        int diff = (int)x * (int)height - (int)y * (int)width;
+        if (abs(diff) < (int)width * 5) {
+            // Blend red color
+            pixel.rgb = pixel.rgb * 0.5f + float3(0.5f, 0.0f, 0.0f);
+            pixel.a = max(pixel.a, 0.5f); // Ensure it's opaque enough to be seen over background
+        }
+    }
+
     // --- Output ARGB for Dual-Port External Key ---
-    // UltraStudio HD Mini will separate:
-    //   SDI Out: Fill (RGB channels)
-    //   SDI Out 2: Key (Alpha channel)
-    
-    // Clamp values
     uint A = (uint)(saturate(pixel.a) * 255.0f);
     uint R = (uint)(saturate(pixel.r) * 255.0f);
     uint G = (uint)(saturate(pixel.g) * 255.0f);
     uint B = (uint)(saturate(pixel.b) * 255.0f);
     
-    // Pack as Big Endian ARGB: memory bytes [A][R][G][B]
-    // Little Endian uint32: B in highest byte, A in lowest byte
     uint packed = (B << 24) | (G << 16) | (R << 8) | A;
     
     OutputBuffer[uint2(x, y)] = packed;

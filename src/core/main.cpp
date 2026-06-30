@@ -12,6 +12,9 @@
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
 
+#include <wincrypt.h>
+#pragma comment(lib, "crypt32.lib")
+
 #include "DeckLinkDevice.h"
 
 #include "CefManager.h"
@@ -123,6 +126,8 @@ static DeckLinkDevice g_deckLink;
 std::atomic<int> g_viewMode(0); // 0=Interlace, 1=Diff, 2=Progressive, 3=30pBlend
 static std::string g_targetUrl;
 static std::string g_format = "5994i"; // "5994i" or "50i"
+static std::string g_licenseKey = "";
+static bool g_isLicensed = false;
 
 // Forward declarations of helper functions
 IDXGIAdapter* SelectBestAdapter();
@@ -130,6 +135,85 @@ bool CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
 void CreateRenderTarget();
 void CleanupRenderTarget();
+bool IsLicenseValid(const std::string& key) {
+    if (key.length() < 10 || key[8] != '-') return false;
+    std::string dateStr = key.substr(0, 8);
+    std::string sigStr = key.substr(9);
+
+    // Hardcoded RSA-2048 Public Key BLOB
+    BYTE pubBlob[] = {
+        0x06, 0x02, 0x00, 0x00, 0x00, 0xA4, 0x00, 0x00, 0x52, 0x53, 0x41, 0x31, 0x00, 0x08, 0x00, 0x00,
+        0x01, 0x00, 0x01, 0x00, 0x95, 0x36, 0x2D, 0x18, 0x47, 0x82, 0x3D, 0xF5, 0x5C, 0x28, 0x08, 0xD1,
+        0x9D, 0x2B, 0xAD, 0x8E, 0x41, 0xEC, 0xC7, 0x46, 0x07, 0x43, 0x3E, 0x90, 0x4F, 0x48, 0x98, 0x8A,
+        0x0A, 0x33, 0x43, 0x94, 0xA9, 0xF0, 0x24, 0x24, 0xBC, 0x18, 0xDD, 0xA3, 0xE2, 0x39, 0x48, 0x83,
+        0x4F, 0xBC, 0x84, 0x0C, 0x32, 0x0C, 0xDA, 0x9E, 0x3B, 0xD4, 0x12, 0xA0, 0x21, 0x32, 0x19, 0xD0,
+        0x30, 0xD8, 0xD4, 0xE8, 0x36, 0x15, 0xDF, 0xEA, 0x16, 0xA8, 0x3C, 0x1E, 0x95, 0x85, 0x84, 0x8C,
+        0xE3, 0xA5, 0x96, 0xD2, 0x1F, 0x5D, 0xB0, 0xC8, 0x22, 0x66, 0xB2, 0xA6, 0x4C, 0x34, 0x93, 0x9B,
+        0x3F, 0x3C, 0x3B, 0xED, 0xF0, 0x2E, 0x19, 0xDB, 0x62, 0xC5, 0xCE, 0x94, 0x39, 0x39, 0x0F, 0x85,
+        0x9D, 0x81, 0x83, 0x33, 0x12, 0xBF, 0x56, 0x1B, 0x42, 0x9B, 0x76, 0xB0, 0xE3, 0x01, 0xD6, 0x20,
+        0xED, 0xEF, 0x0B, 0x59, 0x1B, 0x07, 0x21, 0x98, 0x1F, 0xE3, 0x70, 0x77, 0x54, 0x2D, 0x1E, 0x97,
+        0x9D, 0xA7, 0xA1, 0xCC, 0x56, 0x59, 0x79, 0x9B, 0x02, 0x3D, 0xE7, 0x5A, 0x28, 0xB2, 0xD7, 0x6E,
+        0x22, 0x3B, 0x27, 0xF9, 0x38, 0x0C, 0xEC, 0x54, 0xE5, 0x94, 0xD0, 0x29, 0x17, 0xB3, 0xA3, 0x96,
+        0x49, 0x47, 0x94, 0xA7, 0x50, 0xFE, 0x8A, 0x69, 0x6D, 0x81, 0xAF, 0x23, 0x0A, 0xFD, 0xD3, 0xCA,
+        0x36, 0xE2, 0xE9, 0x1B, 0xD1, 0xD0, 0x96, 0x5B, 0x14, 0xF3, 0xE0, 0x54, 0xF5, 0x8B, 0xA5, 0xFB,
+        0x46, 0xCB, 0x7F, 0x8E, 0x7E, 0xB3, 0x41, 0x92, 0x47, 0xB2, 0xCA, 0xE1, 0x90, 0xCC, 0x7C, 0xFF,
+        0x2B, 0xED, 0x04, 0xF1, 0xC6, 0x08, 0x95, 0x64, 0x38, 0xB9, 0x0F, 0x3B, 0x9A, 0x26, 0xF3, 0x58,
+        0x97, 0x84, 0x1B, 0xC9, 0xAA, 0xD5, 0x98, 0x83, 0x0C, 0xAB, 0xCE, 0xEA, 0xD5, 0x94, 0x4E, 0x00,
+        0xAE, 0x36, 0x8A, 0xF7
+    };
+
+    DWORD sigLen = 0;
+    if (!CryptStringToBinaryA(sigStr.c_str(), 0, CRYPT_STRING_BASE64, NULL, &sigLen, NULL, NULL)) return false;
+    std::vector<BYTE> sigData(sigLen);
+    if (!CryptStringToBinaryA(sigStr.c_str(), 0, CRYPT_STRING_BASE64, sigData.data(), &sigLen, NULL, NULL)) return false;
+
+    // Windows CryptoAPI expects Little Endian for signatures, but Base64 encodes Big Endian from .NET.
+    // Reverse the signature bytes
+    for (size_t i = 0; i < sigLen / 2; ++i) {
+        std::swap(sigData[i], sigData[sigLen - 1 - i]);
+    }
+
+    HCRYPTPROV hProv = 0;
+    if (!CryptAcquireContext(&hProv, NULL, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT)) return false;
+
+    HCRYPTKEY hKey = 0;
+    if (!CryptImportKey(hProv, pubBlob, sizeof(pubBlob), 0, 0, &hKey)) {
+        CryptReleaseContext(hProv, 0);
+        return false;
+    }
+
+    HCRYPTHASH hHash = 0;
+    if (!CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hHash)) {
+        CryptDestroyKey(hKey);
+        CryptReleaseContext(hProv, 0);
+        return false;
+    }
+
+    if (!CryptHashData(hHash, (const BYTE*)dateStr.c_str(), (DWORD)dateStr.length(), 0)) {
+        CryptDestroyHash(hHash);
+        CryptDestroyKey(hKey);
+        CryptReleaseContext(hProv, 0);
+        return false;
+    }
+
+    bool isValidSig = CryptVerifySignatureA(hHash, sigData.data(), sigLen, hKey, NULL, 0) == TRUE;
+    
+    CryptDestroyHash(hHash);
+    CryptDestroyKey(hKey);
+    CryptReleaseContext(hProv, 0);
+
+    if (!isValidSig) return false;
+
+    time_t now = time(nullptr);
+    struct tm tm_now;
+    localtime_s(&tm_now, &now);
+    char buf[9];
+    strftime(buf, sizeof(buf), "%Y%m%d", &tm_now);
+    std::string current_dateStr(buf);
+
+    if (current_dateStr > dateStr) return false; 
+    return true; 
+}
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 void ToggleFullscreen(HWND hWnd);
 BOOL WINAPI ConsoleHandler(DWORD ctrlType);
@@ -270,6 +354,26 @@ bool LoadConfig(std::string& url, float& alpha, std::string& format) {
         format = parsedFormat;
     }
     
+    // Load License from separate file
+    std::wstring licensePath = exeDir + L"\\licensekey.json";
+    std::ifstream licFile(licensePath);
+    if (licFile.is_open()) {
+        std::string licContent((std::istreambuf_iterator<char>(licFile)), std::istreambuf_iterator<char>());
+        size_t keyPos = licContent.find("\"license_key\"");
+        if (keyPos != std::string::npos) {
+            size_t colonPos = licContent.find(":", keyPos);
+            if (colonPos != std::string::npos) {
+                size_t startQuote = licContent.find("\"", colonPos);
+                if (startQuote != std::string::npos) {
+                    size_t endQuote = licContent.find("\"", startQuote + 1);
+                    if (endQuote != std::string::npos) {
+                        g_licenseKey = licContent.substr(startQuote + 1, endQuote - startQuote - 1);
+                    }
+                }
+            }
+        }
+    }
+    
     return true;
 }
 
@@ -395,6 +499,16 @@ void RenderFrame(HWND hWnd) {
         std::ostringstream oss;
         oss << "alive cefTotal=" << totalCef;
         g_logger.Log("[HEARTBEAT]", oss.str());
+
+        // Periodic License Check
+        bool newLicenseStatus = IsLicenseValid(g_licenseKey);
+        if (newLicenseStatus != g_isLicensed) {
+            g_isLicensed = newLicenseStatus;
+            if (g_shaderManager) {
+                std::lock_guard<std::mutex> lock(g_d3dContextMutex);
+                g_shaderManager->SetLicensed(g_isLicensed);
+            }
+        }
     }
 }
 
@@ -408,6 +522,7 @@ int main(int argc, char** argv)
     
     // Priority 2: config.json
     LoadConfig(g_targetUrl, g_alphaThreshold, g_format);
+    g_isLicensed = IsLicenseValid(g_licenseKey);
     
     // Priority 1: CLI Args
     for (int i = 1; i < argc; ++i) {
@@ -492,6 +607,8 @@ int main(int argc, char** argv)
 
     // Initialize Shader Manager
     g_shaderManager = std::make_unique<ShaderManager>(g_pd3dDevice, g_pd3dDeviceContext);
+    g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
+    g_shaderManager->SetLicensed(g_isLicensed);
     if (!g_shaderManager->Initialize(1920, 1080)) {
         std::cerr << "Failed to initialize Shader Manager." << std::endl;
     }

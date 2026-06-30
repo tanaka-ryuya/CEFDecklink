@@ -129,7 +129,7 @@ void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D
         float* data = (float*)mappedResource.pData;
         data[0] = m_alphaThreshold;
         data[1] = (float)m_viewMode; // View Mode
-        data[2] = 0.0f; // padding
+        data[2] = m_isLicensed ? 1.0f : 0.0f; // isLicensed
         data[3] = 0.0f; // padding
         m_context->Unmap(m_constantBuffer.Get(), 0);
     } else {
@@ -203,4 +203,8 @@ void ShaderManager::SetAlphaThreshold(float threshold) {
 
 void ShaderManager::SetViewMode(int mode) {
     m_viewMode = mode;
+}
+
+void ShaderManager::SetLicensed(bool licensed) {
+    m_isLicensed = licensed;
 }

@@ -41,6 +41,7 @@ Source: "build\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Configuration file
 Source: "build\Release\config.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "build\Release\licensekey.json"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
 ; CEF binaries and libraries
 Source: "build\Release\*.dll"; DestDir: "{app}"; Flags: ignoreversion

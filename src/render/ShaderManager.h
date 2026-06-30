@@ -26,6 +26,9 @@ public:
     // 0 = Interlace, 1 = Diff, 2 = Progressive F1, 3 = Progressive F2
     void SetViewMode(int mode);
 
+    // Set License Status
+    void SetLicensed(bool licensed);
+
 private:
     ComPtr<ID3D11Device> m_device;
     ComPtr<ID3D11DeviceContext> m_context;
@@ -46,6 +49,7 @@ private:
     ComPtr<ID3D11Buffer> m_constantBuffer;
     float m_alphaThreshold = 0.01f; // Default threshold
     int m_viewMode = 0;
+    bool m_isLicensed = false;
 
     int m_width = 0;
     int m_height = 0;
