@@ -40,14 +40,15 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "build\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Configuration file
-Source: "build\Release\config.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "build\Release\licensekey.json"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "build\Release\config.json"; DestDir: "{app}"; Flags: onlyifdoesntexist
+Source: "build\Release\licensekey.json"; DestDir: "{app}"; Flags: onlyifdoesntexist skipifsourcedoesntexist
 
 ; CEF binaries and libraries
 Source: "build\Release\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "build\Release\*.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "build\Release\*.bin"; DestDir: "{app}"; Flags: ignoreversion
 Source: "build\Release\*.dat"; DestDir: "{app}"; Flags: ignoreversion
+Source: "build\Release\vk_swiftshader_icd.json"; DestDir: "{app}"; Flags: ignoreversion
 
 ; CEF resources
 Source: "build\Release\*.pak"; DestDir: "{app}"; Flags: ignoreversion
