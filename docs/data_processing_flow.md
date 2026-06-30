@@ -1,29 +1,30 @@
 # データ処理フロー詳細仕様書
 
 本ドキュメントでは、CEF (Chromium Embedded Framework) から DeckLink への映像出力に至るまでのデータ処理パイプラインの詳細を記述する。
-現在の実装に基づき、各ステージの **駆動トリガー**、**動作レート**、および **同期メカニズム** に焦点を当てて解説する。
+現在の実装（CEFフリーラン＋スタッター防止同期機構）に基づき、各ステージの **駆動トリガー**、**動作レート**、および **同期メカニズム** に焦点を当てて解説する。
 
 ---
 
 ## 1. システムアーキテクチャ概要
 
 本システムは、オフスクリーンで動作するWebレンダリングエンジン (CEF) の出力を、厳密な固定フレームレート (59.94i) を要求する放送用ハードウェア (DeckLink) へ送り届けるブリッジアプリケーションである。
-**CEFスレッド (プロデューサー)** と **DeckLinkスレッド (コンシューマー)** が独立して動作し、D3D11と共有バッファを用いて効率的に同期するメカニズムを特徴とする。
+**CEFスレッド (プロデューサー)** と **DeckLinkスレッド (コンシューマー)** が独立して動作し、タイムスタンプ付きのフレームキューを用いて効率的かつ滑らかに同期するメカニズムを特徴とする。
 
 ### データフロー図 (概念)
 
 ```mermaid
 graph TD
-    subgraph "1. Producer: CEF Thread"
-        TIMER["Timer 59.94Hz"] --> CEF["CEF WebCore"]
-        CEF -->|OnPaint| MAIN_MEM["CPU Ring Buffers 6 Slots"]
+    subgraph "1. Producer: CEF Thread (Free-Run)"
+        TIMER["Internal Timer 60Hz"] --> CEF["CEF WebCore"]
+        CEF -->|OnPaint & Timestamp| CPU_Q["CPU Frame Queue (max 8)"]
     end
 
     subgraph "2. Consumer: DeckLink Thread 29.97Hz"
-        MAIN_MEM -->|SyncWithGPU| TEX["D3D11 Textures"]
+        CPU_Q -->|SyncWithGPU| GPU_Q["GPU Texture Queue"]
+        GPU_Q -->|GetSynchronizedTextures| PAIR["Frame Pair [Top, Bottom]"]
         
-        TEX -->|Frame T Top Field| SHADER["Compute Shader"]
-        TEX -->|Frame T0.5 Bottom Field| SHADER
+        PAIR -->|Top Field| SHADER["Compute Shader"]
+        PAIR -->|Bottom Field| SHADER
         
         SHADER -->|Interlace and YUV| STAGING["Staging Buffer"]
         STAGING -->|Readback Delayed| DL_BUF["DeckLink Frame Buffer"]
@@ -32,7 +33,7 @@ graph TD
     end
 
     style CEF fill:#f9f,stroke:#333
-    style TEX fill:#cfc,stroke:#333
+    style GPU_Q fill:#cfc,stroke:#333
     style STAGING fill:#cfc,stroke:#333
     style DL_BUF fill:#9cf,stroke:#333
 ```
@@ -41,35 +42,53 @@ graph TD
 
 ## 2. バッファリングとスレッド間同期戦略
 
-本アプリケーションは、処理落ち（ドロップフレーム）や遅延を防ぐため、複数のバッファリング層を持っている。
+本アプリケーションは、処理落ち（ドロップフレーム）や遅延を防ぎつつ、最も滑らかなモーションを出力するための同期ロジック（CasparCGアーキテクチャ踏襲）を実装している。
 
 ### ステージ 1: CEF レンダリング (Producer)
 - **担当クラス**: `CefManager`, `CefRenderHandlerImpl`
-- **駆動トリガー**: CEF UIスレッド上の自己完結型タイマー (`TriggerBeginFrame`)
-- **動作レート**: 約 **59.94 fps** (16.68ms間隔)
+- **駆動トリガー**: CEF内部タイマー (フリーラン)
+- **動作レート**: **60 fps** (`windowless_frame_rate = 60`)
 - **ロジック**:
-    - CEFの内部ペーシング（VSync）は無効化されており、アプリケーション側から `SendExternalBeginFrame()` と `Invalidate(PET_VIEW)` を送ることで描画を強制する。
-    - `OnPaint` コールバックは専用のCPUメモリ上のリングバッファ (`m_cpuBuffers`, `kBufferCount = 6`) にピクセルデータをコピーする。
-    - 書き込みポインタ (`m_writeIndex`) をアトミックにインクリメントすることで、コンシューマー側に新しいフレームの存在を通知する（短時間のミューテックスロックを使用）。
+    - 以前の手動駆動 (`DriveExternalBeginFrame`) を廃止し、CEF自身の自律的な高精度タイマーでレンダリングを行う（フリーラン方式）。
+    - これによりWindowsの15.6msタイマー分解能によるジッター（遅延）を回避し、安定した60fpsのフレーム供給を実現。
+    - `OnPaint` コールバックでピクセルデータをコピーする際、その瞬間の `std::chrono::steady_clock` をタイムスタンプとして記録する。
 
-### ステージ 2: GPU アップロード (Consumer 1)
-- **担当関数**: `CefRenderHandlerImpl::SyncWithGPU()`
-- **駆動トリガー**: DeckLinkのコールバック内からポーリング実行される。
+### ステージ 2: GPU アップロードと同期キュー (Consumer 1)
+- **担当関数**: `CefRenderHandlerImpl::SyncWithGPU()`, `GetSynchronizedTextures()`
+- **駆動トリガー**: DeckLinkのコールバック (`ScheduledFrameCompleted`) 内から約33.36ms間隔でポーリング実行。
 - **ロジック**:
-    - DeckLinkスレッドは次のフレームを出力する直前に、CEF側で溜まっている未アップロードのフレームを**すべて** D3D11テクスチャへアップロード（Drain）する。
-    - アップロードは `Map/Unmap` を用いて行われ、メインメモリーからVRAMへのコピーとなる。
-    - 直近の2フレーム分の `ShaderResourceView` (SRV) を `m_historySRVs`（Top用, Bottom用）として保持する。
+    - **アップロード**: CEF側で溜まっている未アップロードのフレームをD3D11テクスチャへアップロードし、タイムスタンプと共にキュー (`m_readyTextures`) に追加する。
+    - **ペアの取り出し (スタッター防止・ジッター回避ロジック)**:
+        - **通常時 (キューサイズ >= 2)**: キューから2枚のフレームを取り出し、TopとBottomフィールドに割り当てる。これにより完璧に滑らかなインターレース出力が行われる。
+        - **処理落ち・アニメーション停止時 (キューサイズ < 2)**: 
+            - キューの先頭フレームの「到着からの経過時間 (age)」が **50ms** を超えた場合、CEFの描画が完全に停止（または重度の処理落ち）したと判定し、その1枚を取り出して出力する。
+            - そのまま待機が必要な場合（age < 50ms や キューが空の場合）、前回出力したペアをそのまま再出力すると時間が逆行し「振動（ぶるぶる震える現象）」が発生するため、**前回一番最後に表示したフレーム（Bottomフレーム）を両フィールドに複製して完全静止（Freeze）させる**。
 
 ---
 
-## 3. シェーダー処理とインターレース合成 (Consumer 2)
+## 3. ビューモード (g_viewMode) と TUI コントロール
+
+本システムは、コンソール上の TUI (Text User Interface) にて修飾キー（`Ctrl`）を用いたホットキー操作で、レンダリングやシェーダーの動作モードをリアルタイムに切り替える機能を持つ。
+
+| モード値 | TUI ホットキー | 名称 | 動作仕様 |
+| :---: | :--- | :--- | :--- |
+| **0** | `Ctrl + I` | **Interlace (標準)** | CEFは60fpsフリーラン。シェーダーで前後フレームをWeave合成し、1080i映像として出力する。 |
+| **1** | `Ctrl + D` | **Diff (差分)** | CEFは60fpsフリーラン。前後フレームの差分(`abs(p1 - p2)`)を出力し、動いているピクセルのみを可視化する。静止時は真っ黒になる。 |
+| **2** | `Ctrl + P` | **Progressive** | CEFは60fpsフリーラン。実機ではFrame1のみを使った29.97p出力。ウィンドウプレビュー表示時はダブルパンプによる60pプレビューとなる。 |
+| **3** | `Ctrl + B` | **30p Blend** | CEF描画の消費を半分に間引き、シェーダー側で前後のコマを50%ずつブレンドして滑らかなモーションブラーを生成する（現在はフリーラン移行に伴い挙動調整の対象）。 |
+
+※アルファ閾値 (`g_alphaThreshold`) は `Ctrl + A` (Up) / `Ctrl + Z` (Down) で調整可能。
+
+---
+
+## 4. シェーダー処理とインターレース合成 (Consumer 2)
 
 - **担当クラス**: `ShaderManager`
 - **実行スレッド**: DeckLink Video Output Thread
 - **動作レート**: **29.97 fps (Interlaced Frame Generation)**
 - **ロジック**:
     1.  **Compute Shader Dispatch (`YUVConvert.hlsl`)**:
-        - **入力**: 連続する2枚のプログレッシブフレーム (59.94p 相当)
+        - **入力**: `GetSynchronizedTextures()` から取得した連続する2枚のプログレッシブフレーム。
             - `t0`: 少し古いフレーム (Top Field に適用)
             - `t1`: 最新のフレーム (Bottom Field に適用)
         - **処理内容**: 
@@ -85,29 +104,29 @@ graph TD
 
 ---
 
-## 4. フレームレイテンシとシーケンス
+## 5. フレームレイテンシとシーケンス
 
-**59.94p -> 59.94i 変換および出力フロー**
+**60p -> 59.94i 変換および出力フロー**
 
-全体として、CEFで描画されたフレームが実際にDeckLinkハードウェアから出力されるまでには、**意図的なパイプライン遅延（約2 Tick = 約66ms + CEFバッファ遅延）** が存在する。
+全体として、CEFで描画されたフレームが実際にDeckLinkハードウェアから出力されるまでには、**意図的なパイプライン遅延（約2 Tick = 約66ms + CEFバッファ同期遅延）** が存在する。
 
 | 時間軸 (DL Tick) | アクション (DLスレッド内) | 状態 |
 | :--- | :--- | :--- |
-| **Tick N** | CEFフレームを VRAM (Tex A, B) にアップロード<br>`ShaderManager` が Tex A, B を合成して `Staging[0]` へ出力 | `Staging[0]` 生成開始 (GPU上) |
-| **Tick N+1** | 次のCEFフレームたちを VRAM にアップロード<br>`ShaderManager` が合成して `Staging[1]` へ出力 | `Staging[1]` 生成開始 |
-| **Tick N+2** | 次のCEFフレームたちを VRAM にアップロード<br>**`Staging[0]` からCPUへ非同期 Readback**<br>DeckLinkへスケジュール | **`Staging[0]` (Tick N生成分) がハードウェアへ送出される** |
+| **Tick N** | CEFキューからペア(A, B)を取得し VRAM へアップロード<br>`ShaderManager` が合成して `Staging[0]` へ出力 | `Staging[0]` 生成開始 (GPU上) |
+| **Tick N+1** | 次のペア(C, D)を取得し VRAM へアップロード<br>`ShaderManager` が合成して `Staging[1]` へ出力 | `Staging[1]` 生成開始 |
+| **Tick N+2** | 次のペア(E, F)を取得し VRAM へアップロード<br>**`Staging[0]` からCPUへ非同期 Readback**<br>DeckLinkへスケジュール | **`Staging[0]` (Tick N生成分) がハードウェアへ送出される** |
 
-これにより、時間解像度が 59.94Hz の滑らかな放送品質モーションが保証されたまま、スレッド群がブロックされることなくスループット 29.97fps (Interlaced) を達成する。
+これにより、時間解像度が 60Hz の滑らかな放送品質モーションが保証されたまま、スレッド群がブロックされることなくスループット 29.97fps (Interlaced) を達成する。
 
 ---
 
-## 5. 安定化とパフォーマンス最適化
+## 6. 安定化とパフォーマンス最適化
 
 1.  **プロセス優先度とスレッド制御**:
     - `HIGH_PRIORITY_CLASS` に設定し、OSスケジューラによる優先的なCPU割り当てを確保。
-    - CEF 렌더링 스レッドと DeckLink の Output コールバックスレッドは独立して走り、リングバッファを用いることで互いにブロックしない。
+    - CEFレンダリングスレッド（フリーラン）と DeckLink 出力コールバックスレッド（29.97Hzタイマー駆動）は完全に独立して走り、タイムスタンプ付きキューにより非同期にデータを授受する。
 2.  **バックグラウンド抑制の無効化**:
     - ウィンドウ非表示時でもCEFがフルスピードで動作するよう、起動オプションに `--disable-renderer-backgrounding`, `--disable-background-timer-throttling` 等を適用。
 3.  **UIモニタリング**:
     - 毎秒のシステム状態（FPS, Queueサイズなど）は `main.cpp` のメインループ (`RenderFrame`) で集計され、コンソールにリアルタイム表示される。
-    - `DL` (29.97に近い値) と `CEF` (60前後の値) の両方が安定している状態が「理想のロック状態」である。
+    - フリーラン時は、`CEF` FPS が約60をキープし、キューサイズが安定して消費される状態が理想的である。

@@ -113,7 +113,7 @@ bool CefManager::Initialize(HINSTANCE hInstance) {
     CefSettings settings;
     settings.no_sandbox = true;
     settings.windowless_rendering_enabled = true;
-    settings.log_severity = LOGSEVERITY_WARNING;
+    settings.log_severity = LOGSEVERITY_FATAL; // Suppress GCM DEPRECATED_ENDPOINT and other harmless Chromium errors
     settings.remote_debugging_port = 9222;
 
     // Set cache path for persistent features and DevTools stability
@@ -173,7 +173,7 @@ void CefManager::CreateBrowser(HWND parentHwnd, const std::string& url, ID3D11De
 void CefManager::ExecuteCreateBrowser() {
     CefWindowInfo window_info;
     window_info.SetAsWindowless(m_parentHwnd); 
-    window_info.external_begin_frame_enabled = true; // Driven by DeckLink
+    window_info.external_begin_frame_enabled = false; // Free-running, like CasparCG
 
     // Create Render Handler
     m_renderHandler = new CefRenderHandlerImpl(m_d3dDevice);
@@ -183,38 +183,16 @@ void CefManager::ExecuteCreateBrowser() {
     
     // Browser Settings
     CefBrowserSettings browser_settings;
-    // Set to 128 to ensure no internal throttling
-    browser_settings.windowless_frame_rate = 128; 
+    // Free-run at exactly 60fps
+    browser_settings.windowless_frame_rate = 60; 
     
     // Create Browser
     CefBrowserHost::CreateBrowser(window_info, client, m_initialUrl, browser_settings, nullptr, nullptr);
 }
 
 void CefManager::DriveExternalBeginFrame(int mode) {
-    if (!m_browser) return;
-
-    CefRefPtr<CefTaskRunner> runner = CefTaskRunner::GetForThread(TID_UI);
-    if (!runner) return;
-
-    // Frame 1: Trigger immediately
-    runner->PostTask(new FunctionTask([this]{ 
-        if (m_browser) {
-            m_browser->GetHost()->SendExternalBeginFrame();
-            m_browser->GetHost()->Invalidate(PET_VIEW);
-        }
-    }));
-
-    // If Mode is not 3 (Blend Mode), we need a 59.94fps rate.
-    // DeckLink calls this at 29.97Hz (every ~33.36ms).
-    // So we schedule the second frame 16ms later.
-    if (mode != 3) {
-        runner->PostDelayedTask(new FunctionTask([this]{ 
-            if (m_browser) {
-                m_browser->GetHost()->SendExternalBeginFrame();
-                m_browser->GetHost()->Invalidate(PET_VIEW);
-            }
-        }), 16);
-    }
+    // No longer driven externally. 
+    // CEF is now free-running via its internal timer at 60fps.
 }
 
 void CefManager::SetBrowser(CefRefPtr<CefBrowser> browser) {

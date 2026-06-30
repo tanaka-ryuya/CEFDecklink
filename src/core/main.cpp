@@ -121,6 +121,7 @@ static CefManager g_cefManager;
 static std::unique_ptr<ShaderManager> g_shaderManager;
 static DeckLinkDevice g_deckLink;
 std::atomic<int> g_viewMode(0); // 0=Interlace, 1=Diff, 2=Progressive, 3=30pBlend
+static std::string g_targetUrl;
 
 // Forward declarations of helper functions
 IDXGIAdapter* SelectBestAdapter();
@@ -155,14 +156,12 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     oss << "\x1b[H";
     oss << "\x1b[36m================================================================================\x1b[0m\n";
     oss << "  \x1b[1m\x1b[37mCEFDecklink Live Status Dashboard\x1b[0m\n";
+    oss << "  \x1b[36mURL: \x1b[0m" << g_targetUrl << "\n";
     oss << "\x1b[36m================================================================================\x1b[0m\n";
-    oss << "  \x1b[32m[System Sync]\x1b[0m   Status: \x1b[1m" << (locked ? "\x1b[32mLOCKED\x1b[0m   " : "\x1b[31mSEARCHING\x1b[0m") 
-        << " (DeckLink Output Active)\n";
-    oss << "  \x1b[32m[Performance]\x1b[0m   DeckLink: \x1b[1m" << std::fixed << std::setprecision(2) << deckLinkFps << " fps\x1b[0m | "
-        << "CEF: \x1b[1m" << cefFps << " fps\x1b[0m (" << uniqueInInterval << " unique) | "
+    oss << "  \x1b[32m[Status]\x1b[0m   DeckLink: \x1b[1m" << std::fixed << std::setprecision(2) << deckLinkFps << " fps\x1b[0m | "
+        << "CEF: \x1b[1m" << cefFps << " fps\x1b[0m | "
         << "Queue: \x1b[1m" << pendingCount << "\x1b[0m\n";
-    oss << "  \x1b[32m[Render Config]\x1b[0m ViewMode: " << modeStr << " | Alpha Threshold: " << std::fixed << std::setprecision(4) << alphaThreshold << "\n";
-    oss << "  \x1b[32m[Total Counter]\x1b[0m Total CEF Frames: \x1b[1m" << totalCefFrames << "\x1b[0m\n";
+    oss << "  \x1b[32m[Config]\x1b[0m   ViewMode: " << modeStr << " | Alpha: " << std::fixed << std::setprecision(4) << alphaThreshold << "\n";
     oss << "\x1b[36m--------------------------------------------------------------------------------\x1b[0m\n";
     oss << "  \x1b[33mRecent Events / Logs:\x1b[0m\n";
     
@@ -179,18 +178,15 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     }
 
     oss << "\x1b[36m================================================================================\x1b[0m\n";
-    oss << "  \x1b[90mControls: Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+I(Interlace) | Ctrl+B(Blend) | Ctrl+A/Z(Alpha)\x1b[0m\n";
+    oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+A/Z(Alpha) | Ctrl+C(Exit)\x1b[0m\n";
     oss << "\x1b[36m================================================================================\x1b[0m\n";
 
     std::cout << oss.str() << std::flush;
 }
 
 // ============================================================
-// Blackout state tracking
+// Includes
 // ============================================================
-static std::atomic<bool>     g_isBlackedOut(false);
-static std::atomic<uint64_t> g_blackoutCount(0);
-static std::chrono::steady_clock::time_point g_blackoutStart;
 
 #include <iostream>
 #include <fstream>
@@ -364,20 +360,6 @@ void RenderFrame(HWND hWnd) {
 
         LogStatus(true, deckLinkFps, (int)(cefFps + 0.5), (int)(normalizedUnique + 0.5), g_alphaThreshold, totalCef, pendingCef);
 
-        // ---- CEF stall detection ----
-        if (totalCef == lastCefTotal) {
-            cefZeroCount++;
-            if (cefZeroCount == 5) { // 5 consecutive seconds with no CEF frames
-                std::ostringstream oss;
-                oss << "CEF has not produced frames for 5+ seconds! "
-                    << "cefTotal=" << totalCef
-                    << " pending=" << pendingCef
-                    << " DL_fps=" << std::fixed << std::setprecision(2) << deckLinkFps;
-                g_logger.Log("[WARN]", oss.str());
-            }
-        } else {
-            cefZeroCount = 0;
-        }
         lastCefTotal = totalCef;
 
         // ---- Log status to file every 10 seconds ----
@@ -389,8 +371,7 @@ void RenderFrame(HWND hWnd) {
                 << " CEF=" << (int)(cefFps + 0.5) << "fps"
                 << " unique=" << (int)(normalizedUnique + 0.5)
                 << " Q=" << pendingCef
-                << " total=" << totalCef
-                << " blackouts=" << g_blackoutCount.load();
+                << " total=" << totalCef;
             g_logger.Log("[STATUS]", oss.str());
         }
         
@@ -405,9 +386,7 @@ void RenderFrame(HWND hWnd) {
         auto handler = g_cefManager.GetRenderHandler();
         uint64_t totalCef = handler ? handler->GetTotalFrameCount() : 0;
         std::ostringstream oss;
-        oss << "alive blackouts=" << g_blackoutCount.load()
-            << " cefTotal=" << totalCef
-            << " isBlackedOut=" << (g_isBlackedOut.load() ? "YES" : "no");
+        oss << "alive cefTotal=" << totalCef;
         g_logger.Log("[HEARTBEAT]", oss.str());
     }
 }
@@ -416,18 +395,18 @@ void RenderFrame(HWND hWnd) {
 int main(int argc, char** argv)
 {
     // 0. Configuration Logic
-    std::string targetUrl = "https://telophub.duckdns.org/graphics/preview.html?machineId=8efb67b2-2fac-418a-9bd9-0284852ccd86";
+    g_targetUrl = "https://telophub.duckdns.org/graphics/preview.html?machineId=8efb67b2-2fac-418a-9bd9-0284852ccd86";
     
     // Priority 3: Default (Set above)
     
     // Priority 2: config.json
-    LoadConfig(targetUrl, g_alphaThreshold);
+    LoadConfig(g_targetUrl, g_alphaThreshold);
     
     // Priority 1: CLI Args
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--url" && i + 1 < argc) {
-            targetUrl = argv[++i];
+            g_targetUrl = argv[++i];
         } else if (arg == "--alpha" && i + 1 < argc) {
             try {
                 g_alphaThreshold = std::stof(argv[++i]);
@@ -435,7 +414,7 @@ int main(int argc, char** argv)
         }
     }
     
-    std::cout << "[Config] URL: " << targetUrl << std::endl;
+    std::cout << "[Config] URL: " << g_targetUrl << std::endl;
     std::cout << "[Config] Alpha: " << g_alphaThreshold << std::endl;
 
     // Open file logger
@@ -449,7 +428,7 @@ int main(int argc, char** argv)
         logDir += "\\logs";
         if (g_logger.Open(logDir)) {
             g_logger.Log("[INFO]", "Application started. Log file: " + g_logger.GetPath());
-            g_logger.Log("[INFO]", "URL: " + targetUrl);
+            g_logger.Log("[INFO]", "URL: " + g_targetUrl);
         } else {
             std::cerr << "[Logger] Failed to open log file in: " << logDir << std::endl;
         }
@@ -572,7 +551,7 @@ int main(int argc, char** argv)
                 }
 
                 // 2. Fetch the two most recent distinct textures for synthesis
-                renderHandler->GetLatestTextures(&srvTop, &srvBottom);
+                renderHandler->GetSynchronizedTextures(&srvTop, &srvBottom);
             }
 
             // Fallback: If we only got one frame, duplicate it.
@@ -614,14 +593,7 @@ int main(int argc, char** argv)
                              // std::cerr << "[Warning] Identical Fields synthesized (Double Image)" << std::endl;
                         }
 
-                        // ---- Blackout recovery detection ----
-                        if (g_isBlackedOut.exchange(false)) {
-                            auto now = std::chrono::steady_clock::now();
-                            double durMs = std::chrono::duration<double, std::milli>(now - g_blackoutStart).count();
-                            std::ostringstream oss;
-                            oss << "RECOVERED after " << std::fixed << std::setprecision(0) << durMs << " ms";
-                            g_logger.Log("[BLACKOUT_END]", oss.str());
-                        }
+                        // (No blackout recovery logs)
 
                         std::lock_guard<std::mutex> lock(g_d3dContextMutex);
                         int shaderMode = currentMode;
@@ -630,25 +602,8 @@ int main(int argc, char** argv)
                         g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
                         BlitToWindow(pBuffer); // Blit once
                     } else if (g_shaderManager) {
-                        // ---- BLACKOUT: No CEF frames available ----
-                        if (!g_isBlackedOut.exchange(true)) {
-                            // First frame of blackout
-                            g_blackoutStart = std::chrono::steady_clock::now();
-                            g_blackoutCount++;
-
-                            // Detailed diagnostic
-                            auto renderHandler = g_cefManager.GetRenderHandler();
-                            int pending = renderHandler ? renderHandler->GetPendingFrameCount() : -1;
-                            uint64_t total  = renderHandler ? renderHandler->GetTotalFrameCount() : 0;
-
-                            std::ostringstream oss;
-                            oss << "count=" << g_blackoutCount.load()
-                                << " srvTop=" << (srvTop  ? "OK" : "null")
-                                << " srvBot=" << (srvBottom ? "OK" : "null")
-                                << " pending=" << pending
-                                << " cefTotal=" << total;
-                            g_logger.Log("[BLACKOUT]", oss.str());
-                        }
+                        // ---- Startup / Empty state ----
+                        // At startup before first CEF frame arrives, just output black
                         memset(pBuffer, 0, 1920 * 1080 * 4);
                     }
                 }
@@ -676,7 +631,7 @@ int main(int argc, char** argv)
 
     // Create CEF Browser
     // Note: URL from Config/CLI/Default
-    g_cefManager.CreateBrowser(hwnd, targetUrl, g_pd3dDevice);
+    g_cefManager.CreateBrowser(hwnd, g_targetUrl, g_pd3dDevice);
 
     // Register Fullscreen Callback
     g_cefManager.SetOnFullscreenCallback([hwnd](bool fullscreen) {

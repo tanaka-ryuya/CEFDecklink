@@ -11,8 +11,12 @@ CefRenderHandlerImpl::~CefRenderHandlerImpl() {
         if (m_textureSRVs[i]) m_textureSRVs[i]->Release();
         if (m_textures[i]) m_textures[i]->Release();
     }
-    if (m_historySRVs[0]) m_historySRVs[0]->Release();
-    if (m_historySRVs[1]) m_historySRVs[1]->Release();
+    if (m_lastTop) m_lastTop->Release();
+    if (m_lastBottom) m_lastBottom->Release();
+    while(!m_readyTextures.empty()) {
+        if (m_readyTextures.front().srv) m_readyTextures.front().srv->Release();
+        m_readyTextures.pop();
+    }
 }
 
 void CefRenderHandlerImpl::GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect) {
@@ -50,6 +54,7 @@ void CefRenderHandlerImpl::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementTy
     // Phase 2: Copy (No Lock)
     if (bufferIdx >= 0) {
         memcpy(m_cpuBuffers[bufferIdx].data(), buffer, size);
+        m_timestamps[bufferIdx] = std::chrono::steady_clock::now();
         
         // Phase 3: Commit (Short Lock needed? Or just atomic write?)
         // m_writeIndex needs to be monotonic and observed by consumer.
@@ -72,8 +77,12 @@ void CefRenderHandlerImpl::Resize(int width, int height) {
         if (m_textureSRVs[i]) { m_textureSRVs[i]->Release(); m_textureSRVs[i] = nullptr; }
         if (m_textures[i]) { m_textures[i]->Release(); m_textures[i] = nullptr; }
     }
-    if (m_historySRVs[0]) { m_historySRVs[0]->Release(); m_historySRVs[0] = nullptr; }
-    if (m_historySRVs[1]) { m_historySRVs[1]->Release(); m_historySRVs[1] = nullptr; }
+    if (m_lastTop) { m_lastTop->Release(); m_lastTop = nullptr; }
+    if (m_lastBottom) { m_lastBottom->Release(); m_lastBottom = nullptr; }
+    while(!m_readyTextures.empty()) {
+        if (m_readyTextures.front().srv) m_readyTextures.front().srv->Release();
+        m_readyTextures.pop();
+    }
 
     if (!m_device) return;
 
@@ -146,20 +155,19 @@ void CefRenderHandlerImpl::SyncWithGPU() {
     if (tex) {
         std::lock_guard<std::mutex> lock(m_mutex);
         if (uploadSuccess) {
-            // Update History
-            if (m_historySRVs[0] == nullptr) {
-                // First frame ever: populate both slots to avoid duplication fallback in consumer
-                m_historySRVs[0] = m_textureSRVs[bufferIdx];
-                if (m_historySRVs[0]) m_historySRVs[0]->AddRef();
+            auto srv = m_textureSRVs[bufferIdx];
+            if (srv) {
+                srv->AddRef();
+                TextureEntry entry;
+                entry.srv = srv;
+                entry.timestamp = m_timestamps[bufferIdx];
+                m_readyTextures.push(entry);
                 
-                m_historySRVs[1] = m_textureSRVs[bufferIdx];
-                if (m_historySRVs[1]) m_historySRVs[1]->AddRef();
-            } else {
-                if (m_historySRVs[1]) m_historySRVs[1]->Release();
-                m_historySRVs[1] = m_historySRVs[0]; // Shift
-                
-                m_historySRVs[0] = m_textureSRVs[bufferIdx];
-                if (m_historySRVs[0]) m_historySRVs[0]->AddRef();
+                // Limit queue size to avoid memory leaks if consumer stops
+                while(m_readyTextures.size() > 8) {
+                    m_readyTextures.front().srv->Release();
+                    m_readyTextures.pop();
+                }
             }
         }
         
@@ -170,23 +178,63 @@ void CefRenderHandlerImpl::SyncWithGPU() {
     }
 }
 
-void CefRenderHandlerImpl::GetLatestTextures(ID3D11ShaderResourceView** srv1, ID3D11ShaderResourceView** srv2) {
+void CefRenderHandlerImpl::GetSynchronizedTextures(ID3D11ShaderResourceView** srvTop, ID3D11ShaderResourceView** srvBottom) {
     std::lock_guard<std::mutex> lock(m_mutex);
-    if (srv1) {
-        *srv1 = m_historySRVs[1]; // Older
-        if (*srv1) (*srv1)->AddRef();
+
+    bool poppedPair = false;
+    bool poppedSingle = false;
+
+    if (m_readyTextures.size() >= 2) {
+        if (m_lastTop) m_lastTop->Release();
+        m_lastTop = m_readyTextures.front().srv;
+        m_readyTextures.pop();
+        
+        if (m_lastBottom) m_lastBottom->Release();
+        m_lastBottom = m_readyTextures.front().srv;
+        m_readyTextures.pop();
+        
+        poppedPair = true;
+    } else if (m_readyTextures.size() == 1) {
+        auto age = std::chrono::steady_clock::now() - m_readyTextures.front().timestamp;
+        if (age > std::chrono::milliseconds(50)) {
+            // Too old, animation likely stopped. Use it for both.
+            if (m_lastTop) m_lastTop->Release();
+            m_lastTop = m_readyTextures.front().srv;
+            m_lastTop->AddRef(); 
+            
+            if (m_lastBottom) m_lastBottom->Release();
+            m_lastBottom = m_readyTextures.front().srv;
+            
+            m_readyTextures.pop();
+            poppedSingle = true;
+        }
     }
-    if (srv2) {
-        *srv2 = m_historySRVs[0]; // Newer
-        if (*srv2) (*srv2)->AddRef();
+
+    if (!poppedPair && !poppedSingle) {
+        // We are waiting for frames. To prevent vibration (time-reversal jitter) 
+        // from outputting an old pair [A, B] again, we freeze on the very last available frame [B, B].
+        if (m_lastTop != m_lastBottom) {
+            if (m_lastTop) m_lastTop->Release();
+            m_lastTop = m_lastBottom;
+            if (m_lastTop) m_lastTop->AddRef();
+        }
+    }
+
+    if (srvTop) {
+        *srvTop = m_lastTop;
+        if (*srvTop) (*srvTop)->AddRef();
+    }
+    if (srvBottom) {
+        *srvBottom = m_lastBottom;
+        if (*srvBottom) (*srvBottom)->AddRef();
     }
 }
 
 ID3D11ShaderResourceView* CefRenderHandlerImpl::GetTextureSRV() {
     std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_historySRVs[0]) {
-        m_historySRVs[0]->AddRef();
-        return m_historySRVs[0]; 
+    if (m_lastBottom) {
+        m_lastBottom->AddRef();
+        return m_lastBottom; 
     }
     return nullptr;
 }

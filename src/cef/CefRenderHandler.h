@@ -4,6 +4,8 @@
 #include <vector>
 #include <atomic>
 #include <d3d11.h>
+#include <chrono>
+#include <queue>
 
 class CefRenderHandlerImpl : public CefRenderHandler {
 public:
@@ -25,7 +27,8 @@ public:
     void SyncWithGPU();
 
     // Get the two most recent distinct textures
-    void GetLatestTextures(ID3D11ShaderResourceView** srv1, ID3D11ShaderResourceView** srv2);
+    // Retreives a synchronized pair of frames for interlaced output, applying stutter prevention logic.
+    void GetSynchronizedTextures(ID3D11ShaderResourceView** srvTop, ID3D11ShaderResourceView** srvBottom);
 
     // Diagnostics
     int GetAndResetFrameCount() { return m_frameCount.exchange(0); }
@@ -44,13 +47,21 @@ private:
     ID3D11Texture2D* m_textures[kBufferCount] = { nullptr };
     ID3D11ShaderResourceView* m_textureSRVs[kBufferCount] = { nullptr };
     
+    struct TextureEntry {
+        ID3D11ShaderResourceView* srv;
+        std::chrono::steady_clock::time_point timestamp;
+    };
+
     // The history of recent textures for decoupled retrieval
-    ID3D11ShaderResourceView* m_historySRVs[2] = { nullptr };
+    std::queue<TextureEntry> m_readyTextures;
+    ID3D11ShaderResourceView* m_lastTop = nullptr;
+    ID3D11ShaderResourceView* m_lastBottom = nullptr;
 
     std::mutex m_mutex;
     
     // CPU Ring Buffers
     std::vector<uint8_t> m_cpuBuffers[kBufferCount];
+    std::chrono::steady_clock::time_point m_timestamps[kBufferCount];
 
     // Ring Buffer Indices
     // m_writeIndex: Incremented by OnPaint (Producer)
