@@ -21,6 +21,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Set up CEF (Chromium Embedded Framework)
       shell: powershell
@@ -47,10 +49,35 @@ jobs:
         Compress-Archive -Path build/Release/* -DestinationPath build/CEFDecklink-Release.zip
         Write-Host "ZIP package created."
 
+    - name: Resolve tag name
+      id: resolve_tag
+      shell: powershell
+      run: |
+        if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+          $tag = "${{ github.event.inputs.tag_name }}"
+        } else {
+          $tag = "${{ github.ref_name }}"
+        }
+        Write-Host "tag=$tag"
+        echo "tag=$tag" >> $env:GITHUB_OUTPUT
+
+    - name: Create and push tag (manual run only)
+      if: github.event_name == 'workflow_dispatch'
+      shell: powershell
+      run: |
+        $tag = "${{ steps.resolve_tag.outputs.tag }}"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        # Delete existing tag if present (to allow re-running with same tag like 'latest')
+        git tag -d $tag 2>$null; git push origin :refs/tags/$tag 2>$null; echo "Cleaned old tag"
+        git tag $tag
+        git push origin $tag
+        Write-Host "Tag '$tag' created and pushed."
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+        tag_name: ${{ steps.resolve_tag.outputs.tag }}
         files: |
           build/CEFDecklink-Release.zip
           build/CEFDecklink-Setup.exe
