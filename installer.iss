@@ -12,7 +12,7 @@ AppId={{8F9A3B2C-1D4E-5F6A-7B8C-9D0E1F2A3B4C}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={autopf}\{#MyAppName}
+DefaultDirName={localappdata}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=build
@@ -23,7 +23,8 @@ WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64
 
 ; Privileges
-PrivilegesRequired=admin
+PrivilegesRequired=lowest
+PrivilegesRequiredOverridesAllowed=dialog
 
 ; Uninstall
 UninstallDisplayIcon={app}\{#MyAppExeName}
