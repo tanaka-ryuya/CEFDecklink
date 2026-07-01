@@ -83,6 +83,12 @@ public:
         command_line->AppendSwitch("hide-scrollbars");
         command_line->AppendSwitch("disable-overlay-scrollbar");
         command_line->AppendSwitch("disable-extensions");
+
+        // GPU rasterization: force hardware rasterization path.
+        // Avoids software (CPU) rasterization which causes higher first-frame latency
+        // and is the root cause of animation start jitter in CEF windowless mode.
+        command_line->AppendSwitch("enable-gpu-rasterization");
+        command_line->AppendSwitch("ignore-gpu-blocklist");
     }
 
 private:
@@ -208,6 +214,33 @@ void CefManager::SetBrowser(CefRefPtr<CefBrowser> browser) {
     if (m_browser) {
         m_browser->GetHost()->WasHidden(false);
         m_browser->GetHost()->WasResized();
+
+        // Compositor warm-up: inject a persistent rAF loop into the page.
+        // In CEF windowless mode, Chromium's compositor thread goes idle when
+        // content is static. When an animation starts, the compositor needs
+        // 1-3 frames (~16-50ms) to "wake up", causing visible jitter at the
+        // start of animations. Keeping a continuous rAF loop running prevents
+        // the compositor from ever going idle, so animations start instantly.
+        // Trade-off: slight increase in GPU/CPU usage while page is static.
+        m_browser->GetMainFrame()->ExecuteJavaScript(
+            "(function keepCompositorWarm() {"
+            "  requestAnimationFrame(keepCompositorWarm);"
+            "})();"
+
+            // GPU layer retention: prevent compositor layer teardown at animation end.
+            // When a CSS animation/transition ends, Chromium destroys the promoted
+            // GPU compositor layer for that element, causing a repaint that manifests
+            // as a 1-frame jitter at the end of animations (visible even with linear easing).
+            // Setting will-change after animationend/transitionend keeps the layer alive,
+            // eliminating the teardown repaint entirely.
+            "document.addEventListener('animationend', function(e) {"
+            "  e.target.style.willChange = 'transform, opacity';"
+            "}, true);"
+            "document.addEventListener('transitionend', function(e) {"
+            "  e.target.style.willChange = 'transform, opacity';"
+            "}, true);",
+            "about:blank", 0
+        );
     }
 }
 
