@@ -197,19 +197,19 @@ void CefRenderHandlerImpl::GetSynchronizedTextures(ID3D11ShaderResourceView** sr
         
         poppedPair = true;
     } else if (m_readyTextures.size() == 1) {
-        auto age = std::chrono::steady_clock::now() - m_readyTextures.front().timestamp;
-        if (age > std::chrono::milliseconds(50)) {
-            // Too old, animation likely stopped. Use it for both.
-            if (m_lastTop) m_lastTop->Release();
-            m_lastTop = m_readyTextures.front().srv;
-            m_lastTop->AddRef(); 
-            
-            if (m_lastBottom) m_lastBottom->Release();
-            m_lastBottom = m_readyTextures.front().srv;
-            
-            m_readyTextures.pop();
-            poppedSingle = true;
-        }
+        // CEF(60fps)とDeckLink(29.97fps)のタイミングジッターにより、
+        // 2枚ではなく1枚しかキューにない場合があります。
+        // この新しい1枚を無視するとアニメーション中にフレームがフリーズ（コマ落ち）するため、
+        // 古さに関わらず常に最新フレームとして両フィールドに適用します。
+        if (m_lastTop) m_lastTop->Release();
+        m_lastTop = m_readyTextures.front().srv;
+        m_lastTop->AddRef(); 
+        
+        if (m_lastBottom) m_lastBottom->Release();
+        m_lastBottom = m_readyTextures.front().srv;
+        
+        m_readyTextures.pop();
+        poppedSingle = true;
     }
 
     if (!poppedPair && !poppedSingle) {
