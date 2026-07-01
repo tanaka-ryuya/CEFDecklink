@@ -565,6 +565,10 @@ int main(int argc, char** argv)
     CefMainArgs main_args(GetModuleHandle(nullptr));
     int exit_code = CefExecuteProcess(main_args, nullptr, nullptr);
     if (exit_code >= 0) {
+        // Boost CEF child process priority (Renderer, GPU, Network, etc.)
+        // The parent's HIGH_PRIORITY_CLASS is NOT inherited by child processes on Windows.
+        // Setting it here ensures the renderer runs at high priority, reducing animation jitter.
+        SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
         return exit_code;
     }
     

@@ -321,7 +321,15 @@ ULONG DeckLinkDevice::Release()
 HRESULT DeckLinkDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame *completedFrame, BMDOutputFrameCompletionResult result)
 {
     (void)completedFrame;
-    
+
+    // Boost DeckLink SDK callback thread priority on first invocation.
+    // The SDK creates this thread internally, so we can only set it from within the callback.
+    static bool s_prioritySet = false;
+    if (!s_prioritySet) {
+        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+        s_prioritySet = true;
+    }
+
     // Store result
     m_lastCompletionResult = result;
 
@@ -489,6 +497,10 @@ bool DeckLinkDevice::ScheduleNextFrame()
 }
 
 void DeckLinkDevice::SimulationLoop() {
+    // Boost simulation thread to TIME_CRITICAL so the 29.97fps pacing timer
+    // is not interrupted by lower-priority threads during animations.
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+
     // 59.94 fields per second = 29.97 frames per second ?? 
     // Wait, the hardware is 1080i5994. The callback `ScheduledFrameCompleted` usually fires at field rate or frame rate?
     // Actually DeckLink Output callback fires when a *frame* (which might contain 2 fields) is completed.
