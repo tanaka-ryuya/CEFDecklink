@@ -5,6 +5,22 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# --- Get Git Commit Hash ---
+find_package(Git QUIET)
+if(GIT_FOUND)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_COMMIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+endif()
+if(NOT GIT_COMMIT_HASH)
+    set(GIT_COMMIT_HASH "unknown")
+endif()
+message(STATUS "Build commit: ${GIT_COMMIT_HASH}")
+
 # --- Dependencies ---
 
 # 1. DeckLink SDK API (Bumped to 1 as ImGui removed)
@@ -70,6 +86,11 @@ file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h")
 add_executable(${PROJECT_NAME} 
     ${SOURCES}
     ${DECKLINK_SOURCES}
+)
+
+# Pass git commit hash as compile-time definition
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    GIT_COMMIT_HASH="${GIT_COMMIT_HASH}"
 )
 
 # --- Linking ---

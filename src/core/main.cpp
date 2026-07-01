@@ -539,6 +539,7 @@ int main(int argc, char** argv)
         }
     }
     
+    std::cout << "--- DeckLink + CEF Application [build:" << GIT_COMMIT_HASH << "] ---" << std::endl;
     std::cout << "[Config] URL: " << g_targetUrl << std::endl;
     std::cout << "[Config] Format: " << g_format << std::endl;
     std::cout << "[Config] Alpha: " << g_alphaThreshold << std::endl;
