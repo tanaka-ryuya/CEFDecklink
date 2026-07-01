@@ -34,7 +34,7 @@ jobs:
       run: cmake -S . -B build
 
     - name: Build Project (Release)
-      run: cmake --build build --config Release
+      run: cmake --build build --config Release --parallel
 
     - name: Create Release ZIP
       shell: powershell
