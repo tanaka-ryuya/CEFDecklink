@@ -152,9 +152,9 @@ void CefRenderHandlerImpl::SyncWithGPU() {
     }
 
     // Phase 3: Commit (Short Lock)
-    if (tex) {
+    {
         std::lock_guard<std::mutex> lock(m_mutex);
-        if (uploadSuccess) {
+        if (tex && uploadSuccess) {
             auto srv = m_textureSRVs[bufferIdx];
             if (srv) {
                 srv->AddRef();
@@ -171,9 +171,11 @@ void CefRenderHandlerImpl::SyncWithGPU() {
             }
         }
         
-        // Advance Consumer
+        // Always advance consumer to prevent freeze
         m_readIndex++;
-        
+    }
+
+    if (tex) {
         tex->Release();
     }
 }

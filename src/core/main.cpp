@@ -3,6 +3,7 @@
 #include <tchar.h>
 #include <d3d11.h>
 #include <d3d11_1.h>
+#include <d3d10.h>
 #include <dxgi.h>
 #include <iostream>
 #include <iomanip>
@@ -919,6 +920,13 @@ bool CreateDeviceD3D(HWND hWnd)
     
     if (res != S_OK)
         return false;
+
+    // Enable D3D11 Multithread protection for safe access from DeckLink callback threads
+    ID3D10Multithread* pMultithread = nullptr;
+    if (SUCCEEDED(g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&pMultithread)))) {
+        pMultithread->SetMultithreadProtected(TRUE);
+        pMultithread->Release();
+    }
 
     CreateRenderTarget();
     return true;
