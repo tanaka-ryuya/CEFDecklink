@@ -1,0 +1,54 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up CEF (Chromium Embedded Framework)
+      shell: powershell
+      run: |
+        $url = powershell -File scripts/find_cef.ps1
+        Write-Host "Downloading CEF from $url ..."
+        New-Item -ItemType Directory -Force -Path vender
+        Invoke-WebRequest -Uri $url -OutFile vender/cef.tar.bz2
+        Write-Host "Extracting CEF..."
+        tar -xf vender/cef.tar.bz2 -C vender
+        $extractedDir = Get-ChildItem -Path vender -Filter "cef_binary_*" -Directory | Select-Object -First 1
+        Rename-Item -Path $extractedDir.FullName -NewName "cef"
+        Write-Host "CEF setup completed."
+
+    - name: Configure CMake
+      run: cmake -S . -B build
+
+    - name: Build Project (Release)
+      run: cmake --build build --config Release
+
+    - name: Create Release ZIP
+      shell: powershell
+      run: |
+        Compress-Archive -Path build/Release/* -DestinationPath build/CEFDecklink-Release.zip
+        Write-Host "ZIP package created."
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          build/CEFDecklink-Release.zip
+          build/CEFDecklink-Setup.exe
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

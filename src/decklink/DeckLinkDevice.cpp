@@ -76,7 +76,7 @@ bool DeckLinkDevice::Initialize(const std::string& format)
 
     if (FAILED(result))
     {
-        std::cerr << "DeckLink drivers may not be installed. Switching to SIMULATOR MODE." << std::endl;
+        std::cerr << "[DeckLink] DeckLink drivers may not be installed. Switching to SIMULATOR MODE. HRESULT: 0x" << std::hex << result << std::endl;
         m_isSimulated = true;
         return true; // Return true as we successfully initialized "Simulated" device
     }
@@ -84,7 +84,7 @@ bool DeckLinkDevice::Initialize(const std::string& format)
     // Get the first device
     if (deckLinkIterator->Next(&m_deckLink) != S_OK)
     {
-        std::cerr << "No DeckLink device found. Switching to SIMULATOR MODE." << std::endl;
+        std::cerr << "[DeckLink] No DeckLink device found. Switching to SIMULATOR MODE." << std::endl;
         deckLinkIterator->Release();
         m_isSimulated = true;
         return true;
@@ -92,9 +92,25 @@ bool DeckLinkDevice::Initialize(const std::string& format)
 
     deckLinkIterator->Release();
 
-    // Get Output Interface
-    if (m_deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&m_deckLinkOutput) != S_OK)
+    // Get and print device name
+    BSTR deviceNameBstr = nullptr;
+    if (m_deckLink->GetDisplayName(&deviceNameBstr) == S_OK)
     {
+        std::wstring wname(deviceNameBstr);
+        std::string name(wname.begin(), wname.end());
+        std::cout << "[DeckLink] Found device: " << name << std::endl;
+        SysFreeString(deviceNameBstr);
+    }
+    else
+    {
+        std::cout << "[DeckLink] Found device, but failed to retrieve display name." << std::endl;
+    }
+
+    // Get Output Interface
+    HRESULT hr = m_deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&m_deckLinkOutput);
+    if (hr != S_OK)
+    {
+        std::cerr << "[DeckLink] QueryInterface IID_IDeckLinkOutput failed. HRESULT: 0x" << std::hex << hr << std::endl;
         return false;
     }
 
@@ -112,7 +128,7 @@ bool DeckLinkDevice::Initialize(const std::string& format)
     result = m_deckLinkOutput->EnableVideoOutput(displayMode, bmdVideoOutputFlagDefault);
     if (FAILED(result))
     {
-        std::cerr << "Could not enable video output for " << format << std::endl;
+        std::cerr << "[DeckLink] EnableVideoOutput failed for format " << format << ". HRESULT: 0x" << std::hex << result << std::endl;
         return false;
     }
 
