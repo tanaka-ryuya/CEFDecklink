@@ -497,12 +497,18 @@ void RenderFrame(HWND hWnd) {
         static int statusLogCounter = 0;
         if (++statusLogCounter >= 10) {
             statusLogCounter = 0;
+            int drops = 0;
+            int dups = 0;
+            if (handler) {
+                drops = handler->GetAndResetDroppedFrames();
+                dups = handler->GetAndResetDuplicatedFrames();
+            }
+
             std::ostringstream oss;
-            oss << "DL=" << std::fixed << std::setprecision(2) << deckLinkFps << "fps"
-                << " CEF=" << (int)(cefFps + 0.5) << "fps"
-                << " unique=" << (int)(normalizedUnique + 0.5)
+            oss << "DL=" << std::fixed << std::setprecision(1) << deckLinkFps 
+                << " CEF=" << (int)(cefFps + 0.5) 
                 << " Q=" << pendingCef
-                << " total=" << totalCef;
+                << " skips(d:" << drops << " u:" << dups << ")";
             g_logger.Log("[STATUS]", oss.str());
         }
         
