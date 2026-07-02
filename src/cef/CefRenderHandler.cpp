@@ -167,6 +167,7 @@ void CefRenderHandlerImpl::SyncWithGPU() {
                 while(m_readyTextures.size() > 8) {
                     m_readyTextures.front().srv->Release();
                     m_readyTextures.pop();
+                    m_droppedFrames++;
                 }
             }
         }
@@ -199,6 +200,12 @@ void CefRenderHandlerImpl::GetSynchronizedTextures(ID3D11ShaderResourceView** sr
 
     if (m_isConsuming) {
         if (m_readyTextures.size() >= 2) {
+            // If we had starvation last time but now have >=2, it was a mid-animation stutter!
+            if (m_hadStarvation) {
+                m_duplicatedFrames++;
+                m_hadStarvation = false;
+            }
+
             if (m_lastTop) m_lastTop->Release();
             m_lastTop = m_readyTextures.front().srv;
             m_readyTextures.pop();
@@ -210,6 +217,13 @@ void CefRenderHandlerImpl::GetSynchronizedTextures(ID3D11ShaderResourceView** sr
             poppedPair = true;
         } else if (m_readyTextures.size() == 1) {
             // Static cut-in (1 frame total) or severe jitter
+            // If we already had starvation, animation is continuing at 1 frame per tick = severe stutter
+            if (m_hadStarvation) {
+                m_duplicatedFrames++;
+            } else {
+                m_hadStarvation = true; // Mark starvation, decide if stutter next tick
+            }
+
             if (m_lastTop) m_lastTop->Release();
             m_lastTop = m_readyTextures.front().srv;
             m_lastTop->AddRef(); 
@@ -222,7 +236,8 @@ void CefRenderHandlerImpl::GetSynchronizedTextures(ID3D11ShaderResourceView** sr
         } else {
             // Queue ran dry. Animation ended.
             m_isConsuming = false;
-            m_prerollDelay = 2; // Reset delay for the NEXT animation
+            m_hadStarvation = false; // The starvation was just the end of the animation! NOT a stutter.
+            m_prerollDelay = 4; // Reset delay for the NEXT animation
         }
     }
 

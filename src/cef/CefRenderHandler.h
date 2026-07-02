@@ -35,6 +35,8 @@ public:
     uint64_t GetTotalFrameCount() const { return m_totalFrameCount.load(); }
     bool HasPendingFrames(size_t count) const { return (m_writeIndex.load() - m_readIndex.load()) >= count; }
     int GetPendingFrameCount() const { return (int)(m_writeIndex.load() - m_readIndex.load()); }
+    int GetAndResetDroppedFrames() { return m_droppedFrames.exchange(0); }
+    int GetAndResetDuplicatedFrames() { return m_duplicatedFrames.exchange(0); }
 
 private:
     int m_width = 1920;
@@ -57,7 +59,11 @@ private:
     ID3D11ShaderResourceView* m_lastTop = nullptr;
     ID3D11ShaderResourceView* m_lastBottom = nullptr;
     bool m_isConsuming = false;
-    int m_prerollDelay = 2; // DeckLink cycles to wait before consuming
+    bool m_hadStarvation = false; // Tracks if we hit size==1 recently
+    int m_prerollDelay = 4; // DeckLink cycles to wait before consuming (4 cycles = ~133ms)
+    
+    std::atomic<int> m_droppedFrames{0};
+    std::atomic<int> m_duplicatedFrames{0};
 
     std::mutex m_mutex;
     
