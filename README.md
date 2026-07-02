@@ -122,23 +122,26 @@ CEFDecklink/
 
 ### 1. コマンドライン引数
 ```powershell
-.\DeckLinkDX11.exe --url "http://localhost:3000/cg" --alpha 0.5
+.\DeckLinkDX11.exe --url "http://localhost:3000/cg" --unmult_thresh 0.5 --il_filter_mode 1
 ```
 - `--url`: 読み込む初期URLを指定します。
-- `--alpha`: 初期のアルファ閾値を設定します (0.0 - 1.0)。
+- `--unmult_thresh`: 初期のUnmultiply用アルファ閾値を設定します (0.0 - 1.0)。
+- `--il_filter_mode`: 垂直ローパスフィルタのモードを設定します (0: なし, 1: 3-tap, 2: 5-tap)。
 
 ### 2. config.json
 `DeckLinkDX11.exe` の隣（ビルドディレクトリ、またはインストール先）の `config.json` で設定を固定化できます：
 ```json
 {
     "url": "http://localhost:9090/graphics/on_air.html",
-    "alpha": 0.01,
-    "format": "5994i"
+    "unmult_thresh": 0.000,
+    "format": "5994i",
+    "il_filter_mode": 0
 }
 ```
 - `url`: The web page to render (default: "https://example.com")
-- `alpha`: The alpha threshold for unpremultiplication (default: 0.01)
+- `unmult_thresh`: The alpha threshold for unpremultiplication (default: 0.000)
 - `format`: Output format, e.g., "5994i" or "50i" (default: "5994i")
+- `il_filter_mode`: Interlace vertical filter mode (0=None, 1=3-tap, 2=5-tap) (default: 0)
 
 ### 3. licensekey.json
 `DeckLinkDX11.exe` の隣に `licensekey.json` を配置して有期ライセンスキーを設定できます：
@@ -159,7 +162,7 @@ CEFDecklink/
 - **`Ctrl + I`**: **インターレースモード (標準)** (前後フレームを合成し1080i出力)
 - **`Ctrl + D`**: **Diffモード** (フレームTとT+1の差分を可視化。スタッターのデバッグ用)
 - **`Ctrl + P`**: **プログレッシブモード** (高フレームレートのウィンドウプレビュー等用)
-- **`Ctrl + A` / `Ctrl + Z`**: アルファ閾値の微調整 (キーイング用シェーダーの Unmultiply しきい値の調整。Aで増加、Zで減少)
+- **`Ctrl + A` / `Ctrl + Z`**: UnmultThreshの微調整 (キーイング用シェーダーの Unmultiply しきい値の調整。Aで増加、Zで減少)
 - **`Ctrl + C`**: アプリケーションの安全な終了
 
 ※ウィンドウがアクティブな状態で **`F11`** を押すと、プレビューウィンドウの全画面表示の切り替えが可能です。

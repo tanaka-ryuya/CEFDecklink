@@ -130,7 +130,7 @@ void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D
         data[0] = m_alphaThreshold;
         data[1] = (float)m_viewMode; // View Mode
         data[2] = m_isLicensed ? 1.0f : 0.0f; // isLicensed
-        data[3] = 0.0f; // padding
+        data[3] = (float)m_filterMode; // 0=None, 1=3-tap, 2=5-tap vertical LPF
         m_context->Unmap(m_constantBuffer.Get(), 0);
     } else {
         if (doLog) std::cerr << "[Shader] Failed to map constant buffer: " << std::hex << hr << std::endl;
@@ -207,4 +207,8 @@ void ShaderManager::SetViewMode(int mode) {
 
 void ShaderManager::SetLicensed(bool licensed) {
     m_isLicensed = licensed;
+}
+
+void ShaderManager::SetFilterMode(int mode) {
+    m_filterMode = mode;
 }

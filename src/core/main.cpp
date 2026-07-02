@@ -129,6 +129,7 @@ static std::string g_targetUrl;
 static std::string g_format = "5994i"; // "5994i" or "50i"
 static std::string g_licenseKey = "";
 static bool g_isLicensed = false;
+std::atomic<int> g_filterMode(0); // 0=None, 1=3-tap, 2=5-tap vertical LPF
 
 // Forward declarations of helper functions
 IDXGIAdapter* SelectBestAdapter();
@@ -247,7 +248,13 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     oss << "  \x1b[32m[Status]\x1b[0m   DeckLink: \x1b[1m" << std::fixed << std::setprecision(2) << deckLinkFps << " fps\x1b[0m | "
         << "CEF: \x1b[1m" << cefFps << " fps\x1b[0m | "
         << "Queue: \x1b[1m" << pendingCount << "\x1b[0m\n";
-    oss << "  \x1b[32m[Config]\x1b[0m   ViewMode: " << modeStr << " | Format: " << g_format << " | Alpha: " << std::fixed << std::setprecision(4) << alphaThreshold << "\n";
+    oss << "  \x1b[32m[Config]\x1b[0m   ViewMode: " << modeStr << " | Format: " << g_format << " | UnmultThresh: " << std::fixed << std::setprecision(4) << alphaThreshold;
+    // Filter Mode display
+    int fMode = g_filterMode.load();
+    const char* filterStr = "None";
+    if (fMode == 1) filterStr = "3tap";
+    else if (fMode == 2) filterStr = "5tap";
+    oss << " | Filter: " << filterStr << "\n";
     oss << "\x1b[36m--------------------------------------------------------------------------------\x1b[0m\n";
     oss << "  \x1b[33mRecent Events / Logs:\x1b[0m\n";
     
@@ -264,7 +271,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     }
 
     oss << "\x1b[36m================================================================================\x1b[0m\n";
-    oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+A/Z(Alpha) | Ctrl+C(Exit)\x1b[0m\n";
+    oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+F(Filter) | Ctrl+A/Z(UnmultThresh) | Ctrl+C(Exit)\x1b[0m\n";
     oss << "\x1b[36m================================================================================\x1b[0m\n";
 
     std::cout << oss.str() << std::flush;
@@ -281,7 +288,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
 // ... (existing includes)
 
 // Global Configuration
-static float g_alphaThreshold = 0.01f;
+static float g_alphaThreshold = 0.000f;
 
 // Helper to load config.json
 bool LoadConfig(std::string& url, float& alpha, std::string& format) {
@@ -343,10 +350,16 @@ bool LoadConfig(std::string& url, float& alpha, std::string& format) {
         url = parsedUrl;
     }
 
-    // Load Alpha
-    float parsedAlpha = ParseFloat("alpha");
-    if (parsedAlpha >= 0.0f) {
-        alpha = parsedAlpha;
+    // Load Unmult Threshold (formerly alpha)
+    float parsedUnmultThresh = ParseFloat("unmult_thresh");
+    if (parsedUnmultThresh >= 0.0f) {
+        alpha = parsedUnmultThresh;
+    }
+
+    // Load Filter Mode
+    float parsedFilterMode = ParseFloat("il_filter_mode");
+    if (parsedFilterMode >= 0.0f) {
+        g_filterMode.store((int)parsedFilterMode);
     }
     
     // Load Format
@@ -412,6 +425,11 @@ void RenderFrame(HWND hWnd) {
             g_alphaThreshold -= 0.001f;
             if (g_alphaThreshold < 0.0f) g_alphaThreshold = 0.0f;
             changed = true;
+        } else if (ch == 6 || (modified && (ch == 'f' || ch == 'F'))) {
+            // Cycle vertical LPF: None(0) -> 3-tap(1) -> 5-tap(2) -> None(0)
+            int fm = g_filterMode.load();
+            g_filterMode.store((fm + 1) % 3);
+            changed = true;
         }
     }
 
@@ -428,6 +446,7 @@ void RenderFrame(HWND hWnd) {
     if (changed && g_shaderManager) {
         std::lock_guard<std::mutex> lock(g_d3dContextMutex);
         g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
+        g_shaderManager->SetFilterMode(g_filterMode.load());
     }
 
     // CEF Message Loop
@@ -530,9 +549,13 @@ int main(int argc, char** argv)
         std::string arg = argv[i];
         if (arg == "--url" && i + 1 < argc) {
             g_targetUrl = argv[++i];
-        } else if (arg == "--alpha" && i + 1 < argc) {
+        } else if (arg == "--unmult_thresh" && i + 1 < argc) {
             try {
                 g_alphaThreshold = std::stof(argv[++i]);
+            } catch (...) {}
+        } else if (arg == "--il_filter_mode" && i + 1 < argc) {
+            try {
+                g_filterMode.store(std::stoi(argv[++i]));
             } catch (...) {}
         } else if (arg == "--format" && i + 1 < argc) {
             g_format = argv[++i];
@@ -542,7 +565,8 @@ int main(int argc, char** argv)
     std::cout << "--- DeckLink + CEF Application [build:" << GIT_COMMIT_HASH << "] ---" << std::endl;
     std::cout << "[Config] URL: " << g_targetUrl << std::endl;
     std::cout << "[Config] Format: " << g_format << std::endl;
-    std::cout << "[Config] Alpha: " << g_alphaThreshold << std::endl;
+    std::cout << "[Config] UnmultThresh: " << g_alphaThreshold << std::endl;
+    std::cout << "[Config] FilterMode: " << g_filterMode.load() << std::endl;
 
     // Open file logger
     {
