@@ -164,7 +164,8 @@ void CefRenderHandlerImpl::SyncWithGPU() {
                 m_readyTextures.push(entry);
                 
                 // Limit queue size to avoid memory leaks if consumer stops
-                while(m_readyTextures.size() > 8) {
+                // Cap at 16 frames to allow for huge prerolls without dropping too early
+                while(m_readyTextures.size() > 16) {
                     m_readyTextures.front().srv->Release();
                     m_readyTextures.pop();
                     m_droppedFrames++;
@@ -237,7 +238,7 @@ void CefRenderHandlerImpl::GetSynchronizedTextures(ID3D11ShaderResourceView** sr
             // Queue ran dry. Animation ended.
             m_isConsuming = false;
             m_hadStarvation = false; // The starvation was just the end of the animation! NOT a stutter.
-            m_prerollDelay = 4; // Reset delay for the NEXT animation
+            m_prerollDelay = 3; // Reset delay for the NEXT animation
         }
     }
 

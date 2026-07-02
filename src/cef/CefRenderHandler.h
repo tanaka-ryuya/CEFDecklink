@@ -43,8 +43,8 @@ private:
     int m_height = 1080;
     ID3D11Device* m_device = nullptr;
     
-    // Triple Buffering (Ring Buffer) -> Now Octuple Buffering
-    static const int kBufferCount = 8;
+    // Triple Buffering (Ring Buffer) -> Now 32 to prevent aliasing with large preroll queues
+    static const int kBufferCount = 32;
     
     ID3D11Texture2D* m_textures[kBufferCount] = { nullptr };
     ID3D11ShaderResourceView* m_textureSRVs[kBufferCount] = { nullptr };
@@ -60,7 +60,7 @@ private:
     ID3D11ShaderResourceView* m_lastBottom = nullptr;
     bool m_isConsuming = false;
     bool m_hadStarvation = false; // Tracks if we hit size==1 recently
-    int m_prerollDelay = 4; // DeckLink cycles to wait before consuming (4 cycles = ~133ms)
+    int m_prerollDelay = 3; // DeckLink cycles to wait before consuming
     
     std::atomic<int> m_droppedFrames{0};
     std::atomic<int> m_duplicatedFrames{0};
