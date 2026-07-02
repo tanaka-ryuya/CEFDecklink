@@ -56,6 +56,8 @@ private:
     std::queue<TextureEntry> m_readyTextures;
     ID3D11ShaderResourceView* m_lastTop = nullptr;
     ID3D11ShaderResourceView* m_lastBottom = nullptr;
+    bool m_isConsuming = false;
+    int m_prerollDelay = 2; // DeckLink cycles to wait before consuming
 
     std::mutex m_mutex;
     

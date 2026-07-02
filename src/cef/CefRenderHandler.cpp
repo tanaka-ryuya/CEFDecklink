@@ -186,30 +186,44 @@ void CefRenderHandlerImpl::GetSynchronizedTextures(ID3D11ShaderResourceView** sr
     bool poppedPair = false;
     bool poppedSingle = false;
 
-    if (m_readyTextures.size() >= 2) {
-        if (m_lastTop) m_lastTop->Release();
-        m_lastTop = m_readyTextures.front().srv;
-        m_readyTextures.pop();
-        
-        if (m_lastBottom) m_lastBottom->Release();
-        m_lastBottom = m_readyTextures.front().srv;
-        m_readyTextures.pop();
-        
-        poppedPair = true;
-    } else if (m_readyTextures.size() == 1) {
-        // CEF(60fps)とDeckLink(29.97fps)のタイミングジッターにより、
-        // 2枚ではなく1枚しかキューにない場合があります。
-        // この新しい1枚を無視するとアニメーション中にフレームがフリーズ（コマ落ち）するため、
-        // 古さに関わらず常に最新フレームとして両フィールドに適用します。
-        if (m_lastTop) m_lastTop->Release();
-        m_lastTop = m_readyTextures.front().srv;
-        m_lastTop->AddRef(); 
-        
-        if (m_lastBottom) m_lastBottom->Release();
-        m_lastBottom = m_readyTextures.front().srv;
-        
-        m_readyTextures.pop();
-        poppedSingle = true;
+    // Time-based Preroll logic (Wait for N DeckLink cycles before consuming)
+    if (!m_isConsuming) {
+        if (m_readyTextures.size() > 0) {
+            if (m_prerollDelay > 0) {
+                m_prerollDelay--;
+            } else {
+                m_isConsuming = true;
+            }
+        }
+    }
+
+    if (m_isConsuming) {
+        if (m_readyTextures.size() >= 2) {
+            if (m_lastTop) m_lastTop->Release();
+            m_lastTop = m_readyTextures.front().srv;
+            m_readyTextures.pop();
+            
+            if (m_lastBottom) m_lastBottom->Release();
+            m_lastBottom = m_readyTextures.front().srv;
+            m_readyTextures.pop();
+            
+            poppedPair = true;
+        } else if (m_readyTextures.size() == 1) {
+            // Static cut-in (1 frame total) or severe jitter
+            if (m_lastTop) m_lastTop->Release();
+            m_lastTop = m_readyTextures.front().srv;
+            m_lastTop->AddRef(); 
+            
+            if (m_lastBottom) m_lastBottom->Release();
+            m_lastBottom = m_readyTextures.front().srv;
+            
+            m_readyTextures.pop();
+            poppedSingle = true;
+        } else {
+            // Queue ran dry. Animation ended.
+            m_isConsuming = false;
+            m_prerollDelay = 2; // Reset delay for the NEXT animation
+        }
     }
 
     if (!poppedPair && !poppedSingle) {
