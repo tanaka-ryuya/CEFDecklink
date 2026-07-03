@@ -50,7 +50,7 @@ jobs:
         Write-Host "ZIP package created."
 
     - name: Build Installer
-      run: '"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss'
+      run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss'
 
     - name: Resolve tag name
       id: resolve_tag
