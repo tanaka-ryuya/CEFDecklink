@@ -71,10 +71,12 @@ jobs:
         $tag = "${{ steps.resolve_tag.outputs.tag }}"
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        # Delete existing tag if present (ignore errors if tag doesn't exist)
-        git tag -d $tag 2>&1 | Out-Null
-        git push origin ":refs/tags/$tag" 2>&1 | Out-Null
-        Write-Host "Cleaned old tag (if existed)"
+        # Delete existing tag if present
+        if (git tag -l $tag) {
+          git tag -d $tag
+          git push origin ":refs/tags/$tag"
+          Write-Host "Cleaned old tag"
+        }
         git tag $tag
         git push origin $tag
         Write-Host "Tag '$tag' created and pushed."
