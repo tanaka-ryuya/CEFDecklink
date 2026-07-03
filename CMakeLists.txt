@@ -80,7 +80,7 @@ else()
 endif()
 
 # --- Sources ---
-file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h")
+file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h" "src/*.rc")
 
 # Console App (Removed WIN32 flag)
 add_executable(${PROJECT_NAME} 

@@ -22,6 +22,7 @@
 #include "CefRenderHandler.h"
 #include "ShaderManager.h"
 #include "CrashHandler.h"
+#include "../resource.h"
 
 #include <fstream>
 #include <sstream>
@@ -241,38 +242,35 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     std::ostringstream oss;
     // Move cursor to home (0,0)
     oss << "\x1b[H";
-    oss << "\x1b[36m================================================================================\x1b[0m\n";
-    oss << "  \x1b[1m\x1b[37mCEFDecklink Live Status Dashboard\x1b[0m\n";
-    oss << "  \x1b[36mURL: \x1b[0m" << g_targetUrl << "\n";
-    oss << "\x1b[36m================================================================================\x1b[0m\n";
+    oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
+    oss << "  \x1b[1m\x1b[37m\xF0\x9F\x8D\x8C CEFDecklink Live Status Dashboard \xF0\x9F\x8D\x8C\x1b[K\x1b[0m\n";
+    oss << "  \x1b[36mURL: \x1b[0m" << g_targetUrl << "\x1b[K\n";
+    oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[32m[Status]\x1b[0m   DeckLink: \x1b[1m" << std::fixed << std::setprecision(2) << deckLinkFps << " fps\x1b[0m | "
         << "CEF: \x1b[1m" << cefFps << " fps\x1b[0m | "
-        << "Queue: \x1b[1m" << pendingCount << "\x1b[0m\n";
+        << "Queue: \x1b[1m" << pendingCount << "\x1b[0m\x1b[K\n";
     oss << "  \x1b[32m[Config]\x1b[0m   ViewMode: " << modeStr << " | Format: " << g_format << " | UnmultThresh: " << std::fixed << std::setprecision(4) << alphaThreshold;
     // Filter Mode display
     int fMode = g_filterMode.load();
     const char* filterStr = "None";
     if (fMode == 1) filterStr = "3tap";
     else if (fMode == 2) filterStr = "5tap";
-    oss << " | Filter: " << filterStr << "\n";
-    oss << "\x1b[36m--------------------------------------------------------------------------------\x1b[0m\n";
-    oss << "  \x1b[33mRecent Events / Logs:\x1b[0m\n";
+    oss << " | Filter: " << filterStr << "\x1b[K\n";
+    oss << "\x1b[36m-------------------------------------------------------------------------------\x1b[K\x1b[0m\n";
+    oss << "  \x1b[33mRecent Events / Logs:\x1b[K\x1b[0m\n";
     
     for (int i = 0; i < 5; ++i) {
         if (i < (int)recentLogs.size()) {
-            // Pad line to overwrite previous long text
-            std::string line = recentLogs[i];
-            if (line.length() < 76) line.append(76 - line.length(), ' ');
-            else if (line.length() > 76) line = line.substr(0, 73) + "...";
-            oss << "   " << line << "\n";
+            oss << "   " << recentLogs[i] << "\x1b[K\n";
         } else {
-            oss << "                                                                            \n";
+            oss << "\x1b[K\n";
         }
     }
 
-    oss << "\x1b[36m================================================================================\x1b[0m\n";
-    oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+F(Filter) | Ctrl+A/Z(UnmultThresh) | Ctrl+C(Exit)\x1b[0m\n";
-    oss << "\x1b[36m================================================================================\x1b[0m\n";
+    oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
+    oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+F(Filter)\x1b[K\x1b[0m\n";
+    oss << "            \x1b[90mCtrl+A/Z(UnmultThresh) | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
+    oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
 
     std::cout << oss.str() << std::flush;
 }
@@ -568,7 +566,23 @@ int main(int argc, char** argv)
         }
     }
     
+
+    // 1. CEF Sub-process check (MUST be the absolute first thing)
+    CefMainArgs main_args(GetModuleHandle(nullptr));
+    int exit_code = CefExecuteProcess(main_args, nullptr, nullptr);
+    if (exit_code >= 0) {
+        // Boost CEF child process priority (Renderer, GPU, Network, etc.)
+        // The parent's HIGH_PRIORITY_CLASS is NOT inherited by child processes on Windows.
+        // Setting it here ensures the renderer runs at high priority, reducing animation jitter.
+        SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+        return exit_code;
+    }
+    
+    // ... (Continue initialization)
+
     std::cout << "--- DeckLink + CEF Application [build:" << GIT_COMMIT_HASH << "] ---" << std::endl;
+    SetConsoleOutputCP(CP_UTF8);
+    std::cout << "Initializing..." << std::endl;
     std::cout << "[Config] URL: " << g_targetUrl << std::endl;
     std::cout << "[Config] Format: " << g_format << std::endl;
     std::cout << "[Config] UnmultThresh: " << g_alphaThreshold << std::endl;
@@ -591,27 +605,21 @@ int main(int argc, char** argv)
         }
     }
 
-    // 1. CEF Sub-process check (MUST be the absolute first thing)
-    CefMainArgs main_args(GetModuleHandle(nullptr));
-    int exit_code = CefExecuteProcess(main_args, nullptr, nullptr);
-    if (exit_code >= 0) {
-        // Boost CEF child process priority (Renderer, GPU, Network, etc.)
-        // The parent's HIGH_PRIORITY_CLASS is NOT inherited by child processes on Windows.
-        // Setting it here ensures the renderer runs at high priority, reducing animation jitter.
-        SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
-        return exit_code;
-    }
-    
-    // ... (Continue initialization)
-
-    std::cout << "--- DeckLink + CEF CUI Application ---" << std::endl;
-    std::cout << "Initializing..." << std::endl;
-
     // Initialize Crash Handler for debugging
     CrashHandler::Initialize();
 
     // Register Console Control Handler for clean exit on Ctrl+C
     SetConsoleCtrlHandler(ConsoleHandler, TRUE);
+
+    // Set Console Icon
+    HWND hwndConsole = GetConsoleWindow();
+    if (hwndConsole) {
+        HICON hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_APPICON));
+        if (hIcon) {
+            SendMessage(hwndConsole, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+            SendMessage(hwndConsole, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+        }
+    }
 
     // High Resolution Timer for accurate 60fps pacing
     timeBeginPeriod(1);
@@ -628,6 +636,8 @@ int main(int argc, char** argv)
 
     // Create application window (Hidden)
     WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"DeckLinkApp", nullptr };
+    wc.hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_APPICON));
+    wc.hIconSm = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_APPICON));
     ::RegisterClassExW(&wc);
     // Use SW_HIDE behavior by simply NOT showing it, or strictly SW_HIDE. 
     // We create it as OVERLAPPEDWINDOW but standard size.

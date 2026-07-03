@@ -34,7 +34,10 @@ public:
     int GetAndResetFrameCount() { return m_frameCount.exchange(0); }
     uint64_t GetTotalFrameCount() const { return m_totalFrameCount.load(); }
     bool HasPendingFrames(size_t count) const { return (m_writeIndex.load() - m_readIndex.load()) >= count; }
-    int GetPendingFrameCount() const { return (int)(m_writeIndex.load() - m_readIndex.load()); }
+    int GetPendingFrameCount() {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return (int)m_readyTextures.size();
+    }
     int GetAndResetDroppedFrames() { return m_droppedFrames.exchange(0); }
     int GetAndResetDuplicatedFrames() { return m_duplicatedFrames.exchange(0); }
 
