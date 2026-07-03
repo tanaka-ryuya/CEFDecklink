@@ -1,0 +1,702 @@
+
+(function () {
+    // ==========================================
+    // Standalone SVG Renderer Logic (Unified Core)
+    // ==========================================
+
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    function createSVGElement(tagName) {
+        return document.createElementNS(SVG_NS, tagName);
+    }
+
+    // Inject shared logic core (stripped of exports for standalone use)
+    /**
+ * Shared SVG rendering core.
+ * This file is imported as ESM in the Editor and injected as a raw string in the Player.
+ */
+function setAttributes(el, attrs) {
+    Object.entries(attrs).forEach(([key, value]) => {
+        if (value === undefined)
+            return;
+        const sVal = String(value);
+        if (sVal === "NaN" || sVal.includes("undefined")) {
+            return;
+        }
+        el.setAttribute(key, sVal);
+    });
+}
+function parseHex8(hex) {
+    if (Array.isArray(hex))
+        hex = hex[0] || "#ffffff";
+    if (!hex || typeof hex !== 'string' || !hex.startsWith("#") || hex === "undefined") {
+        return { color: (hex && hex !== "undefined") ? hex : '#ffffff', alpha: 1 };
+    }
+    const h = hex.replace("#", "");
+    if (h.length === 8) {
+        return { color: "#" + h.substring(0, 6), alpha: parseInt(h.substring(6, 8), 16) / 255 };
+    }
+    return { color: hex, alpha: 1 };
+}
+function applyCommonProps(el, node) {
+    const px = Number(node.pivotX ?? 0);
+    const py = Number(node.pivotY ?? 0);
+    const x = Number(node.x ?? 0);
+    const y = Number(node.y ?? 0);
+    const rotation = Number(node.rotation ?? 0);
+    const skewX = Number(node.skewX ?? 0) || 0;
+    const skewY = Number(node.skewY ?? 0) || 0;
+    const scaleX = node.scaleX !== undefined ? Number(node.scaleX) : 1;
+    const scaleY = node.scaleY !== undefined ? Number(node.scaleY) : 1;
+    const opacity = node.opacity !== undefined ? Number(node.opacity) : 1;
+    const visibility = node.visible === false ? "hidden" : "inherit";
+    const sX = isFinite(scaleX) ? scaleX : 1;
+    const sY = isFinite(scaleY) ? scaleY : 1;
+    const skX = isFinite(skewX) ? skewX : 0;
+    const skY = isFinite(skewY) ? skewY : 0;
+    const rad = (rotation * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    const tX = Math.tan((skX * Math.PI) / 180);
+    const tY = Math.tan((skY * Math.PI) / 180);
+    // Konva's order: T * R * Sk * Sc * Toffset
+    // Matrix: [a c e]
+    //         [b d f]
+    // 1. Toffset: [1 0 -px]
+    //             [0 1 -py]
+    // 2. Sc: [sX 0 0]
+    //        [0 sY 0]
+    // 3. Sk: [1 tX 0]
+    //        [tY 1 0]
+    // 4. R: [cos -sin 0]
+    //       [sin  cos 0]
+    // 5. T: [1 0 x]
+    //       [0 1 y]
+    // Combined Sk * Sc * Toffset:
+    // [sX   tX*sY   -sX*px - tX*sY*py]
+    // [tY*sX  sY    -tY*sX*px - sY*py]
+    const m11 = sX;
+    const m12 = tX * sY;
+    const m21 = tY * sX;
+    const m22 = sY;
+    const m13 = -sX * px - tX * sY * py;
+    const m23 = -tY * sX * px - sY * py;
+    // Now apply R:
+    // [cos -sin] * [m11 m12 m13]
+    // [sin  cos]   [m21 m22 m23]
+    const r11 = cos * m11 - sin * m21;
+    const r12 = cos * m12 - sin * m22;
+    const r13 = cos * m13 - sin * m23;
+    const r21 = sin * m11 + cos * m21;
+    const r22 = sin * m12 + cos * m22;
+    const r23 = sin * m13 + cos * m23;
+    // Finally apply T:
+    const a = r11;
+    const b = r21;
+    const c = r12;
+    const d = r22;
+    const e = r13 + x;
+    const f = r23 + y;
+    const transform = `matrix(${a}, ${b}, ${c}, ${d}, ${e}, ${f})`;
+    setAttributes(el, {
+        transform,
+        opacity,
+        visibility,
+        "data-node-id": node.id
+    });
+}
+function setupTextBase(text, node, measuredW, measuredH) {
+    const fontSize = Number(node.style?.fontSize || 24);
+    setAttributes(text, {
+        "font-family": node.style?.fontFamily || "sans-serif",
+        "font-size": fontSize,
+        "font-weight": (node.style?.fontWeight === 'bold' || node.style?.fontWeight === '700' || node.style?.fontWeight === 700) ? 'bold' : 'normal',
+        "font-style": (node.style?.fontStyle === 'italic') ? 'italic' : 'normal',
+        "text-anchor": "start",
+        "dominant-baseline": "hanging",
+        "alignment-baseline": "hanging",
+        "text-rendering": "geometricPrecision",
+        "xml:space": "preserve",
+        x: 0,
+        y: 0
+    });
+    text.textContent = node.text || "";
+}
+/**
+ * Draws the content of an appearance layer (shadow, stroke, or fill)
+ */
+function drawAppearanceContent(target, app, node, appIdx, isRect, measuredW, measuredH, registerDef, createSVGElement) {
+    const rawW = isRect ? (node.width) : (measuredW);
+    const rawH = isRect ? (node.height) : (measuredH);
+    // Fallback to node top-level width/height if not passed
+    const w = Number(rawW ?? (node.width || (isRect ? 100 : 0)));
+    const h = Number(rawH ?? (node.height || (isRect ? 100 : 0)));
+    const safeW = isFinite(w) ? w : 100;
+    const safeH = isFinite(h) ? h : 100;
+    const fillColors = Array.isArray(app.fill) ? app.fill : [app.fill];
+    const firstFillColor = parseHex8(String(fillColors[0] || "#ffffff"));
+    // Punching is used for Stroke and Shadow to avoid them bleeding behind semi-transparent fill.
+    const mainNeedsPunch = app.strokeEnabled && (!app.fillEnabled || firstFillColor.alpha < 1);
+    const shadowNeedsPunch = app.shadowEnabled && !app.fillEnabled;
+    const createMask = (id) => {
+        const mask = createSVGElement("mask");
+        mask.setAttribute("id", id);
+        setAttributes(mask, { maskUnits: "userSpaceOnUse", maskContentUnits: "userSpaceOnUse" });
+        const whiteBg = createSVGElement("rect");
+        setAttributes(whiteBg, { x: -5000, y: -5000, width: 10000, height: 10000, fill: "white" });
+        mask.appendChild(whiteBg);
+        const punchShape = createSVGElement(isRect ? "rect" : "text");
+        if (!isRect) {
+            setupTextBase(punchShape, node, measuredW, measuredH);
+        }
+        else {
+            setAttributes(punchShape, {
+                x: 0, y: 0, width: safeW, height: safeH,
+                rx: Number(node.style?.cornerRadius || 0),
+                ry: Number(node.style?.cornerRadius || 0),
+            });
+        }
+        punchShape.setAttribute("fill", "black");
+        mask.appendChild(punchShape);
+        registerDef(mask);
+    };
+    let mainMaskId = mainNeedsPunch ? `mask-main-${node.id}-${appIdx}` : null;
+    if (mainMaskId)
+        createMask(mainMaskId);
+    let shadowMaskId = shadowNeedsPunch ? `mask-shadow-${node.id}-${appIdx}` : null;
+    if (shadowMaskId)
+        createMask(shadowMaskId);
+    // 1. Shadow
+    if (app.shadowEnabled) {
+        const shadowEl = createSVGElement(isRect ? "rect" : "text");
+        if (!isRect)
+            setupTextBase(shadowEl, node, measuredW, measuredH);
+        const { color: sc, alpha: sa } = parseHex8(String(app.shadowColor || "#000000"));
+        const blur = Number(app.shadowBlur || 0);
+        const dx = Number(app.shadowOffsetX || 0);
+        const dy = Number(app.shadowOffsetY || 0);
+        const filterId = `shadow-blur-${node.id}-${appIdx}`;
+        const filter = createSVGElement("filter");
+        filter.setAttribute("id", filterId);
+        setAttributes(filter, { x: "-50%", y: "-50%", width: "200%", height: "200%" });
+        const feGaussianBlur = createSVGElement("feGaussianBlur");
+        setAttributes(feGaussianBlur, { stdDeviation: (blur / 2) });
+        filter.appendChild(feGaussianBlur);
+        registerDef(filter);
+        if (isRect) {
+            setAttributes(shadowEl, {
+                x: 0, y: 0, width: safeW, height: safeH,
+                rx: Number(node.style?.cornerRadius || 0),
+                ry: Number(node.style?.cornerRadius || 0),
+            });
+        }
+        shadowEl.setAttribute("transform", `translate(${dx}, ${dy})`);
+        shadowEl.setAttribute("filter", `url(#${filterId})`);
+        const shadowAlpha = app.shadowAlpha ?? sa;
+        setAttributes(shadowEl, { fill: sc, "fill-opacity": shadowAlpha });
+        if (app.strokeEnabled) {
+            setAttributes(shadowEl, {
+                stroke: sc, "stroke-opacity": shadowAlpha,
+                "stroke-width": (Number(app.thickness || 0)) * 2,
+                "stroke-linejoin": app.lineJoin || "miter"
+            });
+        }
+        if (shadowMaskId)
+            shadowEl.setAttribute("mask", `url(#${shadowMaskId})`);
+        target.appendChild(shadowEl);
+    }
+    // 2. Stroke
+    if (app.strokeEnabled) {
+        const strokeEl = createSVGElement(isRect ? "rect" : "text");
+        if (!isRect)
+            setupTextBase(strokeEl, node, measuredW, measuredH);
+        else {
+            setAttributes(strokeEl, {
+                x: 0, y: 0, width: safeW, height: safeH,
+                rx: Number(node.style?.cornerRadius || 0),
+                ry: Number(node.style?.cornerRadius || 0),
+            });
+        }
+        const { color, alpha } = parseHex8(app.color || "#000000");
+        setAttributes(strokeEl, {
+            fill: "none", stroke: color, "stroke-opacity": alpha,
+            "stroke-width": (Number(app.thickness || 0)) * 2,
+            "stroke-linejoin": app.lineJoin || "miter"
+        });
+        if (mainMaskId)
+            strokeEl.setAttribute("mask", `url(#${mainMaskId})`);
+        target.appendChild(strokeEl);
+    }
+    // 3. Fill
+    if (app.fillEnabled) {
+        const fillEl = createSVGElement(isRect ? "rect" : "text");
+        if (!isRect)
+            setupTextBase(fillEl, node, measuredW, measuredH);
+        else {
+            setAttributes(fillEl, {
+                x: 0, y: 0, width: safeW, height: safeH,
+                rx: Number(node.style?.cornerRadius || 0),
+                ry: Number(node.style?.cornerRadius || 0),
+            });
+        }
+        if (app.gradientConfig && app.gradientConfig.stops.length > 0) {
+            const gradId = `fill-grad-${node.id}-${appIdx}`;
+            const type = app.gradientConfig.type || "linear";
+            const units = app.gradientConfig.units || "objectBoundingBox";
+            if (type === "radial") {
+                const grad = createSVGElement("radialGradient");
+                grad.setAttribute("id", gradId);
+                const cx = app.gradientConfig.centerX ?? 0.5;
+                const cy = app.gradientConfig.centerY ?? 0.5;
+                const r = app.gradientConfig.radius ?? 0.5;
+                setAttributes(grad, {
+                    gradientUnits: units,
+                    cx: units === "objectBoundingBox" ? `${cx * 100}%` : cx * safeW,
+                    cy: units === "objectBoundingBox" ? `${cy * 100}%` : cy * safeH,
+                    r: units === "objectBoundingBox" ? `${r * 100}%` : r * Math.max(safeW, safeH),
+                    fx: units === "objectBoundingBox" ? `${cx * 100}%` : cx * safeW,
+                    fy: units === "objectBoundingBox" ? `${cy * 100}%` : cy * safeH,
+                });
+                app.gradientConfig.stops.forEach(s => {
+                    const stop = createSVGElement("stop");
+                    const { color, alpha } = parseHex8(s.color || "#000000");
+                    setAttributes(stop, { offset: `${(Number(s.offset || 0)) * 100}%`, "stop-color": color, "stop-opacity": alpha });
+                    grad.appendChild(stop);
+                });
+                registerDef(grad);
+                fillEl.setAttribute("fill", `url(#${gradId})`);
+            }
+            else {
+                const grad = createSVGElement("linearGradient");
+                grad.setAttribute("id", gradId);
+                const angle = Number(app.gradientConfig.angle ?? 90);
+                const rad = (angle * Math.PI) / 180;
+                const x1 = 0.5 - 0.5 * Math.cos(rad), y1 = 0.5 - 0.5 * Math.sin(rad);
+                const x2 = 0.5 + 0.5 * Math.cos(rad), y2 = 0.5 + 0.5 * Math.sin(rad);
+                setAttributes(grad, {
+                    gradientUnits: units,
+                    x1: units === "objectBoundingBox" ? `${x1 * 100}%` : x1 * safeW,
+                    y1: units === "objectBoundingBox" ? `${y1 * 100}%` : y1 * safeH,
+                    x2: units === "objectBoundingBox" ? `${x2 * 100}%` : x2 * safeW,
+                    y2: units === "objectBoundingBox" ? `${y2 * 100}%` : y2 * safeH
+                });
+                app.gradientConfig.stops.forEach(s => {
+                    const stop = createSVGElement("stop");
+                    const { color, alpha } = parseHex8(s.color || "#000000");
+                    setAttributes(stop, { offset: `${(Number(s.offset || 0)) * 100}%`, "stop-color": color, "stop-opacity": alpha });
+                    grad.appendChild(stop);
+                });
+                registerDef(grad);
+                fillEl.setAttribute("fill", `url(#${gradId})`);
+            }
+        }
+        else {
+            const { color, alpha } = parseHex8(String(fillColors[0] || "#ffffff"));
+            setAttributes(fillEl, { fill: color, "fill-opacity": alpha });
+        }
+        target.appendChild(fillEl);
+    }
+    // 4. Alpha Gradient Effect (Implemented as Mask)
+    const alphaGradEffect = (app.effects || []).find(e => e.enabled && e.type === "alpha-gradient");
+    if (alphaGradEffect) {
+        const maskId = `mask-alpha-${node.id}-${appIdx}`;
+        const mask = createSVGElement("mask");
+        mask.setAttribute("id", maskId);
+        // Using objectBoundingBox for BOTH units makes the mask relative to the layer's bounding box.
+        // This is much more robust against coordinate issues.
+        setAttributes(mask, { maskUnits: "objectBoundingBox", maskContentUnits: "objectBoundingBox" });
+        // A single rect covering 100% of the bounding box is enough to apply the gradient.
+        const maskShape = createSVGElement("rect");
+        setAttributes(maskShape, {
+            x: 0, y: 0, width: 1, height: 1
+        });
+        const gradId = `mask-grad-${node.id}-${appIdx}`;
+        const params = alphaGradEffect.params || {};
+        const type = params.type || "linear";
+        if (type === "radial") {
+            const grad = createSVGElement("radialGradient");
+            grad.setAttribute("id", gradId);
+            const cx = params.centerX ?? 0.5;
+            const cy = params.centerY ?? 0.5;
+            const r = params.radius ?? 0.5;
+            setAttributes(grad, {
+                gradientUnits: "objectBoundingBox",
+                cx: cx, cy: cy, r: r,
+                fx: cx, fy: cy
+            });
+            const stops = params.stops || [];
+            stops.forEach((s) => {
+                const stop = createSVGElement("stop");
+                const { alpha } = parseHex8(s.color || "#ffffff");
+                setAttributes(stop, { offset: `${(Number(s.offset || 0)) * 100}%`, "stop-color": "white", "stop-opacity": alpha });
+                grad.appendChild(stop);
+            });
+            registerDef(grad);
+        }
+        else {
+            const grad = createSVGElement("linearGradient");
+            grad.setAttribute("id", gradId);
+            const angle = Number(params.angle ?? 90);
+            const r = (angle * Math.PI) / 180;
+            // Calculation for objectBoundingBox: 0.5 center, 0.5 radius
+            const x1 = 0.5 - 0.5 * Math.cos(r), y1 = 0.5 - 0.5 * Math.sin(r);
+            const x2 = 0.5 + 0.5 * Math.cos(r), y2 = 0.5 + 0.5 * Math.sin(r);
+            setAttributes(grad, {
+                gradientUnits: "objectBoundingBox",
+                x1: x1, y1: y1, x2: x2, y2: y2
+            });
+            const stops = params.stops || [];
+            stops.forEach((s) => {
+                const stop = createSVGElement("stop");
+                const { alpha } = parseHex8(s.color || "#ffffff");
+                // Standard luminance mask: White is visible, transparent/black is hidden.
+                setAttributes(stop, { offset: `${(Number(s.offset || 0)) * 100}%`, "stop-color": "white", "stop-opacity": alpha });
+                grad.appendChild(stop);
+            });
+            registerDef(grad);
+        }
+        maskShape.setAttribute("fill", `url(#${gradId})`);
+        mask.appendChild(maskShape);
+        registerDef(mask);
+        target.setAttribute("mask", `url(#${maskId})`);
+    }
+}
+
+
+    // Text Measurement Utility (Standalone Canvas-based)
+    const TextMeasurer = {
+        canvas: document.createElement('canvas'),
+        measure(text, style) {
+            const ctx = this.canvas.getContext('2d');
+            const fontSize = style.fontSize || 24;
+            ctx.font = `${style.fontStyle || 'normal'} ${style.fontWeight || 'normal'} ${fontSize}px "${style.fontFamily || 'Arial'}"`;
+            const metrics = ctx.measureText(text);
+            let width = metrics.width;
+            if (style.letterSpacing && text.length > 0) {
+                width += style.letterSpacing * (text.length - 1);
+            }
+            return { width, height: fontSize * 1.25 };
+        }
+    };
+
+    // Filter Factory for Blur, Glow, etc.
+    const FilterFactory = {
+        createFilter(effects, id, registerDef) {
+            const enabled = effects.filter(e => e.enabled);
+            if (enabled.length === 0) return null;
+
+            const filter = createSVGElement("filter");
+            setAttributes(filter, { id, x: "-50%", y: "-50%", width: "200%", height: "200%", filterUnits: "userSpaceOnUse" });
+
+            let currentIn = "SourceGraphic";
+            const hasPulse = enabled.some(e => e.type === "glow" && e.params.pulseEnabled);
+            if (hasPulse) {
+                const style = createSVGElement("style");
+                style.textContent = `
+                    @keyframes glow-pulse-opacity { 0%, 100% { flood-opacity: var(--pulse-min, 0); } 50% { flood-opacity: var(--pulse-max, 1); } }
+                    .animate-glow-pulse { animation: glow-pulse-opacity var(--pulse-period, 1s) ease-in-out var(--pulse-delay, 0s) var(--pulse-count, infinite) both; }
+                `;
+                filter.appendChild(style);
+            }
+
+            enabled.forEach((eff, idx) => {
+                const res = `eff-${idx}`;
+                if (eff.type === 'blur') {
+                    const blur = createSVGElement("feGaussianBlur");
+                    setAttributes(blur, { in: currentIn, stdDeviation: eff.params.strength || 4, result: res });
+                    filter.appendChild(blur);
+                    currentIn = res;
+                } else if (eff.type === 'glow') {
+                    const dist = eff.params.blur || 10;
+                    const { color, alpha } = parseHex8(eff.params.color || "#ffffff");
+                    const outerStr = eff.params.outerStrength ?? 2;
+                    const innerStr = eff.params.innerStrength ?? 0;
+                    
+                    const outerRes = `${res}-outer`;
+                    const innerRes = `${res}-inner`;
+
+                    if (outerStr > 0 || dist > 0) {
+                        const dilate = createSVGElement("feMorphology");
+                        setAttributes(dilate, { in: "SourceAlpha", operator: "dilate", radius: 1, result: `${res}-dil` });
+                        filter.appendChild(dilate);
+
+                        const bl = createSVGElement("feGaussianBlur");
+                        setAttributes(bl, { in: `${res}-dil`, stdDeviation: dist, result: `${res}-bl` });
+                        filter.appendChild(bl);
+
+                        const trans = createSVGElement("feComponentTransfer");
+                        setAttributes(trans, { result: `${res}-int` });
+                        const funcA = createSVGElement("feFuncA");
+                        setAttributes(funcA, { type: "linear", slope: outerStr });
+                        trans.appendChild(funcA);
+                        filter.appendChild(trans);
+
+                        const flood = createSVGElement("feFlood");
+                        setAttributes(flood, { "flood-color": color, "flood-opacity": eff.params.pulseEnabled ? eff.params.pulseMin : alpha, result: `${res}-fl` });
+                        if (eff.params.pulseEnabled) {
+                            flood.classList.add("animate-glow-pulse");
+                            flood.style.setProperty("--pulse-period", `${eff.params.pulsePeriod || 1}s`);
+                            flood.style.setProperty("--pulse-min", eff.params.pulseMin ?? 0);
+                            flood.style.setProperty("--pulse-max", eff.params.pulseMax ?? alpha);
+                            flood.style.setProperty("--pulse-count", (eff.params.pulseCount || 0) === 0 ? "infinite" : eff.params.pulseCount);
+                            flood.style.setProperty("--pulse-delay", `${eff.params.pulseDelay || 0}s`);
+                        }
+                        filter.appendChild(flood);
+
+                        const comp = createSVGElement("feComposite");
+                        setAttributes(comp, { in: `${res}-fl`, in2: `${res}-int`, operator: "in", result: outerRes });
+                        filter.appendChild(comp);
+                    }
+
+                    if (innerStr > 0 || dist > 0) {
+                        const bl = createSVGElement("feGaussianBlur");
+                        setAttributes(bl, { in: "SourceAlpha", stdDeviation: dist, result: `${res}-in-bl` });
+                        filter.appendChild(bl);
+
+                        const trans = createSVGElement("feComponentTransfer");
+                        setAttributes(trans, { result: `${res}-int` });
+                        const funcA1 = createSVGElement("feFuncA");
+                        setAttributes(funcA1, { type: "gamma", amplitude: innerStr, exponent: 1.5 });
+                        trans.appendChild(funcA1);
+                        filter.appendChild(trans);
+
+                        const comp1 = createSVGElement("feComposite");
+                        setAttributes(comp1, { in: `${res}-int`, in2: "SourceAlpha", operator: "in", result: `${res}-in-mask` });
+                        filter.appendChild(comp1);
+
+                        const flood = createSVGElement("feFlood");
+                        setAttributes(flood, { "flood-color": color, "flood-opacity": eff.params.pulseEnabled ? eff.params.pulseMin : alpha, result: `${res}-in-fl` });
+                        if (eff.params.pulseEnabled) {
+                            flood.classList.add("animate-glow-pulse");
+                            flood.style.setProperty("--pulse-period", `${eff.params.pulsePeriod || 1}s`);
+                            flood.style.setProperty("--pulse-min", eff.params.pulseMin ?? 0);
+                            flood.style.setProperty("--pulse-max", eff.params.pulseMax ?? alpha);
+                            flood.style.setProperty("--pulse-count", (eff.params.pulseCount || 0) === 0 ? "infinite" : eff.params.pulseCount);
+                            flood.style.setProperty("--pulse-delay", `${eff.params.pulseDelay || 0}s`);
+                        }
+                        filter.appendChild(flood);
+
+                        const comp2 = createSVGElement("feComposite");
+                        setAttributes(comp2, { in: `${res}-in-fl`, in2: `${res}-in-mask`, operator: "in", result: innerRes });
+                        filter.appendChild(comp2);
+                    }
+
+                    const merge = createSVGElement("feMerge");
+                    if (outerStr > 0 || dist > 0) {
+                        const nO = createSVGElement("feMergeNode"); setAttributes(nO, { in: outerRes }); merge.appendChild(nO);
+                    }
+                    if (!eff.params.knockout) {
+                        const nS = createSVGElement("feMergeNode"); setAttributes(nS, { in: currentIn }); merge.appendChild(nS);
+                    }
+                    if (innerStr > 0 || dist > 0) {
+                        const nI = createSVGElement("feMergeNode"); setAttributes(nI, { in: innerRes }); merge.appendChild(nI);
+                    }
+                    setAttributes(merge, { result: res });
+                    filter.appendChild(merge);
+                    currentIn = res;
+                } else if (eff.type === 'outline') {
+                    const thick = eff.params.thickness || 2;
+                    const { color, alpha } = parseHex8(eff.params.color || "#010101");
+                    const dil = createSVGElement("feMorphology");
+                    setAttributes(dil, { in: "SourceAlpha", operator: "dilate", radius: thick, result: `${res}-dil` });
+                    filter.appendChild(dil);
+                    const fl = createSVGElement("feFlood");
+                    setAttributes(fl, { "flood-color": color, "flood-opacity": alpha, result: `${res}-fl` });
+                    filter.appendChild(fl);
+                    const cp = createSVGElement("feComposite");
+                    setAttributes(cp, { in: `${res}-fl`, in2: `${res}-dil`, operator: "in", result: `${res}-out` });
+                    filter.appendChild(cp);
+
+                    const merge = createSVGElement("feMerge");
+                    const n1 = createSVGElement("feMergeNode"); setAttributes(n1, { in: `${res}-out` }); merge.appendChild(n1);
+                    const n2 = createSVGElement("feMergeNode"); setAttributes(n2, { in: currentIn }); merge.appendChild(n2);
+                    setAttributes(merge, { result: res });
+                    filter.appendChild(merge);
+                    currentIn = res;
+                }
+            });
+            registerDef(filter);
+            return `url(#${id})`;
+        }
+    };
+
+    // Initialization Logic
+    window.initPlayer = async function (containerId, projectData, assetCache) {
+        window.containerId = containerId;
+        
+        // Fallback for asset mapping (backwards compatibility for custom JS)
+        if (!projectData.assets && window.assetMapping) {
+            projectData.assets = window.assetMapping;
+        }
+
+        window.telopDoc = projectData;
+        window.assetCache = assetCache;
+        window.keyExpMap = new Map();
+
+        const container = document.getElementById(containerId);
+        const svg = createSVGElement("svg");
+        const defs = createSVGElement("defs");
+        svg.appendChild(defs);
+        window.telopApp = svg; // SVG root
+
+        const width = projectData.meta.width || 1920;
+        const height = projectData.meta.height || 1080;
+        setAttributes(svg, { width, height, viewBox: `0 0 ${width} ${height}`, visibility: "visible" });
+        svg.style.display = "block";
+        if (container) {
+            container.innerHTML = '';
+            container.appendChild(svg);
+        }
+
+        const registerDef = (def) => defs.appendChild(def);
+
+        window.createNode = function (nodeId) {
+            const node = projectData.nodesById[nodeId];
+            if (!node) return null;
+
+            const root = createSVGElement("g");
+            if (node.domId) root.setAttribute("id", node.domId);
+            if (node.domClass) root.setAttribute("class", node.domClass);
+            
+            // Shared Logic: applyCommonProps handles pivot, transform, visibility, opacity
+            applyCommonProps(root, node);
+
+            const content = createSVGElement("g");
+            root.appendChild(content);
+
+            if (node.type === 'text') {
+                const wrapper = createSVGElement("g");
+                content.appendChild(wrapper);
+
+                const fitMode = node.fitMode || "none";
+                const targetWidth = node.width || 0;
+                const targetHeight = node.height || 0;
+                const pad = node.padding || 0;
+                const availW = Math.max(0, (targetWidth || 0) - pad * 2);
+                const availH = Math.max(0, (targetHeight || 0) - pad * 2);
+
+                const { width: contentW, height: contentH } = TextMeasurer.measure(node.text || "", node.style || {});
+
+                let sx = 1, sy = 1;
+                if (fitMode === 'shrink_x' && contentW > availW && availW > 0) sx = availW / contentW;
+                else if (fitMode === 'shrink_font' && contentW > availW && availW > 0) { sx = sy = availW / contentW; }
+                else if (fitMode === 'expand_xy' && availW > 0 && availH > 0) { sx = availW / (contentW || 1); sy = availH / (contentH || 1); }
+                else if (fitMode === 'scale_to_fit' && availW > 0 && availH > 0) { const s = Math.min(availW / (contentW || 1), availH / (contentH || 1)); sx = sy = s; }
+
+                const effW = contentW * sx;
+                const effH = contentH * sy;
+                const align = node.align || 'left';
+                const vAlign = node.verticalAlign || 'top';
+                const effectivePadX = (targetWidth > 0) ? Math.min(pad, targetWidth / 2) : pad;
+                const effectivePadY = (targetHeight > 0) ? Math.min(pad, targetHeight / 2) : pad;
+
+                let tx = effectivePadX, ty = effectivePadY;
+                if (targetWidth > 0) {
+                    if (align === 'center') tx = targetWidth / 2 - effW / 2;
+                    else if (align === 'right') tx = targetWidth - effectivePadX - effW;
+                }
+                if (targetHeight > 0) {
+                    if (vAlign === 'middle') ty = targetHeight / 2 - effH / 2;
+                    else if (vAlign === 'bottom') ty = targetHeight - effectivePadY - effH;
+                }
+
+                wrapper.setAttribute("transform", `translate(${tx}, ${ty}) scale(${sx}, ${sy})`);
+
+                const apps = (node.style?.appearances || []).filter(a => a.enabled);
+                
+                if (apps.length === 0) {
+                    const text = createSVGElement("text");
+                    setupTextBase(text, node, contentW, contentH);
+                    setAttributes(text, { fill: parseHex8(node.style?.fill).color });
+                    wrapper.appendChild(text);
+                } else {
+                    [...apps].reverse().forEach((a, k) => {
+                        const appIdx = apps.length - 1 - k;
+                        const g = createSVGElement("g");
+                        const fUrl = FilterFactory.createFilter(a.effects || [], `filter-${node.id}-${appIdx}`, registerDef);
+                        if (fUrl) g.setAttribute("filter", `url(#${fUrl.id})`);
+                        drawAppearanceContent(g, a, node, appIdx, false, contentW, contentH, registerDef, createSVGElement);
+                        wrapper.appendChild(g);
+                    });
+                }
+
+                if (fitMode === 'none' && (node.width || node.height)) {
+                    const cpId = `clip-t-${node.id}`;
+                    const cp = createSVGElement("clipPath"); cp.setAttribute("id", cpId);
+                    const cr = createSVGElement("rect"); setAttributes(cr, { width: node.width || 5000, height: node.height || 5000 });
+                    cp.appendChild(cr); registerDef(cp);
+                    content.setAttribute("clip-path", `url(#${cpId})`);
+                }
+            } else if (node.type === 'rect') {
+                const w = node.width || 100, h = node.height || 100;
+                const apps = (node.style?.appearances || []).filter(a => a.enabled);
+                if (apps.length === 0) {
+                    const r = createSVGElement("rect");
+                    setAttributes(r, { 
+                        width: w, height: h, 
+                        rx: node.style?.cornerRadius || 0, 
+                        ry: node.style?.cornerRadius || 0,
+                        fill: parseHex8(node.style?.fill).color,
+                        stroke: parseHex8(node.style?.stroke || "none").color,
+                        "stroke-width": node.style?.strokeThickness || 0
+                    });
+                    content.appendChild(r);
+                } else {
+                    [...apps].reverse().forEach((a, i) => {
+                        const appIdx = apps.length - 1 - i;
+                        const g = createSVGElement("g");
+                        const fUrl = FilterFactory.createFilter(a.effects || [], `filter-${node.id}-${appIdx}`, registerDef);
+                        if (fUrl) g.setAttribute("filter", `url(#${fUrl.id})`);
+                        drawAppearanceContent(g, a, node, appIdx, true, 0, 0, registerDef, createSVGElement);
+                        content.appendChild(g);
+                    });
+                }
+            } else if (node.type === 'image') {
+                const img = createSVGElement("image");
+                const asset = projectData.assets ? projectData.assets[node.assetId] : null;
+                const src = asset ? asset.src : null;
+                setAttributes(img, { 
+                    width: node.width || 100, 
+                    height: node.height || 100, 
+                    href: (src && assetCache[src]) ? assetCache[src] : (src || ""), 
+                    preserveAspectRatio: "none" 
+                });
+                content.appendChild(img);
+            } else if (node.type === 'group' || node.type === 'telop' || node.type === 'plane') {
+                if (node.clipRect) {
+                    const clip = node.clipRect;
+                    const cpId = `clip-${node.id}`;
+                    const cp = createSVGElement("clipPath"); cp.setAttribute("id", cpId);
+                    const cr = createSVGElement("rect"); setAttributes(cr, { 
+                        x: clip.x || 0, 
+                        y: clip.y || 0, 
+                        width: clip.width || 0, 
+                        height: clip.height || 0, 
+                        rx: clip.cornerRadius || 0, 
+                        ry: clip.cornerRadius || 0 
+                    });
+                    cp.appendChild(cr); registerDef(cp);
+                    root.setAttribute("clip-path", `url(#${cpId})`);
+                }
+            }
+
+            const nFilter = FilterFactory.createFilter(node.effects || [], `filter-${node.id}-node`, registerDef);
+            if (nFilter) root.setAttribute("filter", nFilter);
+
+            if (node.children) {
+                node.children.forEach(cid => {
+                    const c = window.createNode(cid);
+                    if (c) root.appendChild(c);
+                });
+            }
+
+            if (node.keyexp) window.keyExpMap.set(node.keyexp, { type: node.type, nodeData: node });
+            return root;
+        };
+
+        const rootNode = window.createNode(projectData.rootId);
+        if (rootNode) svg.appendChild(rootNode);
+        
+        window.dispatchEvent(new CustomEvent('telopRendered'));
+    };
+})();

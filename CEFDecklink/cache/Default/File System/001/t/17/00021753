@@ -1,0 +1,7 @@
+<!DOCTYPE html><html><body style="background:#111;color:#eee;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;">
+                <div style="text-align:center;">
+                    <h1>Sports Coder Dashboard Initialized</h1>
+                    <p>Source is at the project root.</p>
+                    <p style="color:#df7401;">Please run <code>npm install && npm run dev</code> in this folder.</p>
+                </div>
+            </body></html>

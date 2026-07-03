@@ -17,7 +17,8 @@ private:
 // Minimal Client with LifeSpanHandler & CefDisplayHandler
 class CefClientImpl : public CefClient,
                       public CefLifeSpanHandler,
-                      public CefDisplayHandler {
+                      public CefDisplayHandler,
+                      public CefLoadHandler {
 public:
     CefClientImpl(CefManager* manager, CefRefPtr<CefRenderHandler> renderHandler) 
         : m_manager(manager), m_renderHandler(renderHandler) {}
@@ -25,6 +26,14 @@ public:
     CefRefPtr<CefRenderHandler> GetRenderHandler() override { return m_renderHandler; }
     CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override { return this; }
     CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
+    CefRefPtr<CefLoadHandler> GetLoadHandler() override { return this; }
+    
+    // CefLoadHandler methods
+    void OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int httpStatusCode) override {
+        if (m_manager && frame->IsMain()) {
+            m_manager->UpdateWatermark();
+        }
+    }
     
     // CefDisplayHandler methods
     void OnFullscreenModeChange(CefRefPtr<CefBrowser> browser, bool fullscreen) override {
@@ -203,7 +212,37 @@ void CefManager::ExecuteCreateBrowser() {
 
 void CefManager::DriveExternalBeginFrame(int mode) {
     // No longer driven externally. 
-    // CEF is now free-running via its internal timer at 60fps.
+}
+
+void CefManager::SetLicensed(bool licensed) {
+    if (m_isLicensed != licensed) {
+        m_isLicensed = licensed;
+        UpdateWatermark();
+    }
+}
+
+void CefManager::UpdateWatermark() {
+    if (!m_browser) return;
+    auto frame = m_browser->GetMainFrame();
+    if (!frame) return;
+
+    if (!m_isLicensed) {
+        CefString code = 
+            "var wm = document.getElementById('cefdecklink-wm');"
+            "if(!wm) {"
+            "  wm = document.createElement('div');"
+            "  wm.id = 'cefdecklink-wm';"
+            "  wm.innerHTML = '🍌 CEFDecklink';"
+            "  wm.style.cssText = 'position:fixed; bottom:20px; right:20px; font-size:48px; font-weight:bold; color:white; text-shadow: 2px 2px 4px black; opacity:0.3; z-index:2147483647; pointer-events:none; font-family:sans-serif;';"
+            "  document.body.appendChild(wm);"
+            "}";
+        frame->ExecuteJavaScript(code, frame->GetURL(), 0);
+    } else {
+        CefString code = 
+            "var wm = document.getElementById('cefdecklink-wm');"
+            "if(wm) wm.remove();";
+        frame->ExecuteJavaScript(code, frame->GetURL(), 0);
+    }
 }
 
 void CefManager::SetBrowser(CefRefPtr<CefBrowser> browser) {

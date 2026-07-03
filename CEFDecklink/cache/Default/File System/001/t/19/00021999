@@ -1,0 +1,518 @@
+window.assetMapping = {
+  "a1_760fd8e1blev": {
+    "id": "a1_760fd8e1blev",
+    "kind": "image",
+    "name": "1SHOTプロフ.png",
+    "src": "img/1SHOTプロフ.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_dgoozzq9kla9": {
+    "id": "a1_dgoozzq9kla9",
+    "kind": "image",
+    "name": "1SHOT得点.png",
+    "src": "img/1SHOT得点.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_lyadpwexeuel": {
+    "id": "a1_lyadpwexeuel",
+    "kind": "image",
+    "name": "アウェイ-スコアリーダーズ１人バージョン.png",
+    "src": "img/アウェイ-スコアリーダーズ１人バージョン.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_380l7jy8lzv7": {
+    "id": "a1_380l7jy8lzv7",
+    "kind": "image",
+    "name": "アウェイ-スコアリーダーズ２人バージョン.png",
+    "src": "img/アウェイ-スコアリーダーズ２人バージョン.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_5o6n1k7pqipv": {
+    "id": "a1_5o6n1k7pqipv",
+    "kind": "image",
+    "name": "アウェイ-スコアリーダーズ３人バージョン.png",
+    "src": "img/アウェイ-スコアリーダーズ３人バージョン.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_dbklrszc74si": {
+    "id": "a1_dbklrszc74si",
+    "kind": "image",
+    "name": "アウェイ-スコアリーダーズ４人バージョン.png",
+    "src": "img/アウェイ-スコアリーダーズ４人バージョン.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_2katif1o2kzf": {
+    "id": "a1_2katif1o2kzf",
+    "kind": "image",
+    "name": "アウェイ-スコアリーダーズ５人バージョン.png",
+    "src": "img/アウェイ-スコアリーダーズ５人バージョン.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_tj09bx5t4xqi": {
+    "id": "a1_tj09bx5t4xqi",
+    "kind": "image",
+    "name": "サブ.png",
+    "src": "img/サブ.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_4kfv384f0jrg": {
+    "id": "a1_4kfv384f0jrg",
+    "kind": "image",
+    "name": "ジグザグ_スライド_ストップ位置.png",
+    "src": "img/ジグザグ_スライド_ストップ位置.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_nygwvvejz9eq": {
+    "id": "a1_nygwvvejz9eq",
+    "kind": "image",
+    "name": "ジグザグ_スライド１枚目.png",
+    "src": "img/ジグザグ_スライド１枚目.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_4xwddw4u5c51": {
+    "id": "a1_4xwddw4u5c51",
+    "kind": "image",
+    "name": "スタメン.png",
+    "src": "img/スタメン.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_ljgppuxkyxlh": {
+    "id": "a1_ljgppuxkyxlh",
+    "kind": "image",
+    "name": "ホームチーム-スコアリーダーズ１人バージョン.png",
+    "src": "img/ホームチーム-スコアリーダーズ１人バージョン.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_60sptwgag1nk": {
+    "id": "a1_60sptwgag1nk",
+    "kind": "image",
+    "name": "ホームチーム-スコアリーダーズ２人バージョン.png",
+    "src": "img/ホームチーム-スコアリーダーズ２人バージョン.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_4vjqfhmmo8m4": {
+    "id": "a1_4vjqfhmmo8m4",
+    "kind": "image",
+    "name": "ホームチーム-スコアリーダーズ３人バージョン.png",
+    "src": "img/ホームチーム-スコアリーダーズ３人バージョン.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_ks505lqtkhpe": {
+    "id": "a1_ks505lqtkhpe",
+    "kind": "image",
+    "name": "ホームチーム-スコアリーダーズ４人バージョン.png",
+    "src": "img/ホームチーム-スコアリーダーズ４人バージョン.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_lqwpth6wruce": {
+    "id": "a1_lqwpth6wruce",
+    "kind": "image",
+    "name": "ホームチーム-スコアリーダーズ５人バージョン.png",
+    "src": "img/ホームチーム-スコアリーダーズ５人バージョン.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_lbuqhf8tf2y4": {
+    "id": "a1_lbuqhf8tf2y4",
+    "kind": "image",
+    "name": "リザルト.png",
+    "src": "img/リザルト.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_c0e9t7j2tt7s": {
+    "id": "a1_c0e9t7j2tt7s",
+    "kind": "image",
+    "name": "リザルトハイライト付き.png",
+    "src": "img/リザルトハイライト付き.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_am2lozzsbply": {
+    "id": "a1_am2lozzsbply",
+    "kind": "image",
+    "name": "リザルトロゴ付き.png",
+    "src": "img/リザルトロゴ付き.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_2t179xld0hhg": {
+    "id": "a1_2t179xld0hhg",
+    "kind": "image",
+    "name": "開始前SETスーパー.png",
+    "src": "img/開始前SETスーパー.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_mrjwumxkn0cm": {
+    "id": "a1_mrjwumxkn0cm",
+    "kind": "image",
+    "name": "開始前SETスーパー.png",
+    "src": "img/開始前SETスーパー_1.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_43gp0scw6amw": {
+    "id": "a1_43gp0scw6amw",
+    "kind": "image",
+    "name": "小得点.png",
+    "src": "img/小得点.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_mcnd0vn0su2y": {
+    "id": "a1_mcnd0vn0su2y",
+    "kind": "image",
+    "name": "小得点.png",
+    "src": "img/小得点_1.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_l3ryafmivq7g": {
+    "id": "a1_l3ryafmivq7g",
+    "kind": "image",
+    "name": "小得点-セットポイント.png",
+    "src": "img/小得点-セットポイント.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_uvfq820j8xhu": {
+    "id": "a1_uvfq820j8xhu",
+    "kind": "image",
+    "name": "小得点-タイムアウト.png",
+    "src": "img/小得点-タイムアウト.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_izze6zl8en85": {
+    "id": "a1_izze6zl8en85",
+    "kind": "image",
+    "name": "小得点-マッチポイント.png",
+    "src": "img/小得点-マッチポイント.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_n4j63zsm6bos": {
+    "id": "a1_n4j63zsm6bos",
+    "kind": "image",
+    "name": "小得点ロゴ付き.png",
+    "src": "img/小得点ロゴ付き.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_jb88wbkvcpgp": {
+    "id": "a1_jb88wbkvcpgp",
+    "kind": "image",
+    "name": "小得点ロゴ付き.png",
+    "src": "img/小得点ロゴ付き_1.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_krw9ndk1oiws": {
+    "id": "a1_krw9ndk1oiws",
+    "kind": "image",
+    "name": "小得点ロゴ付き_セットポイント.png",
+    "src": "img/小得点ロゴ付き_セットポイント.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_0hr144z7z5yn": {
+    "id": "a1_0hr144z7z5yn",
+    "kind": "image",
+    "name": "小得点ロゴ付き_タイムアウト.png",
+    "src": "img/小得点ロゴ付き_タイムアウト.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_1h1pi9my9yna": {
+    "id": "a1_1h1pi9my9yna",
+    "kind": "image",
+    "name": "選手交代.png",
+    "src": "img/選手交代.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  },
+  "a1_fd89gmljhkaf": {
+    "id": "a1_fd89gmljhkaf",
+    "kind": "image",
+    "name": "選手交代２枚.png",
+    "src": "img/選手交代２枚.png",
+    "width": 1920,
+    "height": 1080,
+    "groupId": null,
+    "ownerId": "n1_lzg3c7ygrm7s"
+  }
+};
+
+// 1. Data Loading (Auto-generated)
+let projectData = null;
+let assetCache = {};
+
+// 2. Controller Logic (Editable)
+// @telop-editor-default-template: If you modify this file, remove this line to prevent TelopEditor from overwriting your changes.
+
+// --- External Control API ---
+window._pendingRenderableObject = null;
+window._pendingShow = false;
+
+/**
+ * テロップを表示する関数
+ * @param {Object} rendarableObject - レンダリング可能なオブジェクト。
+ */
+window.showTelop = function (rendarableObject) {
+    if (rendarableObject !== undefined) {
+        window.updateTelop(rendarableObject);
+    }
+
+    if (!window.initialized) {
+        window._pendingShow = true;
+        return;
+    }
+
+    // containerId is exposed by initPlayer
+    const divElement = document.getElementById(window.containerId || 'player-container');
+    if (divElement) {
+        divElement.classList.remove(...divElement.classList);
+        requestAnimationFrame(() => {
+            divElement.classList.add("in_animation");
+            document.body.style.display = "block";
+        });
+    }
+};
+
+/**
+ * テロップの内容を更新する関数
+ * @param {Object} rendarableObject - レンダリング可能なオブジェクト。
+ */
+window.updateTelop = function (rendarableObject) {
+    console.log("updateTelop called", rendarableObject);
+    if (!rendarableObject) return;
+
+    // Globals exposed by renderer.js
+    const app = window.telopApp;
+    const doc = window.telopDoc;
+    const keyExpMap = window.keyExpMap;
+    const createNode = window.createNode;
+
+    if (!app || !doc || !keyExpMap || !createNode) {
+        console.error("updateTelop early return: Missing required globals:", { app: !!app, doc: !!doc, keyExpMap: !!keyExpMap, createNode: !!createNode });
+        console.warn("Player not fully initialized yet. Caching update...");
+        window._pendingRenderableObject = rendarableObject;
+        return;
+    }
+
+    let hasUpdates = false;
+
+    Object.keys(rendarableObject).forEach(key => {
+        const val = rendarableObject[key];
+        const targets = keyExpMap.get(key);
+        console.log(`Processing key: ${key}, targets found: ${targets ? targets.length : 0}, val: ${val}`);
+
+        if (targets && Array.isArray(targets) && (val || val === "")) {
+            targets.forEach((target) => {
+                if (target.type === 'text') {
+                    // Update Doc
+                    if (target.nodeData.text !== String(val)) {
+                        target.nodeData.text = String(val);
+                        hasUpdates = true;
+                    }
+                } else if (target.type === 'image') {
+                    // Update Doc (Asset)
+                    const node = target.nodeData;
+                    if (node.assetId && doc.assets[node.assetId]) {
+                        if (doc.assets[node.assetId].src !== String(val)) {
+                            doc.assets[node.assetId].src = String(val);
+                            hasUpdates = true;
+                        }
+                    }
+                } else if (target.type === 'appearance_fill') {
+                    const apps = target.nodeData.style?.appearances || [];
+                    const app = apps[target.appearanceIndex];
+                    if (app && (app.fill !== String(val) || app.gradientConfig)) {
+                        console.log(`Updating appearance_fill for ${target.nodeData.id} to ${val}`);
+                        app.fill = String(val);
+                        if (app.gradientConfig) { delete app.gradientConfig; }
+                        hasUpdates = true;
+                    }
+                } else if (target.type === 'appearance_stroke') {
+                    const apps = target.nodeData.style?.appearances || [];
+                    const app = apps[target.appearanceIndex];
+                    if (app && app.color !== String(val)) {
+                        console.log(`Updating appearance_stroke for ${target.nodeData.id} to ${val}`);
+                        app.color = String(val);
+                        hasUpdates = true;
+                    }
+                } else if (target.type === 'bg_appearance_fill') {
+                    const apps = target.nodeData.background?.appearances || [];
+                    const app = apps[target.appearanceIndex];
+                    if (app && (app.fill !== String(val) || app.gradientConfig)) {
+                        console.log(`Updating bg_appearance_fill for ${target.nodeData.id} to ${val}`);
+                        app.fill = String(val);
+                        if (app.gradientConfig) { delete app.gradientConfig; }
+                        hasUpdates = true;
+                    }
+                } else if (target.type === 'bg_appearance_stroke') {
+                    const apps = target.nodeData.background?.appearances || [];
+                    const app = apps[target.appearanceIndex];
+                    if (app && app.color !== String(val)) {
+                        console.log(`Updating bg_appearance_stroke for ${target.nodeData.id} to ${val}`);
+                        app.color = String(val);
+                        hasUpdates = true;
+                    }
+                }
+            });
+        }
+    });
+
+    if (hasUpdates) {
+        // Re-render everything (SVG-based)
+        // Keep defs (first child) and clear it
+        const defs = app.firstChild;
+        if (defs) defs.innerHTML = ''; 
+
+        while (app.childNodes.length > 1) {
+            app.removeChild(app.lastChild);
+        }
+        keyExpMap.clear();
+
+        const evaluatedDoc = resolveDynamicVisibility(doc);
+        const prevDoc = window.telopDoc;
+        window.telopDoc = evaluatedDoc;
+        try {
+            const rootNode = createNode(doc.rootId);
+            if (rootNode) app.appendChild(rootNode);
+        } finally {
+            window.telopDoc = prevDoc;
+        }
+        
+        // Notify completion for custom JS control
+        window.dispatchEvent(new CustomEvent('telopRendered'));
+    }
+};
+
+/**
+ * テロップを非表示にする関数
+ */
+window.hideTelop = function () {
+    const divElement = document.getElementById(window.containerId || 'player-container');
+    if (divElement) {
+        divElement.classList.remove(...divElement.classList);
+
+        const onAnimationEnd = () => {
+            console.log("animationed");
+            if (window.animationFinishedCallback) {
+                window.animationFinishedCallback();
+            }
+            divElement.removeEventListener('animationend', onAnimationEnd);
+        };
+
+        divElement.addEventListener('animationend', onAnimationEnd);
+        divElement.classList.add("out_animation");
+    }
+};
+
+
+// 3. Initialization
+window.addEventListener('load', async () => {
+    try {
+        const dataUrl = './過去のいろいろ.telop';
+        const dataResp = await fetch(dataUrl);
+        if (dataResp.ok) {
+            projectData = await dataResp.json();
+            console.log("[Player] Loaded project data from:", dataUrl);
+        }
+        assetCache = {};
+        if (window.initPlayer) {
+            window.initPlayer('player-container', projectData, assetCache).then(() => {
+                window.initialized = true;
+                if (window._pendingRenderableObject) {
+                    window.updateTelop(window._pendingRenderableObject);
+                    window._pendingRenderableObject = null;
+                }
+                if (window._pendingShow) {
+                    window.showTelop();
+                    window._pendingShow = false;
+                }
+            });
+        }
+    } catch (e) {
+        console.error("[Player] Failed to initialize project data:", e);
+    }
+});

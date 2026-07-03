@@ -1,0 +1,1655 @@
+{
+  "meta": {
+    "title": "soccer",
+    "version": 1,
+    "canvas": {
+      "width": 1920,
+      "height": 1080
+    },
+    "creator": "TelopEditor"
+  },
+  "rootId": "n1_6ua9hzcbdxox",
+  "nodesById": {
+    "n1_6ua9hzcbdxox": {
+      "id": "n1_6ua9hzcbdxox",
+      "type": "telop",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "children": [
+        "n1_83licr5h2cgo",
+        "n1_fkeda8ta5ane",
+        "n1_f65dndv4hy6v",
+        "n1_bpi5sv9k7fll",
+        "n1_wip09ht6ud9w",
+        "n1_1cbuh7u0ms4j",
+        "n1_4x2ing3hd2x9",
+        "n1_7kiyd9hilwk2",
+        "n1_o3f0mge3rnip",
+        "n1_akwcrrt6ne4m",
+        "n1_u1hdofu0x9kf"
+      ],
+      "name": "大得点",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_1vrm9rnhtpx0"
+    },
+    "n1_83licr5h2cgo": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_83licr5h2cgo",
+      "type": "image",
+      "x": 397,
+      "y": 947,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 563,
+      "height": 106,
+      "assetId": "a1_ft2m10p3hfe0",
+      "name": "大得点チーム名ベース左",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_6ua9hzcbdxox",
+      "keyexp": ""
+    },
+    "n1_fkeda8ta5ane": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_fkeda8ta5ane",
+      "type": "image",
+      "x": 960,
+      "y": 947,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 563,
+      "height": 106,
+      "assetId": "a1_1v59d0w4ywgh",
+      "name": "大得点チーム名ベース右",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_6ua9hzcbdxox",
+      "keyexp": ""
+    },
+    "n1_f65dndv4hy6v": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_f65dndv4hy6v",
+      "type": "text",
+      "x": 893,
+      "y": 967,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 67,
+      "height": 42,
+      "text": "11",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 40,
+        "fontWeight": 700,
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#fddd10",
+            "strokeEnabled": false,
+            "color": "#ffffff",
+            "thickness": 2,
+            "lineJoin": "round",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "center",
+      "verticalAlign": "middle",
+      "name": "左チーム得点",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "none",
+      "parentId": "n1_6ua9hzcbdxox",
+      "keyexp": "左チーム得点"
+    },
+    "n1_bpi5sv9k7fll": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_bpi5sv9k7fll",
+      "type": "text",
+      "x": 960,
+      "y": 965,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 67,
+      "height": 46,
+      "text": "11",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 40,
+        "fontWeight": 700,
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#fddd10",
+            "strokeEnabled": true,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "round",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "center",
+      "verticalAlign": "middle",
+      "name": "右チーム得点",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "none",
+      "parentId": "n1_6ua9hzcbdxox",
+      "keyexp": "右チーム得点"
+    },
+    "n1_wip09ht6ud9w": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_wip09ht6ud9w",
+      "type": "text",
+      "x": 939,
+      "y": 967,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 42,
+      "height": 36,
+      "text": "-",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 40,
+        "fontWeight": 700,
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#fddd10",
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "round",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "center",
+      "verticalAlign": "middle",
+      "name": "ハイフン",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "none",
+      "parentId": "n1_6ua9hzcbdxox"
+    },
+    "n1_1cbuh7u0ms4j": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_1cbuh7u0ms4j",
+      "type": "text",
+      "x": 570,
+      "y": 965,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 292,
+      "height": 43,
+      "text": "hogehoges",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 40,
+        "fontWeight": 700,
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#000000",
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "center",
+      "verticalAlign": "middle",
+      "name": "左チーム名",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "shrink_x",
+      "parentId": "n1_6ua9hzcbdxox",
+      "keyexp": "左チーム名"
+    },
+    "n1_4x2ing3hd2x9": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_4x2ing3hd2x9",
+      "type": "text",
+      "x": 1069,
+      "y": 962,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 290,
+      "height": 53,
+      "text": "hogehoges",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 40,
+        "fontWeight": 700,
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#000000",
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "center",
+      "verticalAlign": "middle",
+      "name": "右チーム名",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "shrink_x",
+      "parentId": "n1_6ua9hzcbdxox",
+      "keyexp": "右チーム名"
+    },
+    "n1_7kiyd9hilwk2": {
+      "skewX": 12.409689987270337,
+      "skewY": 0,
+      "id": "n1_7kiyd9hilwk2",
+      "type": "group",
+      "x": 507,
+      "y": 955,
+      "rotation": 0,
+      "scaleX": 0.5747582219948462,
+      "scaleY": 1.5542581353781675,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "children": [
+        "n1_h7oybnxq7c6s",
+        "n1_xjdipr3aujfr"
+      ],
+      "name": "LeftTeamColorRect",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_6ua9hzcbdxox"
+    },
+    "n1_h7oybnxq7c6s": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_h7oybnxq7c6s",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 0.9999999999999999,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 37,
+      "height": 45,
+      "style": {
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#bd39fb",
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10
+          }
+        ],
+        "cornerRadius": 0
+      },
+      "name": "Rectangle",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_7kiyd9hilwk2",
+      "domId": "LeftTeamColorLargePoint"
+    },
+    "n1_xjdipr3aujfr": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_xjdipr3aujfr",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 0.9999999999999999,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 37,
+      "height": 45,
+      "style": {
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": [
+              "#00000073",
+              "#00000078",
+              "#ffffff29",
+              "#00000075",
+              "#0000001a",
+              "#000000a1"
+            ],
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "gradientConfig": {
+              "type": "linear",
+              "angle": 90,
+              "units": "objectBoundingBox",
+              "stops": [
+                {
+                  "offset": 0.05,
+                  "color": "#00000073"
+                },
+                {
+                  "offset": 0.05,
+                  "color": "#00000078"
+                },
+                {
+                  "offset": 0.51,
+                  "color": "#ffffff29"
+                },
+                {
+                  "offset": 0.5,
+                  "color": "#00000075"
+                },
+                {
+                  "offset": 0.95,
+                  "color": "#0000001a"
+                },
+                {
+                  "offset": 0.95,
+                  "color": "#000000a1"
+                }
+              ]
+            }
+          }
+        ],
+        "cornerRadius": 0
+      },
+      "name": "Rectangle",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_7kiyd9hilwk2"
+    },
+    "n1_o3f0mge3rnip": {
+      "skewX": -12,
+      "skewY": 0,
+      "id": "n1_o3f0mge3rnip",
+      "type": "group",
+      "x": 1391,
+      "y": 955,
+      "rotation": 0,
+      "scaleX": 0.5747582219948462,
+      "scaleY": 1.5542581353781675,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "children": [
+        "n1_wtsun6uvd5pd",
+        "n1_dhknxzali3da"
+      ],
+      "name": "RightTeamColorRect",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_6ua9hzcbdxox"
+    },
+    "n1_wtsun6uvd5pd": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_wtsun6uvd5pd",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 0.9999999999999999,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 37,
+      "height": 45,
+      "style": {
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#bd39fb",
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10
+          }
+        ],
+        "cornerRadius": 0
+      },
+      "name": "Rectangle",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_o3f0mge3rnip",
+      "domId": "RightTeamColorLargePoint"
+    },
+    "n1_dhknxzali3da": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_dhknxzali3da",
+      "type": "rect",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 0.9999999999999999,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 37,
+      "height": 45,
+      "style": {
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": [
+              "#00000073",
+              "#00000078",
+              "#ffffff29",
+              "#00000075",
+              "#0000001a",
+              "#000000a1"
+            ],
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "gradientConfig": {
+              "type": "linear",
+              "angle": 90,
+              "units": "objectBoundingBox",
+              "stops": [
+                {
+                  "offset": 0.05,
+                  "color": "#00000073"
+                },
+                {
+                  "offset": 0.05,
+                  "color": "#00000078"
+                },
+                {
+                  "offset": 0.51,
+                  "color": "#ffffff29"
+                },
+                {
+                  "offset": 0.5,
+                  "color": "#00000075"
+                },
+                {
+                  "offset": 0.95,
+                  "color": "#0000001a"
+                },
+                {
+                  "offset": 0.95,
+                  "color": "#000000a1"
+                }
+              ]
+            }
+          }
+        ],
+        "cornerRadius": 0
+      },
+      "name": "Rectangle",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_o3f0mge3rnip"
+    },
+    "n1_akwcrrt6ne4m": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_akwcrrt6ne4m",
+      "type": "text",
+      "x": 893,
+      "y": 927,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 52,
+      "height": 20,
+      "text": "#bd39fb",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 10,
+        "fontWeight": "normal",
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": false,
+            "fill": "#ffffff",
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "left",
+      "verticalAlign": "middle",
+      "name": "LeftTeamColor",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "none",
+      "parentId": "n1_6ua9hzcbdxox",
+      "keyexp": "LeftTeamColor"
+    },
+    "n1_u1hdofu0x9kf": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_u1hdofu0x9kf",
+      "type": "text",
+      "x": 981,
+      "y": 927,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 52,
+      "height": 20,
+      "text": "#bd39fb",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 10,
+        "fontWeight": "normal",
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": false,
+            "fill": "#ffffff",
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "left",
+      "verticalAlign": "middle",
+      "name": "RigtTeamColor",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "none",
+      "parentId": "n1_6ua9hzcbdxox",
+      "keyexp": "RigtTeamColor"
+    }
+  },
+  "assets": {
+    "a1_ft2m10p3hfe0": {
+      "id": "a1_ft2m10p3hfe0",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M122.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M122.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_ukby30g3h4if": {
+      "id": "a1_ukby30g3h4if",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M001.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M001.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_45x776x6lfjv": {
+      "id": "a1_45x776x6lfjv",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M002.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M002.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_x6v1mn2dhtf8": {
+      "id": "a1_x6v1mn2dhtf8",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M003.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M003.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_ac0q6yzj4svz": {
+      "id": "a1_ac0q6yzj4svz",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M004.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M004.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_ilu9axeh3fs6": {
+      "id": "a1_ilu9axeh3fs6",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M005.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M005.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_dngc3zkptu4v": {
+      "id": "a1_dngc3zkptu4v",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M006.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M006.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_xjsjw3wxwpqf": {
+      "id": "a1_xjsjw3wxwpqf",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M007.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M007.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_6us27l9p2pod": {
+      "id": "a1_6us27l9p2pod",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M008.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M008.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_6hlhk68o9nwu": {
+      "id": "a1_6hlhk68o9nwu",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M009.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M009.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_z88nnldb6irj": {
+      "id": "a1_z88nnldb6irj",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M010.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M010.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_lerpg6shz5av": {
+      "id": "a1_lerpg6shz5av",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M011.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M011.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_v12m2vubhc4e": {
+      "id": "a1_v12m2vubhc4e",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M012.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M012.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_8j9kux7f8nvr": {
+      "id": "a1_8j9kux7f8nvr",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M013.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M013.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_dy08oo5uwl9d": {
+      "id": "a1_dy08oo5uwl9d",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M014.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M014.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_z6fmec6byjjj": {
+      "id": "a1_z6fmec6byjjj",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M015.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M015.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_u8upjegizspx": {
+      "id": "a1_u8upjegizspx",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M016.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M016.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_6gley9h02yh3": {
+      "id": "a1_6gley9h02yh3",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M017.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M017.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_o8bx4qs3lguq": {
+      "id": "a1_o8bx4qs3lguq",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M018.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M018.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_o1dv1dnpmhou": {
+      "id": "a1_o1dv1dnpmhou",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M019.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M019.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_a0i4ahyxrxqs": {
+      "id": "a1_a0i4ahyxrxqs",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M020.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M020.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_azxsfq61n4nh": {
+      "id": "a1_azxsfq61n4nh",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M021.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M021.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_uk46e0it76n0": {
+      "id": "a1_uk46e0it76n0",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M022.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M022.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_jc19oamx3hpz": {
+      "id": "a1_jc19oamx3hpz",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M101.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M101.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_kaixqkbxs52d": {
+      "id": "a1_kaixqkbxs52d",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M102.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M102.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_4om1fgwsolfw": {
+      "id": "a1_4om1fgwsolfw",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M103.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M103.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_bjwdy5ngb6ua": {
+      "id": "a1_bjwdy5ngb6ua",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M104.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M104.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_rd48neuvy6cl": {
+      "id": "a1_rd48neuvy6cl",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M105.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M105.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_d1zjpbtqgti0": {
+      "id": "a1_d1zjpbtqgti0",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M106.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M106.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_cokplqfdihau": {
+      "id": "a1_cokplqfdihau",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M107.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M107.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_m5pfqniksuk6": {
+      "id": "a1_m5pfqniksuk6",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M108.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M108.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_4gw7gkfombqu": {
+      "id": "a1_4gw7gkfombqu",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M109.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M109.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_kh6zyalxrfkw": {
+      "id": "a1_kh6zyalxrfkw",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M110.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M110.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_1fymv2r90tww": {
+      "id": "a1_1fymv2r90tww",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M111.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M111.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_xrn3yo9024aj": {
+      "id": "a1_xrn3yo9024aj",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M112.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M112.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_ckop4vuixh73": {
+      "id": "a1_ckop4vuixh73",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M113.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M113.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_dhhmrcgf4pcr": {
+      "id": "a1_dhhmrcgf4pcr",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M114.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M114.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_r5q5xu165n4u": {
+      "id": "a1_r5q5xu165n4u",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M115.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M115.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_azouegoibkrq": {
+      "id": "a1_azouegoibkrq",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M116.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M116.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_ibpcqm8ttxhn": {
+      "id": "a1_ibpcqm8ttxhn",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M117.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M117.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_fi5gwv9idarz": {
+      "id": "a1_fi5gwv9idarz",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M118.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M118.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_7jhxoaeikmj9": {
+      "id": "a1_7jhxoaeikmj9",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M119.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M119.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_nolu6bgsinbs": {
+      "id": "a1_nolu6bgsinbs",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M120.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M120.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_kcfbi8s0ybiq": {
+      "id": "a1_kcfbi8s0ybiq",
+      "kind": "image",
+      "name": "HD2D_A00_BaseL_M121.png",
+      "src": "img/チーム名ベース左/HD2D_A00_BaseL_M121.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_linnjxg7vpc8",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_1v59d0w4ywgh": {
+      "id": "a1_1v59d0w4ywgh",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M121.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M121.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_kz0pl2rl85dh": {
+      "id": "a1_kz0pl2rl85dh",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M122.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M122.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_wjbll4cjptrz": {
+      "id": "a1_wjbll4cjptrz",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M001.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M001.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_jgng7cpoq1i4": {
+      "id": "a1_jgng7cpoq1i4",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M002.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M002.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_71kcqdf6k7nd": {
+      "id": "a1_71kcqdf6k7nd",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M003.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M003.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_pr4af2wyqbnj": {
+      "id": "a1_pr4af2wyqbnj",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M004.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M004.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_z07tn0s0w2ih": {
+      "id": "a1_z07tn0s0w2ih",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M005.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M005.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_154ps3cw4r5j": {
+      "id": "a1_154ps3cw4r5j",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M006.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M006.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_gmxwk7r9iza7": {
+      "id": "a1_gmxwk7r9iza7",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M007.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M007.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_uvhwhxusxgr7": {
+      "id": "a1_uvhwhxusxgr7",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M008.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M008.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_1zl6b88v2f34": {
+      "id": "a1_1zl6b88v2f34",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M009.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M009.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_dmoz1i77j5fq": {
+      "id": "a1_dmoz1i77j5fq",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M010.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M010.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_fcqfzaf3xmiv": {
+      "id": "a1_fcqfzaf3xmiv",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M011.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M011.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_ulpbn3ibylsk": {
+      "id": "a1_ulpbn3ibylsk",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M012.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M012.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_o43bbirk26ox": {
+      "id": "a1_o43bbirk26ox",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M013.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M013.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_9n8alqxwbggm": {
+      "id": "a1_9n8alqxwbggm",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M014.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M014.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_bfw17nfd36nn": {
+      "id": "a1_bfw17nfd36nn",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M015.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M015.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_jf5nv1xbq272": {
+      "id": "a1_jf5nv1xbq272",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M016.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M016.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_ev3yc4vrdksf": {
+      "id": "a1_ev3yc4vrdksf",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M017.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M017.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_ejmdqlxqcqoh": {
+      "id": "a1_ejmdqlxqcqoh",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M018.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M018.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_0tzromem4ygl": {
+      "id": "a1_0tzromem4ygl",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M019.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M019.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_wauft1m7h4rh": {
+      "id": "a1_wauft1m7h4rh",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M020.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M020.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_akm8rrt02mn9": {
+      "id": "a1_akm8rrt02mn9",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M021.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M021.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_ush46eg21dok": {
+      "id": "a1_ush46eg21dok",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M022.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M022.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_0ofw8hblmdag": {
+      "id": "a1_0ofw8hblmdag",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M101.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M101.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_djosa7dpowc8": {
+      "id": "a1_djosa7dpowc8",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M102.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M102.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_o3pegj6msxie": {
+      "id": "a1_o3pegj6msxie",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M103.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M103.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_qn1e42yaxo9a": {
+      "id": "a1_qn1e42yaxo9a",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M104.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M104.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_h4z44u0ct48c": {
+      "id": "a1_h4z44u0ct48c",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M105.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M105.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_6grniv3qtkvn": {
+      "id": "a1_6grniv3qtkvn",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M106.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M106.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_xh61pxxiij22": {
+      "id": "a1_xh61pxxiij22",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M107.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M107.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_b5fxe08zboi1": {
+      "id": "a1_b5fxe08zboi1",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M108.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M108.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_pg31xwhuj38n": {
+      "id": "a1_pg31xwhuj38n",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M109.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M109.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_g5ozyhm86in9": {
+      "id": "a1_g5ozyhm86in9",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M110.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M110.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_styixucvfcu8": {
+      "id": "a1_styixucvfcu8",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M111.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M111.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_sfdukmdww7f6": {
+      "id": "a1_sfdukmdww7f6",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M112.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M112.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_e73jgwur045n": {
+      "id": "a1_e73jgwur045n",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M113.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M113.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_uoqkhfj9gr83": {
+      "id": "a1_uoqkhfj9gr83",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M114.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M114.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_tx26aj6k3ig6": {
+      "id": "a1_tx26aj6k3ig6",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M115.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M115.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_amx3sn5xnf3i": {
+      "id": "a1_amx3sn5xnf3i",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M116.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M116.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_r33cc78hw18g": {
+      "id": "a1_r33cc78hw18g",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M117.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M117.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_kscgrfzgxej6": {
+      "id": "a1_kscgrfzgxej6",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M118.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M118.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_t96cdboxpmkn": {
+      "id": "a1_t96cdboxpmkn",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M119.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M119.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "a1_47x7kjjg4d3a": {
+      "id": "a1_47x7kjjg4d3a",
+      "kind": "image",
+      "name": "HD2D_A00_BaseR_M120.png",
+      "src": "img/チーム名ベース右/HD2D_A00_BaseR_M120.png",
+      "width": 563,
+      "height": 106,
+      "groupId": "ag_t8m4emyvjyk3",
+      "ownerId": "n1_6ua9hzcbdxox"
+    }
+  },
+  "assetGroups": {
+    "ag_gmje0s0j5rh2": {
+      "id": "ag_gmje0s0j5rh2",
+      "name": "顔写真",
+      "order": 0
+    },
+    "ag_2tp9vr7rgjrm": {
+      "id": "ag_2tp9vr7rgjrm",
+      "name": "顔写真",
+      "order": 1,
+      "ownerId": "n1_es2xfsdwu7af"
+    },
+    "ag_8cjhkps1gbgl": {
+      "id": "ag_8cjhkps1gbgl",
+      "name": "チーム名ベース左",
+      "order": 2,
+      "ownerId": "n1_hpc88ri4zdf0"
+    },
+    "ag_kp1ed02zjofg": {
+      "id": "ag_kp1ed02zjofg",
+      "name": "チーム名ベース右",
+      "order": 3,
+      "ownerId": "n1_hpc88ri4zdf0"
+    },
+    "ag_linnjxg7vpc8": {
+      "id": "ag_linnjxg7vpc8",
+      "name": "チーム名ベース左",
+      "order": 4,
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "ag_t8m4emyvjyk3": {
+      "id": "ag_t8m4emyvjyk3",
+      "name": "チーム名ベース右",
+      "order": 5,
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "ag_5p3jtppl49e4": {
+      "id": "ag_5p3jtppl49e4",
+      "name": "顔写真",
+      "order": 7,
+      "ownerId": "n1_nqlp71a7dlfe"
+    }
+  }
+}

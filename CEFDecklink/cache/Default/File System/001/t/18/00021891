@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>大対戦</title>
+    <link rel="stylesheet" href="./大対戦.css?v=1782785903300">
+    <script src="../viewer/renderer.js"></script>
+    <script src="./大対戦.js?v=1782785903300"></script>
+</head>
+<body>
+    <div id="player-container"></div>
+</body>
+</html>

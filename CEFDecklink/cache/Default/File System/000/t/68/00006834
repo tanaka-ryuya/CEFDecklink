@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>過去のいろいろ</title>
+    <link rel="stylesheet" href="./過去のいろいろ.css?v=1782372571281">
+    <script src="../viewer/renderer.js"></script>
+    <script src="./過去のいろいろ.js?v=1782372571281"></script>
+</head>
+<body>
+    <div id="player-container"></div>
+</body>
+</html>

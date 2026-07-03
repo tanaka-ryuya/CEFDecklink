@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>プロ２</title>
+    <link rel="stylesheet" href="./プロ２.css?v=1782372698149">
+    <script src="../viewer/renderer.js"></script>
+    <script src="./プロ２.js?v=1782372698149"></script>
+</head>
+<body>
+    <div id="player-container"></div>
+</body>
+</html>

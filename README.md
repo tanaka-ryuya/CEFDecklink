@@ -1,6 +1,8 @@
 # CEFDecklink
 
-CEFDecklinkは、**Chromium Embedded Framework (CEF)** を使用してHTML/CSS/JSコンテンツをオフスクリーンでレンダリングし、**Blackmagic DeckLink** SDI経由で**Unmultiplied Fill & Key**信号として出力する専用アプリケーションです。
+CEFDecklinkは、**組み込みのブラウザ（CEF）で描いたWEBページを、1080i59.94もしくは1080i50の出力レートで、SDIで「ストレートアルファのFillとKey」に分離出力ができる、軽量単機能な安定性に優れた放送品質のソフトウェア**です。
+
+（内部では Chromium Embedded Framework を使用してHTML/CSS/JSコンテンツをオフスクリーンでレンダリングし、Blackmagic DeckLinkデバイス経由でスイッチャー向けに正確なUnmultiplied信号を生成します）
 
 特に以下の設定に合わせて構成されています：
 - **デバイス**: **UltraStudio HD Mini** (および同様のDeckLinkデバイス) と互換性があります。
@@ -99,6 +101,10 @@ CEFDecklink/
 
 ## 実行とインストール
 
+### セキュリティ警告について
+- **SmartScreenの警告:** 個人開発のため、実行ファイルに対するデジタル署名（コードサイニング証明書）を取得していません。初回実行時に Windows Defender SmartScreen による青い警告画面が表示される場合があります。その場合は、画面内の **「詳細情報」** をクリックし、**「実行」** を押すことで起動できます。
+- **ファイアウォールの警告:** 内部ブラウザ（CEF）が開発者ツール（DevTools）接続用のポートを開くため、Windows ファイアウォールの警告が表示されることがあります。開発者ツールを使用しない場合は、通信を **「キャンセル（許可しない）」** としても本ソフトウェアの送出機能は問題なく動作します。
+
 ### インストーラーを使用する場合 (推奨)
 1. ビルド完了後に生成された `build\CEFDecklink-Setup.exe` を実行します。
 2. 画面の指示に従ってインストールし、デスクトップまたはスタートメニューのショートカットからアプリケーションを起動します。
@@ -132,16 +138,16 @@ CEFDecklink/
 `DeckLinkDX11.exe` の隣（ビルドディレクトリ、またはインストール先）の `config.json` で設定を固定化できます：
 ```json
 {
-    "url": "http://localhost:9090/graphics/on_air.html",
-    "unmult_thresh": 0.000,
+    "url": "https://google.com",
+    "unmult_thresh": 0.0,
     "format": "5994i",
-    "il_filter_mode": 0
+    "il_filter_mode": 1
 }
 ```
 - `url`: The web page to render (default: "https://example.com")
-- `unmult_thresh`: The alpha threshold for unpremultiplication (default: 0.000)
-- `format`: Output format, e.g., "5994i" or "50i" (default: "5994i")
-- `il_filter_mode`: Interlace vertical filter mode (0=None, 1=3-tap, 2=5-tap) (default: 0)
+- `unmult_thresh`: The threshold for unmultiplied processing (default: 0.0, perfectly straight alpha)
+- `format`: SDI output format. Only two values are supported: "5994i" or "50i" (default: "5994i")
+- `il_filter_mode`: Interlace vertical filter mode (0=None, 1=3-tap, 2=5-tap) (default: 1)
 
 ### 3. licensekey.json
 `DeckLinkDX11.exe` の隣に `licensekey.json` を配置して有期ライセンスキーを設定できます：

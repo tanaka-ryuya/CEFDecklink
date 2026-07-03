@@ -2,6 +2,7 @@
 #include <include/cef_app.h>
 #include <include/cef_client.h>
 #include <include/cef_render_handler.h>
+#include <include/cef_load_handler.h>
 #include <functional>
 
 // Forward declaration
@@ -43,6 +44,10 @@ public:
     // Externally drive CEF frame generation from DeckLink thread
     void DriveExternalBeginFrame(int mode);
 
+    // License Watermark
+    void SetLicensed(bool licensed);
+    void UpdateWatermark();
+
 private:
     CefRefPtr<CefRenderHandlerImpl> m_renderHandler;
     CefRefPtr<CefBrowser> m_browser;
@@ -54,4 +59,5 @@ private:
     std::string m_format;
     ID3D11Device* m_d3dDevice = nullptr;
     FullscreenCallback m_fullscreenCallback;
+    bool m_isLicensed = false;
 };

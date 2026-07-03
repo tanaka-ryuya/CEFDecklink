@@ -1,0 +1,10 @@
+/* @telop-editor-default-template: If you modify this file, remove this line to prevent TelopEditor from overwriting your changes. */
+body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+svg { width: 100%; height: 100%; display: block; }
+#player-container { opacity: 0; width: 1920px; height: 1080px; }
+.in_animation { animation: fadeIn 0s forwards; opacity: 1; }
+.out_animation { animation: fadeOut 0s forwards; opacity: 1; }
+#player-container.in_animation { opacity: 1; }
+#player-container.out_animation { opacity: 1; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }

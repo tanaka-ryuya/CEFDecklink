@@ -1,0 +1,253 @@
+/* @telop-editor-default-template: If you modify this file, remove this line to prevent TelopEditor from overwriting your changes. */
+body { margin: 0; padding: 0; background: transparent; overflow: hidden;
+    width: 1920px;
+    height: 1080px;
+
+
+
+
+
+}
+svg { width: 100%; height: 100%; display: block; }
+#player-container { opacity: 0; width: 1920px; height: 1080px;
+    overflow: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
+
+
+
+
+
+}
+.in_animation {  opacity: 1;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    transform-origin: 50% 50%;
+    width: 1920px;
+    height: 1080px;
+    top: 0px;
+    left: 0px;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    animation-name: zoomInDown;
+    animation-duration: 1.3s;
+    animation-timing-function: forwards;
+    animation-delay: 0s;
+    animation-iteration-count: 1;
+    animation-direction: normal;
+    animation-fill-mode: both;
+    animation-play-state: running;
+}
+.out_animation {  
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    transform-origin: 50% 50%;
+    width: 1920px;
+    height: 1080px;
+    top: 0px;
+    left: 0px;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    animation-name: fadeOut;
+    animation-duration: 0s;
+    animation-timing-function: forwards;
+    animation-delay: 0s;
+    animation-iteration-count: 1;
+    animation-direction: normal;
+    animation-fill-mode: both;
+    animation-play-state: running;
+}
+#player-container.in_animation { opacity: 1;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    transform-origin: 50% 50%;
+    width: 1920px;
+    height: 1080px;
+    top: 0px;
+    left: 0px;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    animation-name: zoomInDown;
+    animation-duration: 1.3s;
+    animation-timing-function: forwards;
+    animation-delay: 0s;
+    animation-iteration-count: 1;
+    animation-direction: normal;
+    animation-fill-mode: both;
+    animation-play-state: running;
+}
+#player-container.out_animation { 
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    transform-origin: 50% 50%;
+    width: 1920px;
+    height: 1080px;
+    top: 0px;
+    left: 0px;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    
+    
+    animation-timing-function: forwards;
+    
+    animation-iteration-count: 1;
+    
+    animation-fill-mode: both;
+    animation-play-state: running;
+    animation-name: fadeOut;
+    animation-duration: 0s;
+    animation-timing-function: forwards;
+    animation-delay: 0s;
+    animation-iteration-count: 1;
+    animation-direction: normal;
+    animation-fill-mode: both;
+    animation-play-state: running;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* --- BAKED ANIMATION START --- */
+@-webkit-keyframes zoomInDown{0%{opacity:0;-webkit-transform:scale3d(.1,.1,.1) translate3d(0,-1000px,0);transform:scale3d(.1,.1,.1) translate3d(0,-1000px,0);-webkit-animation-timing-function:cubic-bezier(.55,.055,.675,.19);animation-timing-function:cubic-bezier(.55,.055,.675,.19)}60%{opacity:1;-webkit-transform:scale3d(.475,.475,.475) translate3d(0,60px,0);transform:scale3d(.475,.475,.475) translate3d(0,60px,0);-webkit-animation-timing-function:cubic-bezier(.175,.885,.32,1);animation-timing-function:cubic-bezier(.175,.885,.32,1)}}
+@keyframes zoomInDown{0%{opacity:0;-webkit-transform:scale3d(.1,.1,.1) translate3d(0,-1000px,0);transform:scale3d(.1,.1,.1) translate3d(0,-1000px,0);-webkit-animation-timing-function:cubic-bezier(.55,.055,.675,.19);animation-timing-function:cubic-bezier(.55,.055,.675,.19)}60%{opacity:1;-webkit-transform:scale3d(.475,.475,.475) translate3d(0,60px,0);transform:scale3d(.475,.475,.475) translate3d(0,60px,0);-webkit-animation-timing-function:cubic-bezier(.175,.885,.32,1);animation-timing-function:cubic-bezier(.175,.885,.32,1)}}
+
+@-webkit-keyframes fadeOut{0%{opacity:1}to{opacity:0}}
+@keyframes fadeOut{0%{opacity:1}to{opacity:0}}
+
+/* --- BAKED ANIMATION END --- */

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>フォーメーション右</title>
+    <link rel="stylesheet" href="./フォーメーション右.css?v=1782372698151">
+    <script src="../viewer/renderer.js"></script>
+    <script src="./フォーメーション右.js?v=1782372698151"></script>
+</head>
+<body>
+    <div id="player-container"></div>
+</body>
+</html>

@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "title": "VolleyBall",
+    "version": 1,
+    "canvas": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "rootId": "n1_howdaww9d9e6",
+  "nodesById": {
+    "n1_howdaww9d9e6": {
+      "id": "n1_howdaww9d9e6",
+      "type": "plane",
+      "parentId": null,
+      "children": [
+        "n1_lzg3c7ygrm7s",
+        "n1_vjbzrd1p669c",
+        "n1_1kdb48k8dieb",
+        "n1_sf2rpsuxnqhs",
+        "n1_b5j9cd76tb83",
+        "n1_vtpydpab98bh",
+        "n1_madtdp2eplok",
+        "n1_daby8ezxgbtj",
+        "n1_wax96a6mgjp8",
+        "n1_3mdx53ln0vjh"
+      ],
+      "name": "Root",
+      "visible": true,
+      "locked": false,
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "skewX": 0,
+      "skewY": 0,
+      "opacity": 1,
+      "blendMode": "normal",
+      "effects": []
+    }
+  },
+  "assets": {},
+  "assetGroups": {}
+}

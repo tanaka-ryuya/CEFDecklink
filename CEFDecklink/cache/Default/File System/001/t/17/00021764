@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "title": "tennis",
+    "version": 1,
+    "canvas": {
+      "width": 1920,
+      "height": 1080
+    },
+    "creator": "TelopEditor"
+  },
+  "rootId": "n1_ggbrlvegjttv",
+  "nodesById": {
+    "n1_ggbrlvegjttv": {
+      "id": "n1_ggbrlvegjttv",
+      "type": "telop",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "skewX": 0,
+      "skewY": 0,
+      "opacity": 1,
+      "children": [
+        "n1_gx4y40bsu5kd",
+        "n1_xcysmva8fan9"
+      ],
+      "name": "Telop 1",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_kzuift26n8pz"
+    },
+    "n1_gx4y40bsu5kd": {
+      "id": "n1_gx4y40bsu5kd",
+      "type": "rect",
+      "x": 404.08284023668637,
+      "y": 82.2189349112426,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "skewX": 0,
+      "skewY": 0,
+      "opacity": 1,
+      "width": 220,
+      "height": 170,
+      "style": {
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#cccccc",
+            "strokeEnabled": true,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10
+          }
+        ],
+        "cornerRadius": 10
+      },
+      "name": "Rectangle",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_ggbrlvegjttv"
+    },
+    "n1_xcysmva8fan9": {
+      "id": "n1_xcysmva8fan9",
+      "type": "text",
+      "x": 394.792899408284,
+      "y": 195.6213017751479,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "skewX": 0,
+      "skewY": 0,
+      "opacity": 1,
+      "width": 320,
+      "height": 120,
+      "text": "New Text",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 40,
+        "fontWeight": "normal",
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#ffffff",
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "left",
+      "verticalAlign": "middle",
+      "name": "Text 1",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "none",
+      "parentId": "n1_ggbrlvegjttv"
+    }
+  },
+  "assets": {},
+  "assetGroups": {}
+}

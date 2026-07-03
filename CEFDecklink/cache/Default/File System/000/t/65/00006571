@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>顔付き1Shot</title>
+    <link rel="stylesheet" href="./顔付き1Shot.css?v=1782372698150">
+    <script src="../viewer/renderer.js"></script>
+    <script src="./顔付き1Shot.js?v=1782372698150"></script>
+</head>
+<body>
+    <div id="player-container"></div>
+</body>
+</html>

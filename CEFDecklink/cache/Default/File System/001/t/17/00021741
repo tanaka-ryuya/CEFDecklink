@@ -1,0 +1,798 @@
+window.assetMapping = {
+  "a1_00mp9xx7pa5y": {
+    "id": "a1_00mp9xx7pa5y",
+    "kind": "image",
+    "name": "01 安達想抜き.png",
+    "src": "img/顔写真/01 安達想抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_744ttkaoi6dq": {
+    "id": "a1_744ttkaoi6dq",
+    "kind": "image",
+    "name": "02 一柳　瑛太抜き.png",
+    "src": "img/顔写真/02 一柳　瑛太抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_fc6u2b31tv7w": {
+    "id": "a1_fc6u2b31tv7w",
+    "kind": "image",
+    "name": "03 大石蓮斗抜き.png",
+    "src": "img/顔写真/03 大石蓮斗抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_1syrnsjifn6o": {
+    "id": "a1_1syrnsjifn6o",
+    "kind": "image",
+    "name": "04 菊谷　輝抜き.png",
+    "src": "img/顔写真/04 菊谷　輝抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_cmj2ghr1gyfx": {
+    "id": "a1_cmj2ghr1gyfx",
+    "kind": "image",
+    "name": "05 髙橋　壯一朗抜き.png",
+    "src": "img/顔写真/05 髙橋　壯一朗抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_5b87zle0vbma": {
+    "id": "a1_5b87zle0vbma",
+    "kind": "image",
+    "name": "06 今井　朝陽抜き.png",
+    "src": "img/顔写真/06 今井　朝陽抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_u3qzxjr6an1s": {
+    "id": "a1_u3qzxjr6an1s",
+    "kind": "image",
+    "name": "07 中村　哲爾抜き.png",
+    "src": "img/顔写真/07 中村　哲爾抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_dr7c7fhehmwu": {
+    "id": "a1_dr7c7fhehmwu",
+    "kind": "image",
+    "name": "08 前田　晴陽抜き.png",
+    "src": "img/顔写真/08 前田　晴陽抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_lrjjix26faqq": {
+    "id": "a1_lrjjix26faqq",
+    "kind": "image",
+    "name": "09 遠藤　煌太抜き.png",
+    "src": "img/顔写真/09 遠藤　煌太抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_u8cyzz8qo741": {
+    "id": "a1_u8cyzz8qo741",
+    "kind": "image",
+    "name": "10 岡　拓希抜き.png",
+    "src": "img/顔写真/10 岡　拓希抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_8k2yc4y5exhv": {
+    "id": "a1_8k2yc4y5exhv",
+    "kind": "image",
+    "name": "11 吉田　朝陽抜き.png",
+    "src": "img/顔写真/11 吉田　朝陽抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_1utghu1itjtp": {
+    "id": "a1_1utghu1itjtp",
+    "kind": "image",
+    "name": "12 荒井　清大朗抜き.png",
+    "src": "img/顔写真/12 荒井　清大朗抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_ymo2xhdrvnlj": {
+    "id": "a1_ymo2xhdrvnlj",
+    "kind": "image",
+    "name": "13 岡本　空抜き.png",
+    "src": "img/顔写真/13 岡本　空抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_5hoscapum5lu": {
+    "id": "a1_5hoscapum5lu",
+    "kind": "image",
+    "name": "14 榎本　至抜き.png",
+    "src": "img/顔写真/14 榎本　至抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_l0tchndcoon9": {
+    "id": "a1_l0tchndcoon9",
+    "kind": "image",
+    "name": "15 北村　瑞抜き.png",
+    "src": "img/顔写真/15 北村　瑞抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_4qg25s4y3bxi": {
+    "id": "a1_4qg25s4y3bxi",
+    "kind": "image",
+    "name": "16 入澤　快斗抜き.png",
+    "src": "img/顔写真/16 入澤　快斗抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_xz2f0bio8mkv": {
+    "id": "a1_xz2f0bio8mkv",
+    "kind": "image",
+    "name": "17 小林　龍之介抜き.png",
+    "src": "img/顔写真/17 小林　龍之介抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_xutne7grcgmr": {
+    "id": "a1_xutne7grcgmr",
+    "kind": "image",
+    "name": "18 小林　颯太抜き.png",
+    "src": "img/顔写真/18 小林　颯太抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_738e3g4otcrf": {
+    "id": "a1_738e3g4otcrf",
+    "kind": "image",
+    "name": "19 小野田　悠人抜き.png",
+    "src": "img/顔写真/19 小野田　悠人抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_cehypc6bmy9g": {
+    "id": "a1_cehypc6bmy9g",
+    "kind": "image",
+    "name": "20 松田　颯之介抜き.png",
+    "src": "img/顔写真/20 松田　颯之介抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_ipipyi8iwfcu": {
+    "id": "a1_ipipyi8iwfcu",
+    "kind": "image",
+    "name": "21 宮城　勇斗抜き.png",
+    "src": "img/顔写真/21 宮城　勇斗抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_kihto7exffje": {
+    "id": "a1_kihto7exffje",
+    "kind": "image",
+    "name": "22 遠藤　広洋抜き.png",
+    "src": "img/顔写真/22 遠藤　広洋抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_da63ypkbcpvv": {
+    "id": "a1_da63ypkbcpvv",
+    "kind": "image",
+    "name": "23 菊田　勝利抜き.png",
+    "src": "img/顔写真/23 菊田　勝利抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_vx9hu4z7e5jv": {
+    "id": "a1_vx9hu4z7e5jv",
+    "kind": "image",
+    "name": "24 赤石　奏羽抜き.png",
+    "src": "img/顔写真/24 赤石　奏羽抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_mf65l1vp1tkw": {
+    "id": "a1_mf65l1vp1tkw",
+    "kind": "image",
+    "name": "25 加藤　一爽抜き.png",
+    "src": "img/顔写真/25 加藤　一爽抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_df234wonb2wn": {
+    "id": "a1_df234wonb2wn",
+    "kind": "image",
+    "name": "26 小野塚　輝抜き.png",
+    "src": "img/顔写真/26 小野塚　輝抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_u5xs9fu77b4z": {
+    "id": "a1_u5xs9fu77b4z",
+    "kind": "image",
+    "name": "27 佐々木　涼介抜き.png",
+    "src": "img/顔写真/27 佐々木　涼介抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_d5aveqlwn8ss": {
+    "id": "a1_d5aveqlwn8ss",
+    "kind": "image",
+    "name": "28 髙橋　拓仁抜き.png",
+    "src": "img/顔写真/28 髙橋　拓仁抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_5xq5bvf9q73o": {
+    "id": "a1_5xq5bvf9q73o",
+    "kind": "image",
+    "name": "29 夛湖　悠晋抜き.png",
+    "src": "img/顔写真/29 夛湖　悠晋抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_h8br4hn5bdjd": {
+    "id": "a1_h8br4hn5bdjd",
+    "kind": "image",
+    "name": "30 髙橋　欧太郎抜き.png",
+    "src": "img/顔写真/30 髙橋　欧太郎抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_av0f5nd1yckz": {
+    "id": "a1_av0f5nd1yckz",
+    "kind": "image",
+    "name": "１遠入抜き.png",
+    "src": "img/顔写真/１遠入抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_ndi1x0vv08fk": {
+    "id": "a1_ndi1x0vv08fk",
+    "kind": "image",
+    "name": "２西垣抜き.png",
+    "src": "img/顔写真/２西垣抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_9kjixvl9hl3p": {
+    "id": "a1_9kjixvl9hl3p",
+    "kind": "image",
+    "name": "３谷口抜き.png",
+    "src": "img/顔写真/３谷口抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_72rn07lxsp38": {
+    "id": "a1_72rn07lxsp38",
+    "kind": "image",
+    "name": "４齋藤抜き.png",
+    "src": "img/顔写真/４齋藤抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_w80enm4tpxno": {
+    "id": "a1_w80enm4tpxno",
+    "kind": "image",
+    "name": "５山崎抜き.png",
+    "src": "img/顔写真/５山崎抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_rh07tapxsvao": {
+    "id": "a1_rh07tapxsvao",
+    "kind": "image",
+    "name": "６曳地抜き.png",
+    "src": "img/顔写真/６曳地抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_rlstxpm247nl": {
+    "id": "a1_rlstxpm247nl",
+    "kind": "image",
+    "name": "７藤原抜き.png",
+    "src": "img/顔写真/７藤原抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_b0ji2zng33uz": {
+    "id": "a1_b0ji2zng33uz",
+    "kind": "image",
+    "name": "８萩野抜き.png",
+    "src": "img/顔写真/８萩野抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_dypp398yuhf6": {
+    "id": "a1_dypp398yuhf6",
+    "kind": "image",
+    "name": "９原田抜き.png",
+    "src": "img/顔写真/９原田抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_h1u6agdsdpkg": {
+    "id": "a1_h1u6agdsdpkg",
+    "kind": "image",
+    "name": "１０増谷抜き.png",
+    "src": "img/顔写真/１０増谷抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_rs0xj2hq2490": {
+    "id": "a1_rs0xj2hq2490",
+    "kind": "image",
+    "name": "１１野澤抜き.png",
+    "src": "img/顔写真/１１野澤抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_kkswp0mr768x": {
+    "id": "a1_kkswp0mr768x",
+    "kind": "image",
+    "name": "１２濱本抜き.png",
+    "src": "img/顔写真/１２濱本抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_b7kyhbhc2hfz": {
+    "id": "a1_b7kyhbhc2hfz",
+    "kind": "image",
+    "name": "１３国分抜き.png",
+    "src": "img/顔写真/１３国分抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_s8670slfydoc": {
+    "id": "a1_s8670slfydoc",
+    "kind": "image",
+    "name": "14 菅野桜抜き.png",
+    "src": "img/顔写真/14 菅野桜抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_k40zr5w1fnzc": {
+    "id": "a1_k40zr5w1fnzc",
+    "kind": "image",
+    "name": "15 井上抜き.png",
+    "src": "img/顔写真/15 井上抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_k737a1ns36o5": {
+    "id": "a1_k737a1ns36o5",
+    "kind": "image",
+    "name": "１６菅野抜き.png",
+    "src": "img/顔写真/１６菅野抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_kgiuni7xeu4y": {
+    "id": "a1_kgiuni7xeu4y",
+    "kind": "image",
+    "name": "１７本田抜き.png",
+    "src": "img/顔写真/１７本田抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_2hejhnag72sz": {
+    "id": "a1_2hejhnag72sz",
+    "kind": "image",
+    "name": "18 石黒抜き.png",
+    "src": "img/顔写真/18 石黒抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_42lpam34a3uw": {
+    "id": "a1_42lpam34a3uw",
+    "kind": "image",
+    "name": "１９木村抜き.png",
+    "src": "img/顔写真/１９木村抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_khf3bb4hnrpc": {
+    "id": "a1_khf3bb4hnrpc",
+    "kind": "image",
+    "name": "２０木南抜き.png",
+    "src": "img/顔写真/２０木南抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_tzhfy219hmou": {
+    "id": "a1_tzhfy219hmou",
+    "kind": "image",
+    "name": "２１高橋抜き.png",
+    "src": "img/顔写真/２１高橋抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_lhmp1063zjmx": {
+    "id": "a1_lhmp1063zjmx",
+    "kind": "image",
+    "name": "２２新岡抜き.png",
+    "src": "img/顔写真/２２新岡抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_hli5xo449p43": {
+    "id": "a1_hli5xo449p43",
+    "kind": "image",
+    "name": "２３廣瀬抜き.png",
+    "src": "img/顔写真/２３廣瀬抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_dr3ysk9a9dpq": {
+    "id": "a1_dr3ysk9a9dpq",
+    "kind": "image",
+    "name": "２４遠田抜き.png",
+    "src": "img/顔写真/２４遠田抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_0a61vfhgg0wl": {
+    "id": "a1_0a61vfhgg0wl",
+    "kind": "image",
+    "name": "２５葛西抜き.png",
+    "src": "img/顔写真/２５葛西抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_0iwzj9hoor8d": {
+    "id": "a1_0iwzj9hoor8d",
+    "kind": "image",
+    "name": "２６西田抜き.png",
+    "src": "img/顔写真/２６西田抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_glek70i3dkn6": {
+    "id": "a1_glek70i3dkn6",
+    "kind": "image",
+    "name": "２７角谷抜き.png",
+    "src": "img/顔写真/２７角谷抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_oet1nomjvrju": {
+    "id": "a1_oet1nomjvrju",
+    "kind": "image",
+    "name": "２８千葉抜き.png",
+    "src": "img/顔写真/２８千葉抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_uhgv5v588xem": {
+    "id": "a1_uhgv5v588xem",
+    "kind": "image",
+    "name": "２９藤田抜き.png",
+    "src": "img/顔写真/２９藤田抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  },
+  "a1_uho5a2hkope3": {
+    "id": "a1_uho5a2hkope3",
+    "kind": "image",
+    "name": "３０吉村抜き.png",
+    "src": "img/顔写真/３０吉村抜き.png",
+    "width": 205,
+    "height": 240,
+    "groupId": "ag_5p3jtppl49e4",
+    "ownerId": "n1_nqlp71a7dlfe"
+  }
+};
+
+// 1. Data Loading (Auto-generated)
+let projectData = null;
+let assetCache = {};
+
+// 2. Controller Logic (Editable)
+// @telop-editor-default-template: If you modify this file, remove this line to prevent TelopEditor from overwriting your changes.
+
+// --- External Control API ---
+window._pendingRenderableObject = null;
+window._pendingShow = false;
+
+/**
+ * テロップを表示する関数
+ * @param {Object} rendarableObject - レンダリング可能なオブジェクト。
+ */
+window.showTelop = function (rendarableObject) {
+    if (rendarableObject !== undefined) {
+        window.updateTelop(rendarableObject);
+    }
+
+    if (!window.initialized) {
+        window._pendingShow = true;
+        return;
+    }
+
+    // containerId is exposed by initPlayer
+    const divElement = document.getElementById(window.containerId || 'player-container');
+    if (divElement) {
+        divElement.classList.remove(...divElement.classList);
+        requestAnimationFrame(() => {
+            divElement.classList.add("in_animation");
+            document.body.style.display = "block";
+        });
+    }
+};
+
+/**
+ * テロップの内容を更新する関数
+ * @param {Object} rendarableObject - レンダリング可能なオブジェクト。
+ */
+window.updateTelop = function (rendarableObject) {
+    console.log("updateTelop called", rendarableObject);
+    if (!rendarableObject) return;
+
+    // Globals exposed by renderer.js
+    const app = window.telopApp;
+    const doc = window.telopDoc;
+    const keyExpMap = window.keyExpMap;
+    const createNode = window.createNode;
+
+    if (!app || !doc || !keyExpMap || !createNode) {
+        console.error("updateTelop early return: Missing required globals:", { app: !!app, doc: !!doc, keyExpMap: !!keyExpMap, createNode: !!createNode });
+        console.warn("Player not fully initialized yet. Caching update...");
+        window._pendingRenderableObject = rendarableObject;
+        return;
+    }
+
+    let hasUpdates = false;
+
+    Object.keys(rendarableObject).forEach(key => {
+        const val = rendarableObject[key];
+        const targets = keyExpMap.get(key);
+        console.log(`Processing key: ${key}, targets found: ${targets ? targets.length : 0}, val: ${val}`);
+
+        if (targets && Array.isArray(targets) && (val || val === "")) {
+            targets.forEach((target) => {
+                if (target.type === 'text') {
+                    // Update Doc
+                    if (target.nodeData.text !== String(val)) {
+                        target.nodeData.text = String(val);
+                        hasUpdates = true;
+                    }
+                } else if (target.type === 'image') {
+                    // Update Doc (Asset)
+                    const node = target.nodeData;
+                    if (node.assetId && doc.assets[node.assetId]) {
+                        if (doc.assets[node.assetId].src !== String(val)) {
+                            doc.assets[node.assetId].src = String(val);
+                            hasUpdates = true;
+                        }
+                    }
+                } else if (target.type === 'appearance_fill') {
+                    const apps = target.nodeData.style?.appearances || [];
+                    const app = apps[target.appearanceIndex];
+                    if (app && (app.fill !== String(val) || app.gradientConfig)) {
+                        console.log(`Updating appearance_fill for ${target.nodeData.id} to ${val}`);
+                        app.fill = String(val);
+                        if (app.gradientConfig) { delete app.gradientConfig; }
+                        hasUpdates = true;
+                    }
+                } else if (target.type === 'appearance_stroke') {
+                    const apps = target.nodeData.style?.appearances || [];
+                    const app = apps[target.appearanceIndex];
+                    if (app && app.color !== String(val)) {
+                        console.log(`Updating appearance_stroke for ${target.nodeData.id} to ${val}`);
+                        app.color = String(val);
+                        hasUpdates = true;
+                    }
+                } else if (target.type === 'bg_appearance_fill') {
+                    const apps = target.nodeData.background?.appearances || [];
+                    const app = apps[target.appearanceIndex];
+                    if (app && (app.fill !== String(val) || app.gradientConfig)) {
+                        console.log(`Updating bg_appearance_fill for ${target.nodeData.id} to ${val}`);
+                        app.fill = String(val);
+                        if (app.gradientConfig) { delete app.gradientConfig; }
+                        hasUpdates = true;
+                    }
+                } else if (target.type === 'bg_appearance_stroke') {
+                    const apps = target.nodeData.background?.appearances || [];
+                    const app = apps[target.appearanceIndex];
+                    if (app && app.color !== String(val)) {
+                        console.log(`Updating bg_appearance_stroke for ${target.nodeData.id} to ${val}`);
+                        app.color = String(val);
+                        hasUpdates = true;
+                    }
+                }
+            });
+        }
+    });
+
+    if (hasUpdates) {
+        // Re-render everything (SVG-based)
+        // Keep defs (first child) and clear it
+        const defs = app.firstChild;
+        if (defs) defs.innerHTML = ''; 
+
+        while (app.childNodes.length > 1) {
+            app.removeChild(app.lastChild);
+        }
+        keyExpMap.clear();
+
+        const evaluatedDoc = resolveDynamicVisibility(doc);
+        const prevDoc = window.telopDoc;
+        window.telopDoc = evaluatedDoc;
+        try {
+            const rootNode = createNode(doc.rootId);
+            if (rootNode) app.appendChild(rootNode);
+        } finally {
+            window.telopDoc = prevDoc;
+        }
+        
+        // Notify completion for custom JS control
+        window.dispatchEvent(new CustomEvent('telopRendered'));
+    }
+};
+
+/**
+ * テロップを非表示にする関数
+ */
+window.hideTelop = function () {
+    const divElement = document.getElementById(window.containerId || 'player-container');
+    if (divElement) {
+        divElement.classList.remove(...divElement.classList);
+
+        const onAnimationEnd = () => {
+            console.log("animationed");
+            if (window.animationFinishedCallback) {
+                window.animationFinishedCallback();
+            }
+            divElement.removeEventListener('animationend', onAnimationEnd);
+        };
+
+        divElement.addEventListener('animationend', onAnimationEnd);
+        divElement.classList.add("out_animation");
+    }
+};
+
+
+// 3. Initialization
+window.addEventListener('load', async () => {
+    try {
+        const dataUrl = './顔付き1Shot.telop';
+        const dataResp = await fetch(dataUrl);
+        if (dataResp.ok) {
+            projectData = await dataResp.json();
+            console.log("[Player] Loaded project data from:", dataUrl);
+        }
+        assetCache = {};
+        if (window.initPlayer) {
+            window.initPlayer('player-container', projectData, assetCache).then(() => {
+                window.initialized = true;
+                if (window._pendingRenderableObject) {
+                    window.updateTelop(window._pendingRenderableObject);
+                    window._pendingRenderableObject = null;
+                }
+                if (window._pendingShow) {
+                    window.showTelop();
+                    window._pendingShow = false;
+                }
+            });
+        }
+    } catch (e) {
+        console.error("[Player] Failed to initialize project data:", e);
+    }
+});

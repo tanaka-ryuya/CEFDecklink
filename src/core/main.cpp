@@ -270,7 +270,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+F(Filter)\x1b[K\x1b[0m\n";
     oss << "            \x1b[90mCtrl+A/Z(UnmultThresh) | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
-    oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
+    oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\x1b[J";
 
     std::cout << oss.str() << std::flush;
 }
@@ -532,6 +532,7 @@ void RenderFrame(HWND hWnd) {
                 std::lock_guard<std::mutex> lock(g_d3dContextMutex);
                 g_shaderManager->SetLicensed(g_isLicensed);
             }
+            g_cefManager.SetLicensed(g_isLicensed);
         }
     }
 }
@@ -547,6 +548,7 @@ int main(int argc, char** argv)
     // Priority 2: config.json
     LoadConfig(g_targetUrl, g_alphaThreshold, g_format);
     g_isLicensed = IsLicenseValid(g_licenseKey);
+    g_cefManager.SetLicensed(g_isLicensed);
     
     // Priority 1: CLI Args
     for (int i = 1; i < argc; ++i) {
@@ -681,7 +683,7 @@ int main(int argc, char** argv)
             // Helper Lambda for Blitting to Window
             auto BlitToWindow = [&](void* buffer) {
                  if (g_deckLink.IsSimulated() && buffer) {
-                     HWND previewHwnd = FindWindowW(L"DeckLinkApp", L"Native DeckLink + CEF");
+                     HWND previewHwnd = FindWindowW(L"DeckLinkApp", nullptr);
                      if (previewHwnd) {
                          HDC hdc = GetDC(previewHwnd);
                          if (hdc) {
@@ -689,6 +691,18 @@ int main(int argc, char** argv)
                              GetClientRect(previewHwnd, &rcClient);
                              int winW = rcClient.right - rcClient.left;
                              int winH = rcClient.bottom - rcClient.top;
+
+                             // --- Simulator Color Conversion (DeckLink ARGB -> GDI BGRA) ---
+                             // DeckLink format: A, R, G, B in memory
+                             // GDI format: B, G, R, 255 in memory
+                             uint32_t* p32 = static_cast<uint32_t*>(buffer);
+                             for (int i = 0; i < 1920 * 1080; ++i) {
+                                 uint32_t p = p32[i];
+                                 uint32_t b = (p >> 24) & 0xFF;
+                                 uint32_t g = (p >> 16) & 0xFF;
+                                 uint32_t r = (p >> 8)  & 0xFF;
+                                 p32[i] = b | (g << 8) | (r << 16) | 0xFF000000;
+                             }
 
                              BITMAPINFO bmi = {0};
                              bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -790,6 +804,7 @@ int main(int argc, char** argv)
         g_deckLink.StartOutput();
 
         if (g_deckLink.IsSimulated()) {
+            SetWindowTextW(hwnd, L"Native DeckLink + CEF [SIMULATOR MODE] - Press F11 to toggle Fullscreen");
             // Show window for Preview in Simulator Mode
             ::ShowWindow(hwnd, SW_SHOW);
             ::UpdateWindow(hwnd);

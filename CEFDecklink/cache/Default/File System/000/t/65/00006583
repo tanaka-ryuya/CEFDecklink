@@ -1,0 +1,560 @@
+{
+  "meta": {
+    "title": "soccer",
+    "version": 1,
+    "canvas": {
+      "width": 1920,
+      "height": 1080
+    },
+    "creator": "TelopEditor"
+  },
+  "rootId": "n1_h34l97040ncv",
+  "nodesById": {
+    "n1_h34l97040ncv": {
+      "id": "n1_h34l97040ncv",
+      "type": "telop",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "children": [
+        "n1_hiramq8l4u7i",
+        "n1_9q12emn1vdtj",
+        "n1_l37tvpmmxthj",
+        "n1_uovgswg0ms7y",
+        "n1_40x1ky0fvgfi",
+        "n1_uewqqufowifr",
+        "n1_y0vgydlghylc",
+        "n1_9pvpeo35mymc",
+        "n1_nj3swolb59ur"
+      ],
+      "name": "顔付きプロ２",
+      "visible": true,
+      "locked": true,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_1vrm9rnhtpx0"
+    },
+    "n1_hiramq8l4u7i": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_hiramq8l4u7i",
+      "type": "rect",
+      "x": 1349,
+      "y": 966,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 523,
+      "height": 43,
+      "style": {
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": [
+              "#00000087",
+              "#ffffff",
+              "#0000009e"
+            ],
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "effects": [],
+            "gradientConfig": {
+              "angle": 0,
+              "units": "objectBoundingBox",
+              "stops": [
+                {
+                  "offset": 0,
+                  "color": "#00000087"
+                },
+                {
+                  "offset": 0.5,
+                  "color": "#ffffff"
+                },
+                {
+                  "offset": 1,
+                  "color": "#0000009e"
+                }
+              ]
+            }
+          }
+        ],
+        "cornerRadius": 10
+      },
+      "name": "Rectangle",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_h34l97040ncv"
+    },
+    "n1_9q12emn1vdtj": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_9q12emn1vdtj",
+      "type": "rect",
+      "x": 1349,
+      "y": 1009,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 523,
+      "height": 43,
+      "style": {
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": [
+              "#00000087",
+              "#ffffff",
+              "#0000009e"
+            ],
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "effects": [],
+            "gradientConfig": {
+              "angle": 0,
+              "units": "objectBoundingBox",
+              "stops": [
+                {
+                  "offset": 0,
+                  "color": "#00000087"
+                },
+                {
+                  "offset": 0.5,
+                  "color": "#ffffff"
+                },
+                {
+                  "offset": 1,
+                  "color": "#0000009e"
+                }
+              ]
+            }
+          }
+        ],
+        "cornerRadius": 10
+      },
+      "name": "Rectangle",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_h34l97040ncv"
+    },
+    "n1_l37tvpmmxthj": {
+      "skewX": 0,
+      "skewY": 0,
+      "id": "n1_l37tvpmmxthj",
+      "type": "rect",
+      "x": 1349,
+      "y": 922,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 523,
+      "height": 43,
+      "style": {
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": [
+              "#00000087",
+              "#ffffff",
+              "#0000009e"
+            ],
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "effects": [],
+            "gradientConfig": {
+              "angle": 0,
+              "units": "objectBoundingBox",
+              "stops": [
+                {
+                  "offset": 0,
+                  "color": "#00000087"
+                },
+                {
+                  "offset": 0.5,
+                  "color": "#ffffff"
+                },
+                {
+                  "offset": 1,
+                  "color": "#0000009e"
+                }
+              ]
+            }
+          }
+        ],
+        "cornerRadius": 10
+      },
+      "name": "Rectangle",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_h34l97040ncv"
+    },
+    "n1_uovgswg0ms7y": {
+      "id": "n1_uovgswg0ms7y",
+      "type": "text",
+      "x": 1535,
+      "y": 966,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 260,
+      "height": 43,
+      "text": "田中　隆也",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 39,
+        "fontWeight": "normal",
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#ffffff",
+            "strokeEnabled": true,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "lineHeight": 1.2,
+        "letterSpacing": 0
+      },
+      "align": "left",
+      "verticalAlign": "top",
+      "name": "氏名",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "shrink_x",
+      "parentId": "n1_h34l97040ncv",
+      "keyexp": "氏名",
+      "skewX": 0,
+      "skewY": 0
+    },
+    "n1_40x1ky0fvgfi": {
+      "id": "n1_40x1ky0fvgfi",
+      "type": "text",
+      "x": 1445,
+      "y": 970,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 55,
+      "height": 44,
+      "text": "23",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 40,
+        "fontWeight": "normal",
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#ffffff",
+            "strokeEnabled": true,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "center",
+      "verticalAlign": "middle",
+      "name": "番号",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "shrink_font",
+      "parentId": "n1_h34l97040ncv",
+      "keyexp": "番号",
+      "skewX": 0,
+      "skewY": 0
+    },
+    "n1_uewqqufowifr": {
+      "id": "n1_uewqqufowifr",
+      "type": "text",
+      "x": 1376,
+      "y": 926,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 165,
+      "height": 42,
+      "text": "北海高校",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 35,
+        "fontWeight": "normal",
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#ffffff",
+            "strokeEnabled": true,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "left",
+      "verticalAlign": "middle",
+      "name": "所属",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "shrink_x",
+      "parentId": "n1_h34l97040ncv",
+      "keyexp": "所属",
+      "skewX": 0,
+      "skewY": 0
+    },
+    "n1_y0vgydlghylc": {
+      "id": "n1_y0vgydlghylc",
+      "type": "text",
+      "x": 1380,
+      "y": 955,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 60,
+      "height": 70,
+      "text": "MF",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 39,
+        "fontWeight": "normal",
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#ffffff",
+            "strokeEnabled": true,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "left",
+      "verticalAlign": "middle",
+      "name": "ポジション",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "none",
+      "parentId": "n1_h34l97040ncv",
+      "keyexp": "ポジション",
+      "skewX": 0,
+      "skewY": 0
+    },
+    "n1_9pvpeo35mymc": {
+      "id": "n1_9pvpeo35mymc",
+      "type": "text",
+      "x": 1377,
+      "y": 1010,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 450,
+      "height": 45,
+      "text": "大会最多６ゴール",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 38,
+        "fontWeight": "normal",
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#ffffff",
+            "strokeEnabled": true,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "center",
+      "verticalAlign": "middle",
+      "name": "プロ２",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "shrink_x",
+      "parentId": "n1_h34l97040ncv",
+      "keyexp": "プロ２",
+      "skewX": 0,
+      "skewY": 0
+    },
+    "n1_nj3swolb59ur": {
+      "id": "n1_nj3swolb59ur",
+      "type": "image",
+      "x": 1144,
+      "y": 814,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 205,
+      "height": 240,
+      "assetId": "n1_vggts59txclv",
+      "name": "顔写真",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_h34l97040ncv",
+      "keyexp": "顔写真"
+    }
+  },
+  "assets": {
+    "n1_vggts59txclv": {
+      "id": "n1_vggts59txclv",
+      "kind": "image",
+      "name": "01 安達想抜き.png",
+      "src": "img/顔写真/01 安達想抜き_1.png",
+      "width": 205,
+      "height": 240,
+      "groupId": "ag_5p3jtppl49e4",
+      "ownerId": "n1_h34l97040ncv"
+    }
+  },
+  "assetGroups": {
+    "ag_gmje0s0j5rh2": {
+      "id": "ag_gmje0s0j5rh2",
+      "name": "顔写真",
+      "order": 0
+    },
+    "ag_2tp9vr7rgjrm": {
+      "id": "ag_2tp9vr7rgjrm",
+      "name": "顔写真",
+      "order": 1,
+      "ownerId": "n1_es2xfsdwu7af"
+    },
+    "ag_8cjhkps1gbgl": {
+      "id": "ag_8cjhkps1gbgl",
+      "name": "チーム名ベース左",
+      "order": 2,
+      "ownerId": "n1_hpc88ri4zdf0"
+    },
+    "ag_kp1ed02zjofg": {
+      "id": "ag_kp1ed02zjofg",
+      "name": "チーム名ベース右",
+      "order": 3,
+      "ownerId": "n1_hpc88ri4zdf0"
+    },
+    "ag_linnjxg7vpc8": {
+      "id": "ag_linnjxg7vpc8",
+      "name": "チーム名ベース左",
+      "order": 4,
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "ag_t8m4emyvjyk3": {
+      "id": "ag_t8m4emyvjyk3",
+      "name": "チーム名ベース右",
+      "order": 5,
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "ag_5p3jtppl49e4": {
+      "id": "ag_5p3jtppl49e4",
+      "name": "顔写真",
+      "order": 7,
+      "ownerId": "n1_nqlp71a7dlfe"
+    }
+  }
+}

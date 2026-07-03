@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>タイマー</title>
+    <link rel="stylesheet" href="./タイマー.css?v=1782372698149">
+    <script src="../viewer/renderer.js"></script>
+    <script src="./タイマー.js?v=1782372698149"></script>
+</head>
+<body>
+    <div id="player-container"></div>
+</body>
+</html>

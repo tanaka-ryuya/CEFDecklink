@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>スコアリーダー</title>
+    <link rel="stylesheet" href="./スコアリーダー.css?v=1782372571282">
+    <script src="../viewer/renderer.js"></script>
+    <script src="./スコアリーダー.js?v=1782372571282"></script>
+</head>
+<body>
+    <div id="player-container"></div>
+</body>
+</html>

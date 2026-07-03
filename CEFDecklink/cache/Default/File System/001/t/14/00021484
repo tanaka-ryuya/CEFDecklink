@@ -1,0 +1,510 @@
+{
+  "meta": {
+    "title": "soccer",
+    "version": 1,
+    "canvas": {
+      "width": 1920,
+      "height": 1080
+    },
+    "creator": "TelopEditor"
+  },
+  "rootId": "n1_dhlzt46vsda2",
+  "nodesById": {
+    "n1_dhlzt46vsda2": {
+      "id": "n1_dhlzt46vsda2",
+      "type": "telop",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "children": [
+        "n1_6ll7ev0pnvvk",
+        "n1_dfcw4tvy5qr4",
+        "n1_q5mhszkor7or",
+        "n1_cwu4qhuwaoax",
+        "n1_x4pryxs81a0f",
+        "n1_oxhys4yzudm7",
+        "n1_wi21c0n6qe80",
+        "n1_bjvvpm7aa1wn"
+      ],
+      "name": "前所属",
+      "visible": true,
+      "locked": true,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_1vrm9rnhtpx0"
+    },
+    "n1_6ll7ev0pnvvk": {
+      "id": "n1_6ll7ev0pnvvk",
+      "type": "rect",
+      "x": 1349,
+      "y": 946,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 523,
+      "height": 43,
+      "style": {
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": [
+              "#00000087",
+              "#ffffff",
+              "#0000009e"
+            ],
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "effects": [],
+            "gradientConfig": {
+              "angle": 0,
+              "units": "objectBoundingBox",
+              "stops": [
+                {
+                  "offset": 0,
+                  "color": "#00000087"
+                },
+                {
+                  "offset": 0.5,
+                  "color": "#ffffff"
+                },
+                {
+                  "offset": 1,
+                  "color": "#0000009e"
+                }
+              ]
+            }
+          }
+        ],
+        "cornerRadius": 10
+      },
+      "name": "Rectangle",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_dhlzt46vsda2"
+    },
+    "n1_dfcw4tvy5qr4": {
+      "id": "n1_dfcw4tvy5qr4",
+      "type": "rect",
+      "x": 1349,
+      "y": 1003,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 523,
+      "height": 50,
+      "style": {
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": [
+              "#00000087",
+              "#ffffff",
+              "#0000009e"
+            ],
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "effects": [],
+            "gradientConfig": {
+              "angle": 0,
+              "units": "objectBoundingBox",
+              "stops": [
+                {
+                  "offset": 0,
+                  "color": "#00000087"
+                },
+                {
+                  "offset": 0.5,
+                  "color": "#ffffff"
+                },
+                {
+                  "offset": 1,
+                  "color": "#0000009e"
+                }
+              ]
+            }
+          }
+        ],
+        "cornerRadius": 10
+      },
+      "name": "Rectangle",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_dhlzt46vsda2"
+    },
+    "n1_q5mhszkor7or": {
+      "id": "n1_q5mhszkor7or",
+      "type": "rect",
+      "x": 1338,
+      "y": 877,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 523,
+      "height": 43,
+      "style": {
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": [
+              "#00000087",
+              "#ffffff",
+              "#0000009e"
+            ],
+            "strokeEnabled": false,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "effects": [],
+            "gradientConfig": {
+              "angle": 0,
+              "units": "objectBoundingBox",
+              "stops": [
+                {
+                  "offset": 0,
+                  "color": "#00000087"
+                },
+                {
+                  "offset": 0.5,
+                  "color": "#ffffff"
+                },
+                {
+                  "offset": 1,
+                  "color": "#0000009e"
+                }
+              ]
+            }
+          }
+        ],
+        "cornerRadius": 10
+      },
+      "name": "Rectangle",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "parentId": "n1_dhlzt46vsda2"
+    },
+    "n1_cwu4qhuwaoax": {
+      "id": "n1_cwu4qhuwaoax",
+      "type": "text",
+      "x": 1585,
+      "y": 938,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 260,
+      "height": 59,
+      "text": "田中　隆也",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 40,
+        "fontWeight": "normal",
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#ffffff",
+            "strokeEnabled": true,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "lineHeight": 1.2,
+        "letterSpacing": 0
+      },
+      "align": "left",
+      "verticalAlign": "middle",
+      "name": "氏名",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "shrink_x",
+      "parentId": "n1_dhlzt46vsda2",
+      "keyexp": "氏名"
+    },
+    "n1_x4pryxs81a0f": {
+      "id": "n1_x4pryxs81a0f",
+      "type": "text",
+      "x": 1488,
+      "y": 933,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 60,
+      "height": 70,
+      "text": "13",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 40,
+        "fontWeight": "normal",
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#ffffff",
+            "strokeEnabled": true,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "left",
+      "verticalAlign": "middle",
+      "name": "番号",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "none",
+      "parentId": "n1_dhlzt46vsda2",
+      "keyexp": "番号"
+    },
+    "n1_oxhys4yzudm7": {
+      "id": "n1_oxhys4yzudm7",
+      "type": "text",
+      "x": 1418,
+      "y": 875,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 144,
+      "height": 46,
+      "text": "北海高校",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 20,
+        "fontWeight": "normal",
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#ffffff",
+            "strokeEnabled": true,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "left",
+      "verticalAlign": "middle",
+      "name": "所属",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "shrink_x",
+      "parentId": "n1_dhlzt46vsda2",
+      "keyexp": "所属"
+    },
+    "n1_wi21c0n6qe80": {
+      "id": "n1_wi21c0n6qe80",
+      "type": "text",
+      "x": 1418,
+      "y": 934,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 60,
+      "height": 70,
+      "text": "FW",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 40,
+        "fontWeight": "normal",
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#ffffff",
+            "strokeEnabled": true,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "left",
+      "verticalAlign": "middle",
+      "name": "ポジション",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "none",
+      "parentId": "n1_dhlzt46vsda2",
+      "keyexp": "ポジション"
+    },
+    "n1_bjvvpm7aa1wn": {
+      "id": "n1_bjvvpm7aa1wn",
+      "type": "text",
+      "x": 1415,
+      "y": 1007,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "pivotX": 0,
+      "pivotY": 0,
+      "opacity": 1,
+      "width": 392,
+      "height": 42,
+      "text": "コンサドーレ札幌",
+      "style": {
+        "fontFamily": "Noto Sans JP",
+        "fontSize": 40,
+        "fontWeight": "normal",
+        "appearances": [
+          {
+            "enabled": true,
+            "fillEnabled": true,
+            "fill": "#ffffff",
+            "strokeEnabled": true,
+            "color": "#000000",
+            "thickness": 2,
+            "lineJoin": "miter",
+            "miterLimit": 10,
+            "shadowEnabled": false,
+            "shadowColor": "#000000",
+            "shadowBlur": 0,
+            "shadowAlpha": 1,
+            "shadowOffsetX": 4,
+            "shadowOffsetY": 4
+          }
+        ],
+        "letterSpacing": 0,
+        "lineHeight": 1.2
+      },
+      "align": "center",
+      "verticalAlign": "middle",
+      "name": "前所属",
+      "visible": true,
+      "locked": false,
+      "blendMode": "normal",
+      "effects": [],
+      "fitMode": "shrink_x",
+      "parentId": "n1_dhlzt46vsda2",
+      "keyexp": "前所属"
+    }
+  },
+  "assets": {},
+  "assetGroups": {
+    "ag_gmje0s0j5rh2": {
+      "id": "ag_gmje0s0j5rh2",
+      "name": "顔写真",
+      "order": 0
+    },
+    "ag_2tp9vr7rgjrm": {
+      "id": "ag_2tp9vr7rgjrm",
+      "name": "顔写真",
+      "order": 1,
+      "ownerId": "n1_es2xfsdwu7af"
+    },
+    "ag_8cjhkps1gbgl": {
+      "id": "ag_8cjhkps1gbgl",
+      "name": "チーム名ベース左",
+      "order": 2,
+      "ownerId": "n1_hpc88ri4zdf0"
+    },
+    "ag_kp1ed02zjofg": {
+      "id": "ag_kp1ed02zjofg",
+      "name": "チーム名ベース右",
+      "order": 3,
+      "ownerId": "n1_hpc88ri4zdf0"
+    },
+    "ag_linnjxg7vpc8": {
+      "id": "ag_linnjxg7vpc8",
+      "name": "チーム名ベース左",
+      "order": 4,
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "ag_t8m4emyvjyk3": {
+      "id": "ag_t8m4emyvjyk3",
+      "name": "チーム名ベース右",
+      "order": 5,
+      "ownerId": "n1_6ua9hzcbdxox"
+    },
+    "ag_5p3jtppl49e4": {
+      "id": "ag_5p3jtppl49e4",
+      "name": "顔写真",
+      "order": 7,
+      "ownerId": "n1_nqlp71a7dlfe"
+    }
+  }
+}
