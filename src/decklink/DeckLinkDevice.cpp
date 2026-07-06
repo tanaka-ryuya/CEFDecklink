@@ -1,8 +1,12 @@
 #include "DeckLinkDevice.h"
+#ifdef _WIN32
 #include <comdef.h>
+#include "DeckLinkAPI_i.c" // Helper for GUIDs
+#else
+#include <CoreFoundation/CoreFoundation.h>
+#endif
 #include <iostream>
 #include <sstream>
-#include "DeckLinkAPI_i.c" // Helper for GUIDs
 #include <chrono>
 #include <thread>
 
@@ -11,7 +15,11 @@ static void DLLog(const char* tag, const std::string& msg) {
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);
     struct tm tm_info;
+#ifdef _WIN32
     localtime_s(&tm_info, &t);
+#else
+    localtime_r(&t, &tm_info);
+#endif
     char timebuf[32];
     strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", &tm_info);
     std::cout << "\n" << timebuf << " " << tag << " [DeckLink] " << msg << std::endl;
@@ -72,6 +80,7 @@ DeckLinkDevice::~DeckLinkDevice()
 bool DeckLinkDevice::Initialize(const std::string& format)
 {
     IDeckLinkIterator* deckLinkIterator = nullptr;
+#ifdef _WIN32
     HRESULT result = CoCreateInstance(CLSID_CDeckLinkIterator, nullptr, CLSCTX_ALL, IID_IDeckLinkIterator, (void**)&deckLinkIterator);
 
     if (FAILED(result))
@@ -80,6 +89,15 @@ bool DeckLinkDevice::Initialize(const std::string& format)
         m_isSimulated = true;
         return true; // Return true as we successfully initialized "Simulated" device
     }
+#else
+    deckLinkIterator = CreateDeckLinkIteratorInstance();
+    if (!deckLinkIterator)
+    {
+        std::cerr << "[DeckLink] DeckLink drivers may not be installed. Switching to SIMULATOR MODE." << std::endl;
+        m_isSimulated = true;
+        return true;
+    }
+#endif
 
     // Get the first device
     if (deckLinkIterator->Next(&m_deckLink) != S_OK)
@@ -93,6 +111,7 @@ bool DeckLinkDevice::Initialize(const std::string& format)
     deckLinkIterator->Release();
 
     // Get and print device name
+#ifdef _WIN32
     BSTR deviceNameBstr = nullptr;
     if (m_deckLink->GetDisplayName(&deviceNameBstr) == S_OK)
     {
@@ -105,6 +124,21 @@ bool DeckLinkDevice::Initialize(const std::string& format)
     {
         std::cout << "[DeckLink] Found device, but failed to retrieve display name." << std::endl;
     }
+#else
+    CFStringRef deviceNameCFStr = nullptr;
+    if (m_deckLink->GetDisplayName(&deviceNameCFStr) == S_OK)
+    {
+        char name[256];
+        if (CFStringGetCString(deviceNameCFStr, name, sizeof(name), kCFStringEncodingUTF8)) {
+            std::cout << "[DeckLink] Found device: " << name << std::endl;
+        }
+        CFRelease(deviceNameCFStr);
+    }
+    else
+    {
+        std::cout << "[DeckLink] Found device, but failed to retrieve display name." << std::endl;
+    }
+#endif
 
     // Get Output Interface
     HRESULT hr = m_deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&m_deckLinkOutput);

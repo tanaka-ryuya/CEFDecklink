@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include <Windows.h>
 #include <shellapi.h>
 #include <tchar.h>
@@ -5,36 +6,41 @@
 #include <d3d11_1.h>
 #include <d3d10.h>
 #include <dxgi.h>
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
+#include <wincrypt.h>
+#pragma comment(lib, "crypt32.lib")
+#include <conio.h>
+#else
+#include <unistd.h>
+#include <mach-o/dyld.h>
+#include <limits.h>
+#include <signal.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
+
 #include <iostream>
 #include <iomanip>
 #include <chrono>
 #include <thread>
 #include <mutex>
-#include <mmsystem.h>
-#pragma comment(lib, "winmm.lib")
-
-#include <wincrypt.h>
-#pragma comment(lib, "crypt32.lib")
-
-#include "DeckLinkDevice.h"
-
-#include "CefManager.h"
-#include "CefRenderHandler.h"
-#include "ShaderManager.h"
-#include "CrashHandler.h"
-#include "../resource.h"
-
+#include <vector>
+#include <deque>
 #include <fstream>
 #include <sstream>
 #include <ctime>
 #include <atomic>
-#include <conio.h>
 
-// ============================================================
-// File Logger - Writes to logs/app_YYYYMMDD_HHMMSS.log
-// ============================================================
-#include <vector>
-#include <deque>
+#include "DeckLinkDevice.h"
+#include "CefManager.h"
+#include "CefRenderHandler.h"
+#include "ShaderManager.h"
+
+#ifdef _WIN32
+#include "CrashHandler.h"
+#include "../resource.h"
+#endif
 
 // ============================================================
 // File Logger - Writes to logs/app_YYYYMMDD_HHMMSS.log
@@ -45,16 +51,28 @@ public:
     FileLogger() {}
 
     bool Open(const std::string& logDir) {
+#ifdef _WIN32
         CreateDirectoryA(logDir.c_str(), nullptr);
+#else
+        mkdir(logDir.c_str(), 0777);
+#endif
 
         auto now = std::chrono::system_clock::now();
         std::time_t t = std::chrono::system_clock::to_time_t(now);
         struct tm tm_info;
+#ifdef _WIN32
         localtime_s(&tm_info, &t);
+#else
+        localtime_r(&t, &tm_info);
+#endif
         char buf[64];
         strftime(buf, sizeof(buf), "app_%Y%m%d_%H%M%S.log", &tm_info);
 
+#ifdef _WIN32
         m_path = logDir + "\\" + buf;
+#else
+        m_path = logDir + "/" + buf;
+#endif
         m_file.open(m_path, std::ios::out | std::ios::trunc);
         return m_file.is_open();
     }
@@ -63,7 +81,11 @@ public:
         auto now = std::chrono::system_clock::now();
         std::time_t t = std::chrono::system_clock::to_time_t(now);
         struct tm tm_info;
+#ifdef _WIN32
         localtime_s(&tm_info, &t);
+#else
+        localtime_r(&t, &tm_info);
+#endif
         char timebuf[32];
         strftime(timebuf, sizeof(timebuf), "%H:%M:%S", &tm_info);
 
@@ -72,7 +94,6 @@ public:
         std::string line = oss.str();
 
         std::lock_guard<std::mutex> lock(m_mutex);
-        // Full timestamp for file
         if (m_file.is_open()) {
             char fulltime[32];
             strftime(fulltime, sizeof(fulltime), "%Y-%m-%d %H:%M:%S", &tm_info);
@@ -80,7 +101,6 @@ public:
             m_file.flush();
         }
 
-        // Buffer recent logs for TUI display
         m_recentLogs.push_back(line);
         if (m_recentLogs.size() > 5) {
             m_recentLogs.pop_front();
@@ -105,20 +125,26 @@ static FileLogger g_logger;
 
 // Enable Virtual Terminal Processing for ANSI Escape Codes
 static bool EnableVTMode() {
+#ifdef _WIN32
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hOut == INVALID_HANDLE_VALUE) return false;
     DWORD dwMode = 0;
     if (!GetConsoleMode(hOut, &dwMode)) return false;
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     return SetConsoleMode(hOut, dwMode) != 0;
+#else
+    return true; // macOS console supports ANSI out of the box
+#endif
 }
 
 // Data
+#ifdef _WIN32
 static ID3D11Device*            g_pd3dDevice = nullptr;
 static ID3D11DeviceContext*     g_pd3dDeviceContext = nullptr;
-static std::mutex               g_d3dContextMutex;
 static IDXGISwapChain*          g_pSwapChain = nullptr;
 static ID3D11RenderTargetView*  g_mainRenderTargetView = nullptr;
+#endif
+static std::mutex               g_d3dContextMutex;
 static bool                     g_appDone = false;
 
 // Managers & Devices (Global)
@@ -131,19 +157,30 @@ static std::string g_format = "5994i"; // "5994i" or "50i"
 static std::string g_licenseKey = "";
 static bool g_isLicensed = false;
 std::atomic<int> g_filterMode(0); // 0=None, 1=3-tap, 2=5-tap vertical LPF
+static float g_alphaThreshold = 0.000f;
 
 // Forward declarations of helper functions
+#ifdef _WIN32
 IDXGIAdapter* SelectBestAdapter();
 bool CreateDeviceD3D(HWND hWnd);
 void CleanupDeviceD3D();
 void CreateRenderTarget();
 void CleanupRenderTarget();
+LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+void ToggleFullscreen(HWND hWnd);
+BOOL WINAPI ConsoleHandler(DWORD ctrlType);
+#else
+void SignalHandler(int sig) {
+    g_appDone = true;
+}
+#endif
+
 bool IsLicenseValid(const std::string& key) {
+#ifdef _WIN32
     if (key.length() < 10 || key[8] != '-') return false;
     std::string dateStr = key.substr(0, 8);
     std::string sigStr = key.substr(9);
 
-    // Hardcoded RSA-2048 Public Key BLOB
     BYTE pubBlob[] = {
         0x06, 0x02, 0x00, 0x00, 0x00, 0xA4, 0x00, 0x00, 0x52, 0x53, 0x41, 0x31, 0x00, 0x08, 0x00, 0x00,
         0x01, 0x00, 0x01, 0x00, 0x95, 0x36, 0x2D, 0x18, 0x47, 0x82, 0x3D, 0xF5, 0x5C, 0x28, 0x08, 0xD1,
@@ -170,8 +207,6 @@ bool IsLicenseValid(const std::string& key) {
     std::vector<BYTE> sigData(sigLen);
     if (!CryptStringToBinaryA(sigStr.c_str(), 0, CRYPT_STRING_BASE64, sigData.data(), &sigLen, NULL, NULL)) return false;
 
-    // Windows CryptoAPI expects Little Endian for signatures, but Base64 encodes Big Endian from .NET.
-    // Reverse the signature bytes
     for (size_t i = 0; i < sigLen / 2; ++i) {
         std::swap(sigData[i], sigData[sigLen - 1 - i]);
     }
@@ -216,31 +251,45 @@ bool IsLicenseValid(const std::string& key) {
 
     if (current_dateStr > dateStr) return false; 
     return true; 
+#else
+    // macOS always valid stub
+    return true;
+#endif
 }
-LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-void ToggleFullscreen(HWND hWnd);
-BOOL WINAPI ConsoleHandler(DWORD ctrlType);
+
+#ifndef _WIN32
+std::string GetExeDir() {
+    char path[PATH_MAX];
+    uint32_t size = sizeof(path);
+    if (_NSGetExecutablePath(path, &size) == 0) {
+        std::string sPath(path);
+        size_t pos = sPath.find_last_of("/");
+        if (pos != std::string::npos) {
+            return sPath.substr(0, pos);
+        }
+    }
+    return ".";
+}
+#endif
 
 // TUI Dashboard Console Output Helper
 void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval, float alphaThreshold, uint64_t totalCefFrames, int pendingCount) {
     static bool tuiInitialized = false;
     if (!tuiInitialized) {
         EnableVTMode();
-        // Clear screen once on start
         std::cout << "\x1b[2J" << std::flush;
         tuiInitialized = true;
     }
 
     const char* modeStr = "Interlace (0)";
     int vMode = g_viewMode.load();
-    if (vMode == 1) modeStr = "\x1b[33mDiff Mode (1)\x1b[0m"; // Yellow warning for Diff
+    if (vMode == 1) modeStr = "\x1b[33mDiff Mode (1)\x1b[0m"; 
     else if (vMode == 2) modeStr = "Progressive (2)";
-    else if (vMode == 3) modeStr = "\x1b[35m30p Blend (3)\x1b[0m"; // Magenta for Blend
+    else if (vMode == 3) modeStr = "\x1b[35m30p Blend (3)\x1b[0m"; 
 
     auto recentLogs = g_logger.GetRecentLogs();
 
     std::ostringstream oss;
-    // Move cursor to home (0,0)
     oss << "\x1b[H";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[1m\x1b[37m\xF0\x9F\x8D\x8C CEFDecklink Live Status Dashboard \xF0\x9F\x8D\x8C\x1b[K\x1b[0m\n";
@@ -250,7 +299,6 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
         << "CEF: \x1b[1m" << cefFps << " fps\x1b[0m | "
         << "Queue: \x1b[1m" << pendingCount << "\x1b[0m\x1b[K\n";
     oss << "  \x1b[32m[Config]\x1b[0m   ViewMode: " << modeStr << " | Format: " << g_format << " | UnmultThresh: " << std::fixed << std::setprecision(4) << alphaThreshold;
-    // Filter Mode display
     int fMode = g_filterMode.load();
     const char* filterStr = "None";
     if (fMode == 1) filterStr = "3tap";
@@ -275,21 +323,9 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     std::cout << oss.str() << std::flush;
 }
 
-// ============================================================
-// Includes
-// ============================================================
-
-#include <iostream>
-#include <fstream>
-#include <string>
-
-// ... (existing includes)
-
-// Global Configuration
-static float g_alphaThreshold = 0.000f;
-
 // Helper to load config.json
 bool LoadConfig(std::string& url, float& alpha, std::string& format) {
+#ifdef _WIN32
     wchar_t exePath[MAX_PATH];
     GetModuleFileNameW(nullptr, exePath, MAX_PATH);
     std::wstring exeDir = exePath;
@@ -300,11 +336,15 @@ bool LoadConfig(std::string& url, float& alpha, std::string& format) {
     
     std::wstring configPath = exeDir + L"\\config.json";
     std::ifstream file(configPath);
+#else
+    std::string exeDir = GetExeDir();
+    std::string configPath = exeDir + "/config.json";
+    std::ifstream file(configPath);
+#endif
     if (!file.is_open()) return false;
 
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     
-    // Simple JSON parsing logic
     auto ParseString = [&](const std::string& key) -> std::string {
         size_t keyPos = content.find("\"" + key + "\"");
         if (keyPos == std::string::npos) return "";
@@ -367,7 +407,11 @@ bool LoadConfig(std::string& url, float& alpha, std::string& format) {
     }
     
     // Load License from separate file
+#ifdef _WIN32
     std::wstring licensePath = exeDir + L"\\licensekey.json";
+#else
+    std::string licensePath = exeDir + "/licensekey.json";
+#endif
     std::ifstream licFile(licensePath);
     if (licFile.is_open()) {
         std::string licContent((std::istreambuf_iterator<char>(licFile)), std::istreambuf_iterator<char>());
@@ -389,12 +433,11 @@ bool LoadConfig(std::string& url, float& alpha, std::string& format) {
     return true;
 }
 
-// ... (rest of main)
-
-// RenderFrame now only handles Main Thread tasks: Input processing & CEF Message Loop & Logging
+// RenderFrame handles Main Thread tasks: Input processing & CEF Message Loop & Logging
 void RenderFrame(HWND hWnd) {
-    // --- Console TUI Keyboard Input (_kbhit / _getch) ---
     bool changed = false;
+#ifdef _WIN32
+    // --- Console TUI Keyboard Input (_kbhit / _getch) ---
     while (_kbhit()) {
         int ch = _getch();
         bool ctrlPressed = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
@@ -402,7 +445,6 @@ void RenderFrame(HWND hWnd) {
         bool altPressed = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
         bool modified = ctrlPressed || shiftPressed || altPressed;
 
-        // Requires modifier key (Ctrl/Shift/Alt or ASCII control codes) to prevent accidental triggers
         if (ch == 4 || (modified && (ch == 'd' || ch == 'D'))) {
             g_viewMode.store(1); // Diff Mode
             changed = true;
@@ -424,7 +466,6 @@ void RenderFrame(HWND hWnd) {
             if (g_alphaThreshold < 0.0f) g_alphaThreshold = 0.0f;
             changed = true;
         } else if (ch == 6 || (modified && (ch == 'f' || ch == 'F'))) {
-            // Cycle vertical LPF: None(0) -> 3-tap(1) -> 5-tap(2) -> None(0)
             int fm = g_filterMode.load();
             g_filterMode.store((fm + 1) % 3);
             changed = true;
@@ -440,6 +481,7 @@ void RenderFrame(HWND hWnd) {
             lastF11Time = nowF11;
         }
     }
+#endif
     
     if (changed && g_shaderManager) {
         std::lock_guard<std::mutex> lock(g_d3dContextMutex);
@@ -450,15 +492,13 @@ void RenderFrame(HWND hWnd) {
     // CEF Message Loop
     g_cefManager.DoMessageLoopWork();
 
-    // --- Synchronization - Wait for DeckLink callback just for tracking FPS ---
+    // --- Wait for DeckLink callback ---
     bool deckLinkReady = g_deckLink.WaitForNextFrame(0);
     
-    // Console Logging (Actual FPS calculation)
     static int frameCount = 0;
     static auto lastLogTime = std::chrono::steady_clock::now();
     static auto lastHeartbeatTime = std::chrono::steady_clock::now();
     static uint64_t lastCefTotal = 0;
-    static int cefZeroCount = 0; // consecutive 1-sec intervals with 0 CEF fps
     
     if (deckLinkReady) {
         frameCount++;
@@ -470,7 +510,6 @@ void RenderFrame(HWND hWnd) {
         static uint64_t lastUniqueTotal = 0;
         double deckLinkFps = (double)frameCount * 1000.0 / elapsedMs;
         
-        // Get CEF Rate
         int cefTotalInInterval = 0;
         auto handler = g_cefManager.GetRenderHandler();
         uint64_t totalCef = 0;
@@ -491,7 +530,6 @@ void RenderFrame(HWND hWnd) {
 
         lastCefTotal = totalCef;
 
-        // ---- Log status to file every 10 seconds ----
         static int statusLogCounter = 0;
         if (++statusLogCounter >= 10) {
             statusLogCounter = 0;
@@ -514,7 +552,6 @@ void RenderFrame(HWND hWnd) {
         lastLogTime = now;
     }
 
-    // ---- Heartbeat every 60 seconds ----
     uint64_t hbElapsedSec = std::chrono::duration_cast<std::chrono::seconds>(now - lastHeartbeatTime).count();
     if (hbElapsedSec >= 60) {
         lastHeartbeatTime = now;
@@ -524,7 +561,6 @@ void RenderFrame(HWND hWnd) {
         oss << "alive cefTotal=" << totalCef;
         g_logger.Log("[HEARTBEAT]", oss.str());
 
-        // Periodic License Check
         bool newLicenseStatus = IsLicenseValid(g_licenseKey);
         if (newLicenseStatus != g_isLicensed) {
             g_isLicensed = newLicenseStatus;
@@ -543,14 +579,10 @@ int main(int argc, char** argv)
     // 0. Configuration Logic
     g_targetUrl = "https://telophub.duckdns.org/graphics/preview.html?machineId=8efb67b2-2fac-418a-9bd9-0284852ccd86";
     
-    // Priority 3: Default (Set above)
-    
-    // Priority 2: config.json
     LoadConfig(g_targetUrl, g_alphaThreshold, g_format);
     g_isLicensed = IsLicenseValid(g_licenseKey);
     g_cefManager.SetLicensed(g_isLicensed);
     
-    // Priority 1: CLI Args
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--url" && i + 1 < argc) {
@@ -568,22 +600,25 @@ int main(int argc, char** argv)
         }
     }
     
-
-    // 1. CEF Sub-process check (MUST be the absolute first thing)
+#ifdef _WIN32
     CefMainArgs main_args(GetModuleHandle(nullptr));
+#else
+    CefMainArgs main_args(argc, argv);
+#endif
     int exit_code = CefExecuteProcess(main_args, nullptr, nullptr);
     if (exit_code >= 0) {
-        // Boost CEF child process priority (Renderer, GPU, Network, etc.)
-        // The parent's HIGH_PRIORITY_CLASS is NOT inherited by child processes on Windows.
-        // Setting it here ensures the renderer runs at high priority, reducing animation jitter.
+#ifdef _WIN32
         SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+#endif
         return exit_code;
     }
     
-    // ... (Continue initialization)
-
+#ifdef _WIN32
     std::cout << "--- DeckLink + CEF Application [build:" << GIT_COMMIT_HASH << "] ---" << std::endl;
     SetConsoleOutputCP(CP_UTF8);
+#else
+    std::cout << "--- DeckLink + CEF Application [macOS] ---" << std::endl;
+#endif
     std::cout << "Initializing..." << std::endl;
     std::cout << "[Config] URL: " << g_targetUrl << std::endl;
     std::cout << "[Config] Format: " << g_format << std::endl;
@@ -592,6 +627,7 @@ int main(int argc, char** argv)
 
     // Open file logger
     {
+#ifdef _WIN32
         wchar_t exePath[MAX_PATH];
         GetModuleFileNameW(nullptr, exePath, MAX_PATH);
         std::wstring exeDir = exePath;
@@ -599,6 +635,9 @@ int main(int argc, char** argv)
         if (lastSlash != std::wstring::npos) exeDir = exeDir.substr(0, lastSlash);
         std::string logDir(exeDir.begin(), exeDir.end());
         logDir += "\\logs";
+#else
+        std::string logDir = GetExeDir() + "/logs";
+#endif
         if (g_logger.Open(logDir)) {
             g_logger.Log("[INFO]", "Application started. Log file: " + g_logger.GetPath());
             g_logger.Log("[INFO]", "URL: " + g_targetUrl);
@@ -607,13 +646,10 @@ int main(int argc, char** argv)
         }
     }
 
-    // Initialize Crash Handler for debugging
+#ifdef _WIN32
     CrashHandler::Initialize();
-
-    // Register Console Control Handler for clean exit on Ctrl+C
     SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
-    // Set Console Icon
     HWND hwndConsole = GetConsoleWindow();
     if (hwndConsole) {
         HICON hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_APPICON));
@@ -623,29 +659,33 @@ int main(int argc, char** argv)
         }
     }
 
-    // High Resolution Timer for accurate 60fps pacing
     timeBeginPeriod(1);
-
-    // Boost Priority to Real-Time-ish (High) to avoid scheduler starvation
     SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+#else
+    signal(SIGINT, SignalHandler);
+    signal(SIGTERM, SignalHandler);
+#endif
 
-    // Initialize CEF early
+    // Initialize CEF
+#ifdef _WIN32
     if (!g_cefManager.Initialize(GetModuleHandle(nullptr))) {
+#else
+    if (!g_cefManager.Initialize(main_args)) {
+#endif
         std::cerr << "Failed to initialize CEF." << std::endl;
+#ifdef _WIN32
         timeEndPeriod(1);
+#endif
         return 1;
     }
 
-    // Create application window (Hidden)
+#ifdef _WIN32
     WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"DeckLinkApp", nullptr };
     wc.hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_APPICON));
     wc.hIconSm = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_APPICON));
     ::RegisterClassExW(&wc);
-    // Use SW_HIDE behavior by simply NOT showing it, or strictly SW_HIDE. 
-    // We create it as OVERLAPPEDWINDOW but standard size.
     HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"Native DeckLink + CEF", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
 
-    // Initialize Direct3D
     if (!CreateDeviceD3D(hwnd))
     {
         CleanupDeviceD3D();
@@ -653,187 +693,157 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    // Initialize Shader Manager
     g_shaderManager = std::make_unique<ShaderManager>(g_pd3dDevice, g_pd3dDeviceContext);
+#else
+    HWND hwnd = nullptr;
+    g_shaderManager = std::make_unique<ShaderManager>();
+#endif
     g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
     g_shaderManager->SetLicensed(g_isLicensed);
+    g_shaderManager->SetFilterMode(g_filterMode.load());
     if (!g_shaderManager->Initialize(1920, 1080)) {
         std::cerr << "Failed to initialize Shader Manager." << std::endl;
     }
     
-    // Apply initial configuration
     {
         std::lock_guard<std::mutex> lock(g_d3dContextMutex);
         g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
     }
 
-    // Initialize DeckLink
     if (g_deckLink.Initialize(g_format))
     {
         std::cout << "DeckLink Initialized." << std::endl;
 
-        // --- Register Render Callback (Reference Pattern) ---
-        // This runs INSIDE the DeckLink thread/callback
         g_deckLink.SetRenderCallback([](void* pBuffer) {
             int currentMode = g_viewMode.load();
 
-            // Genlock CEF to hardware clock
             g_cefManager.DriveExternalBeginFrame(currentMode);
 
-            // Helper Lambda for Blitting to Window
             auto BlitToWindow = [&](void* buffer) {
+#ifdef _WIN32
                  if (g_deckLink.IsSimulated() && buffer) {
                      HWND previewHwnd = FindWindowW(L"DeckLinkApp", nullptr);
                      if (previewHwnd) {
-                         HDC hdc = GetDC(previewHwnd);
-                         if (hdc) {
-                             RECT rcClient;
-                             GetClientRect(previewHwnd, &rcClient);
-                             int winW = rcClient.right - rcClient.left;
-                             int winH = rcClient.bottom - rcClient.top;
+                          HDC hdc = GetDC(previewHwnd);
+                          if (hdc) {
+                              RECT rcClient;
+                              GetClientRect(previewHwnd, &rcClient);
+                              int winW = rcClient.right - rcClient.left;
+                              int winH = rcClient.bottom - rcClient.top;
 
-                             // --- Simulator Color Conversion (DeckLink ARGB -> GDI BGRA) ---
-                             // DeckLink format: A, R, G, B in memory
-                             // GDI format: B, G, R, 255 in memory
-                             uint32_t* p32 = static_cast<uint32_t*>(buffer);
-                             for (int i = 0; i < 1920 * 1080; ++i) {
-                                 uint32_t p = p32[i];
-                                 uint32_t b = (p >> 24) & 0xFF;
-                                 uint32_t g = (p >> 16) & 0xFF;
-                                 uint32_t r = (p >> 8)  & 0xFF;
-                                 p32[i] = b | (g << 8) | (r << 16) | 0xFF000000;
-                             }
+                              uint32_t* p32 = static_cast<uint32_t*>(buffer);
+                              for (int i = 0; i < 1920 * 1080; ++i) {
+                                  uint32_t p = p32[i];
+                                  uint32_t b = (p >> 24) & 0xFF;
+                                  uint32_t g = (p >> 16) & 0xFF;
+                                  uint32_t r = (p >> 8)  & 0xFF;
+                                  p32[i] = b | (g << 8) | (r << 16) | 0xFF000000;
+                              }
 
-                             BITMAPINFO bmi = {0};
-                             bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-                             bmi.bmiHeader.biWidth = 1920;
-                             bmi.bmiHeader.biHeight = -1080; // Top-down
-                             bmi.bmiHeader.biPlanes = 1;
-                             bmi.bmiHeader.biBitCount = 32;
-                             bmi.bmiHeader.biCompression = BI_RGB;
-                             
-                             SetStretchBltMode(hdc, COLORONCOLOR);
-                             StretchDIBits(hdc, 
-                                 0, 0, winW, winH,          // Destination
-                                 0, 0, 1920, 1080,          // Source
-                                 buffer, &bmi, DIB_RGB_COLORS, SRCCOPY);
-                                 
-                             ReleaseDC(previewHwnd, hdc);
-                         }
+                              BITMAPINFO bmi = {0};
+                              bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+                              bmi.bmiHeader.biWidth = 1920;
+                              bmi.bmiHeader.biHeight = -1080; 
+                              bmi.bmiHeader.biPlanes = 1;
+                              bmi.bmiHeader.biBitCount = 32;
+                              bmi.bmiHeader.biCompression = BI_RGB;
+                              
+                              SetStretchBltMode(hdc, COLORONCOLOR);
+                              StretchDIBits(hdc, 
+                                  0, 0, winW, winH,          
+                                  0, 0, 1920, 1080,          
+                                  buffer, &bmi, DIB_RGB_COLORS, SRCCOPY);
+                                  
+                              ReleaseDC(previewHwnd, hdc);
+                          }
                      }
                  }
+#endif
             };
             
-            static uint64_t totalConsumedFrames = 0;
-            ID3D11ShaderResourceView* srvTop = nullptr;
-            ID3D11ShaderResourceView* srvBottom = nullptr;
+            CefFrameResource srvTop = nullptr;
+            CefFrameResource srvBottom = nullptr;
 
             auto renderHandler = g_cefManager.GetRenderHandler();
             
             if (renderHandler) {
-                // 1. Drain all pending frames from the CEF queue to GPU textures (Thread Safe)
                 std::lock_guard<std::mutex> lock(g_d3dContextMutex);
                 while (renderHandler->HasPendingFrames(1)) {
                     renderHandler->SyncWithGPU();
                 }
 
-                // 2. Fetch the two most recent distinct textures for synthesis
                 renderHandler->GetSynchronizedTextures(&srvTop, &srvBottom);
             }
 
-            // Fallback: If we only got one frame, duplicate it.
             if (srvTop && !srvBottom) { srvBottom = srvTop; srvBottom->AddRef(); }
             if (!srvTop && srvBottom) { srvTop = srvBottom; srvTop->AddRef(); }
 
-            // Diagnostic: Warn if fields are identical (results in static image fields)
-            if (srvTop && srvBottom && srvTop == srvBottom) {
-                // static int dupLogCount = 0;
-                // if (dupLogCount++ % 60 == 0) std::cerr << "[Warning] Synthesizing identical fields (srvTop == srvBottom)" << std::endl;
-            }
-
-            // --- Rendering Logic ---
-            // currentMode is already loaded above
-
             if (currentMode == 2 && g_deckLink.IsSimulated()) {
-                // === Mode 2: Progressive Double-Pump (59.94p Window Output - DEBUG ONLY) ===
                 if (pBuffer && g_shaderManager && srvTop && srvBottom) {
                     std::lock_guard<std::mutex> lock(g_d3dContextMutex);
-                    // Pass 1: Render Frame 1 (Top Field Source)
                     g_shaderManager->SetViewMode(2); 
                     g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
-                    BlitToWindow(pBuffer); // Show Frame 1
+                    BlitToWindow(pBuffer);
 
-                    // Wait ~16.6ms to simulate 60fps pacing
                     std::this_thread::sleep_for(std::chrono::milliseconds(16));
 
-                    // Pass 2: Render Frame 2 (Bottom Field Source)
                     g_shaderManager->SetViewMode(3);
                     g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
-                    BlitToWindow(pBuffer); // Show Frame 2
+                    BlitToWindow(pBuffer);
                 }
             } else {
-                // === Mode 0/1/2/3: Standard Logic ===
                 if (pBuffer) {
                     if (srvTop && srvBottom && g_shaderManager) {
-                        static int lastSameFieldLog = 0;
-                        if (srvTop == srvBottom && lastSameFieldLog++ % 60 == 0) {
-                             // std::cerr << "[Warning] Identical Fields synthesized (Double Image)" << std::endl;
-                        }
-
-                        // (No blackout recovery logs)
-
                         std::lock_guard<std::mutex> lock(g_d3dContextMutex);
                         int shaderMode = currentMode;
                         if (currentMode == 3) shaderMode = 4; // Map TUI Mode 3 to HLSL Mode 4
                         g_shaderManager->SetViewMode(shaderMode);
                         g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
-                        BlitToWindow(pBuffer); // Blit once
+                        BlitToWindow(pBuffer);
                     } else if (g_shaderManager) {
-                        // ---- Startup / Empty state ----
-                        // At startup before first CEF frame arrives, just output black
                         memset(pBuffer, 0, 1920 * 1080 * 4);
                     }
                 }
             }
             
-            // Release References
             if (srvTop) srvTop->Release();
             if (srvBottom) srvBottom->Release();
         });
 
         g_deckLink.StartOutput();
 
+#ifdef _WIN32
         if (g_deckLink.IsSimulated()) {
             SetWindowTextW(hwnd, L"Native DeckLink + CEF [SIMULATOR MODE] - Press F11 to toggle Fullscreen");
-            // Show window for Preview in Simulator Mode
             ::ShowWindow(hwnd, SW_SHOW);
             ::UpdateWindow(hwnd);
         } else {
             ::ShowWindow(hwnd, SW_HIDE);
         }
+#endif
     }
     else
     {
         std::cerr << "Failed to initialize DeckLink!" << std::endl; 
     }
 
-    // Create CEF Browser
-    // Note: URL from Config/CLI/Default
+#ifdef _WIN32
     g_cefManager.CreateBrowser(hwnd, g_targetUrl, g_pd3dDevice, g_format);
-
-    // Register Fullscreen Callback
+    
     g_cefManager.SetOnFullscreenCallback([hwnd](bool fullscreen) {
         ToggleFullscreen(hwnd);
     });
+#else
+    g_cefManager.CreateBrowser(hwnd, g_targetUrl, g_format);
+#endif
 
     g_logger.Log("[INFO]", "Starting Main Loop...");
     std::cout << "Starting Main Loop..." << std::endl;
 
-    // Main loop
     try {
+#ifdef _WIN32
         while (!g_appDone)
         {
-            // Poll Windows Messages
             MSG msg;
             while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
             {
@@ -844,37 +854,44 @@ int main(int argc, char** argv)
             }
             if (g_appDone) break;
 
-            // Update user input (Main Thread)
-            RenderFrame(hwnd); // This now just handles input and logging
+            RenderFrame(hwnd);
         }
+#else
+        while (!g_appDone)
+        {
+            RenderFrame(hwnd);
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        }
+#endif
     }
     catch (const std::exception& e) {
         std::cerr << "\n[EXCEPTION] Caught C++ exception in main loop: " << e.what() << std::endl;
+#ifdef _WIN32
         CrashHandler::ForceCrashDump();
+#endif
     }
     catch (...) {
         std::cerr << "\n[EXCEPTION] Caught unknown exception in main loop" << std::endl;
+#ifdef _WIN32
         CrashHandler::ForceCrashDump();
+#endif
     }
     
-    // Shutdown
-    g_deckLink.StopOutput(); // Explicit stop
-    
+    g_deckLink.StopOutput();
     g_cefManager.Shutdown();
 
+#ifdef _WIN32
     CleanupDeviceD3D();
     ::DestroyWindow(hwnd);
     ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
+    timeEndPeriod(1);
+#endif
     
     std::cout << "\nExiting." << std::endl;
-
-    timeEndPeriod(1);
     return 0;
 }
 
-// Helper functions for D3D implementation...
-
-// Select the best GPU adapter (prioritize NVIDIA or high VRAM)
+#ifdef _WIN32
 IDXGIAdapter* SelectBestAdapter()
 {
     IDXGIFactory* factory = nullptr;
@@ -898,7 +915,6 @@ IDXGIAdapter* SelectBestAdapter()
         DXGI_ADAPTER_DESC desc;
         adapter->GetDesc(&desc);
 
-        // Convert wide string to narrow for printing
         char descStr[128];
         wcstombs_s(nullptr, descStr, sizeof(descStr), desc.Description, _TRUNCATE);
 
@@ -906,7 +922,6 @@ IDXGIAdapter* SelectBestAdapter()
                   << " (Vendor: 0x" << std::hex << desc.VendorId << std::dec
                   << ", VRAM: " << (desc.DedicatedVideoMemory / 1024 / 1024) << " MB)" << std::endl;
 
-        // Prioritize NVIDIA (0x10DE) or highest VRAM
         bool isNvidia = (desc.VendorId == 0x10DE);
         bool hasMoreVRAM = (desc.DedicatedVideoMemory > maxDedicatedMem);
 
@@ -941,7 +956,6 @@ IDXGIAdapter* SelectBestAdapter()
 
 bool CreateDeviceD3D(HWND hWnd)
 {
-    // Setup swap chain
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
     sd.BufferCount = 2;
@@ -959,29 +973,23 @@ bool CreateDeviceD3D(HWND hWnd)
     sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
     UINT createDeviceFlags = 0;
-    //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     D3D_FEATURE_LEVEL featureLevel;
     const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
     
-    // Select best GPU adapter (NVIDIA or highest VRAM)
     IDXGIAdapter* adapter = SelectBestAdapter();
     D3D_DRIVER_TYPE driverType = adapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE;
     
     HRESULT res = D3D11CreateDeviceAndSwapChain(adapter, driverType, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
     
-    if (res == DXGI_ERROR_UNSUPPORTED) { // Try high-performance WARP software driver if hardware is not available.
+    if (res == DXGI_ERROR_UNSUPPORTED) { 
         if (adapter) adapter->Release();
         adapter = nullptr;
         res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
     }
     
-    // Release adapter after device creation
     if (adapter) adapter->Release();
-    
-    if (res != S_OK)
-        return false;
+    if (res != S_OK) return false;
 
-    // Enable D3D11 Multithread protection for safe access from DeckLink callback threads
     ID3D10Multithread* pMultithread = nullptr;
     if (SUCCEEDED(g_pd3dDevice->QueryInterface(IID_PPV_ARGS(&pMultithread)))) {
         pMultithread->SetMultithreadProtected(TRUE);
@@ -1026,12 +1034,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             CleanupRenderTarget();
             g_pSwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
             CreateRenderTarget();
-
-            // Note: We DO NOT resize CEF here. 
-            // The broadcast output MUST remain 1920x1080.
-            // The window resizing only affects the Preview scaling (handled in RenderCallback).
         }
-
         return 0;
 
     case WM_CLOSE:
@@ -1056,9 +1059,7 @@ BOOL WINAPI ConsoleHandler(DWORD ctrlType) {
     return FALSE;
 }
 
-// Helper to toggle borderless fullscreen
 void ToggleFullscreen(HWND hWnd) {
-    // static variables to save window state
     static WINDOWPLACEMENT g_wpPrev = { sizeof(g_wpPrev) };
 
     DWORD dwStyle = GetWindowLong(hWnd, GWL_STYLE);
@@ -1080,3 +1081,4 @@ void ToggleFullscreen(HWND hWnd) {
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
     }
 }
+#endif

@@ -1,23 +1,31 @@
 #pragma once
-#include <d3d11.h>
 #include <string>
-#include <wrl/client.h>
 
+#ifdef _WIN32
+#include <d3d11.h>
+#include <wrl/client.h>
 using Microsoft::WRL::ComPtr;
+#endif
+
+#include "CefRenderHandler.h"
 
 class ShaderManager {
 public:
+#ifdef _WIN32
     ShaderManager(ID3D11Device* device, ID3D11DeviceContext* context);
+#else
+    ShaderManager();
+#endif
     ~ShaderManager();
 
     // Initialize shaders and buffers
     bool Initialize(int width, int height);
 
     // Convert BGRA texture to ARGB for DeckLink
-    // inputSRV1: SRV of the CEF BGRA texture (Frame T)
-    // inputSRV2: SRV of the CEF BGRA texture (Frame T+1)
+    // inputSRV1: CEF BGRA texture (Frame T)
+    // inputSRV2: CEF BGRA texture (Frame T+1)
     // outputBuffer: Pointer to the DeckLink ARGB buffer memory
-    void ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D11ShaderResourceView* inputSRV2, void* outputBuffer);
+    void ConvertAndDownload(CefFrameResource inputSRV1, CefFrameResource inputSRV2, void* outputBuffer);
 
     // Set alpha threshold for unpremultiply
     void SetAlphaThreshold(float threshold);
@@ -34,6 +42,7 @@ public:
     void SetLicensed(bool licensed);
 
 private:
+#ifdef _WIN32
     ComPtr<ID3D11Device> m_device;
     ComPtr<ID3D11DeviceContext> m_context;
     
@@ -51,6 +60,8 @@ private:
 
     // Constant Buffer for Parameters
     ComPtr<ID3D11Buffer> m_constantBuffer;
+#endif
+
     float m_alphaThreshold = 0.0f; // Default threshold
     int m_viewMode = 0;
     int m_filterMode = 0;
@@ -59,6 +70,8 @@ private:
     int m_width = 0;
     int m_height = 0;
 
+#ifdef _WIN32
     bool LoadShader();
     bool CreateBuffers(int width, int height);
+#endif
 };

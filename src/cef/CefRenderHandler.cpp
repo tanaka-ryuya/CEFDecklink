@@ -1,15 +1,25 @@
 #include "CefRenderHandler.h"
 #include <iostream>
 
+#ifdef _WIN32
 CefRenderHandlerImpl::CefRenderHandlerImpl(ID3D11Device* device) : m_device(device) {
     // Initial Resize to allocate textures
     Resize(1920, 1080);
 }
+#else
+CefRenderHandlerImpl::CefRenderHandlerImpl() {
+    Resize(1920, 1080);
+}
+#endif
 
 CefRenderHandlerImpl::~CefRenderHandlerImpl() {
     for (int i = 0; i < kBufferCount; ++i) {
+#ifdef _WIN32
         if (m_textureSRVs[i]) m_textureSRVs[i]->Release();
         if (m_textures[i]) m_textures[i]->Release();
+#else
+        if (m_textures[i]) m_textures[i]->Release();
+#endif
     }
     if (m_lastTop) m_lastTop->Release();
     if (m_lastBottom) m_lastBottom->Release();
@@ -56,10 +66,7 @@ void CefRenderHandlerImpl::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementTy
         memcpy(m_cpuBuffers[bufferIdx].data(), buffer, size);
         m_timestamps[bufferIdx] = std::chrono::steady_clock::now();
         
-        // Phase 3: Commit (Short Lock needed? Or just atomic write?)
-        // m_writeIndex needs to be monotonic and observed by consumer.
-        // SyncWithGPU relies on m_writeIndex.
-        // We can just atomic increment.
+        // Phase 3: Commit
         m_writeIndex++; 
         m_frameCount++;
         m_totalFrameCount++;
@@ -74,8 +81,12 @@ void CefRenderHandlerImpl::Resize(int width, int height) {
     for (int i = 0; i < kBufferCount; ++i) {
         m_cpuBuffers[i].resize(width * height * 4);
         
+#ifdef _WIN32
         if (m_textureSRVs[i]) { m_textureSRVs[i]->Release(); m_textureSRVs[i] = nullptr; }
         if (m_textures[i]) { m_textures[i]->Release(); m_textures[i] = nullptr; }
+#else
+        if (m_textures[i]) { m_textures[i]->Release(); m_textures[i] = nullptr; }
+#endif
     }
     if (m_lastTop) { m_lastTop->Release(); m_lastTop = nullptr; }
     if (m_lastBottom) { m_lastBottom->Release(); m_lastBottom = nullptr; }
@@ -84,6 +95,7 @@ void CefRenderHandlerImpl::Resize(int width, int height) {
         m_readyTextures.pop();
     }
 
+#ifdef _WIN32
     if (!m_device) return;
 
     D3D11_TEXTURE2D_DESC desc;
@@ -104,10 +116,12 @@ void CefRenderHandlerImpl::Resize(int width, int height) {
             m_device->CreateShaderResourceView(m_textures[i], nullptr, &m_textureSRVs[i]);
         }
     }
+#endif
 }
 
 // Call this from Main Thread / DeckLink Thread
 void CefRenderHandlerImpl::SyncWithGPU() {
+#ifdef _WIN32
     int bufferIdx = -1;
     ID3D11Texture2D* tex = nullptr;
     
@@ -126,8 +140,6 @@ void CefRenderHandlerImpl::SyncWithGPU() {
     } // Unlock
 
     // Phase 2: Upload (No Lock)
-    // We own "readIdx" slot implicitly because OnPaint checks (write - read < k).
-    // As long as we don't increment readIdx, OnPaint won't overwrite this slot.
     bool uploadSuccess = false;
     if (tex) {
         if (bufferIdx >= 0) {
@@ -136,7 +148,6 @@ void CefRenderHandlerImpl::SyncWithGPU() {
             if (context) {
                 D3D11_MAPPED_SUBRESOURCE mapped;
                 if (SUCCEEDED(context->Map(tex, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
-                    // Safe to read cpuBuffer[bufferIdx] because OnPaint won't touch it until readIdx increments
                     const uint8_t* src = m_cpuBuffers[bufferIdx].data(); 
                     uint8_t* dst = (uint8_t*)mapped.pData;
                     
@@ -163,8 +174,6 @@ void CefRenderHandlerImpl::SyncWithGPU() {
                 entry.timestamp = m_timestamps[bufferIdx];
                 m_readyTextures.push(entry);
                 
-                // Limit queue size to avoid memory leaks if consumer stops
-                // Cap at 16 frames to allow for huge prerolls without dropping too early
                 while(m_readyTextures.size() > 16) {
                     m_readyTextures.front().srv->Release();
                     m_readyTextures.pop();
@@ -173,22 +182,58 @@ void CefRenderHandlerImpl::SyncWithGPU() {
             }
         }
         
-        // Always advance consumer to prevent freeze
         m_readIndex++;
     }
 
     if (tex) {
         tex->Release();
     }
+#else
+    int bufferIdx = -1;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        size_t writeIdx = m_writeIndex.load();
+        size_t readIdx = m_readIndex.load();
+
+        if (writeIdx > readIdx) {
+            bufferIdx = readIdx % kBufferCount;
+        }
+    }
+
+    bool uploadSuccess = false;
+    MacFrameResource* frameRes = nullptr;
+    if (bufferIdx >= 0) {
+        frameRes = new MacFrameResource();
+        frameRes->buffer = m_cpuBuffers[bufferIdx];
+        uploadSuccess = true;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (frameRes && uploadSuccess) {
+            TextureEntry entry;
+            entry.srv = frameRes;
+            entry.timestamp = m_timestamps[bufferIdx];
+            m_readyTextures.push(entry);
+            
+            while(m_readyTextures.size() > 16) {
+                m_readyTextures.front().srv->Release();
+                m_readyTextures.pop();
+                m_droppedFrames++;
+            }
+        }
+        m_readIndex++;
+    }
+#endif
 }
 
-void CefRenderHandlerImpl::GetSynchronizedTextures(ID3D11ShaderResourceView** srvTop, ID3D11ShaderResourceView** srvBottom) {
+void CefRenderHandlerImpl::GetSynchronizedTextures(CefFrameResource* srvTop, CefFrameResource* srvBottom) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     bool poppedPair = false;
     bool poppedSingle = false;
 
-    // Time-based Preroll logic (Wait for N DeckLink cycles before consuming)
+    // Time-based Preroll logic
     if (!m_isConsuming) {
         if (m_readyTextures.size() > 0) {
             if (m_prerollDelay > 0) {
@@ -201,7 +246,6 @@ void CefRenderHandlerImpl::GetSynchronizedTextures(ID3D11ShaderResourceView** sr
 
     if (m_isConsuming) {
         if (m_readyTextures.size() >= 2) {
-            // If we had starvation last time but now have >=2, it was a mid-animation stutter!
             if (m_hadStarvation) {
                 m_duplicatedFrames++;
                 m_hadStarvation = false;
@@ -217,12 +261,10 @@ void CefRenderHandlerImpl::GetSynchronizedTextures(ID3D11ShaderResourceView** sr
             
             poppedPair = true;
         } else if (m_readyTextures.size() == 1) {
-            // Static cut-in (1 frame total) or severe jitter
-            // If we already had starvation, animation is continuing at 1 frame per tick = severe stutter
             if (m_hadStarvation) {
                 m_duplicatedFrames++;
             } else {
-                m_hadStarvation = true; // Mark starvation, decide if stutter next tick
+                m_hadStarvation = true;
             }
 
             if (m_lastTop) m_lastTop->Release();
@@ -235,16 +277,13 @@ void CefRenderHandlerImpl::GetSynchronizedTextures(ID3D11ShaderResourceView** sr
             m_readyTextures.pop();
             poppedSingle = true;
         } else {
-            // Queue ran dry. Animation ended.
             m_isConsuming = false;
-            m_hadStarvation = false; // The starvation was just the end of the animation! NOT a stutter.
-            m_prerollDelay = 3; // Reset delay for the NEXT animation
+            m_hadStarvation = false;
+            m_prerollDelay = 3;
         }
     }
 
     if (!poppedPair && !poppedSingle) {
-        // We are waiting for frames. To prevent vibration (time-reversal jitter) 
-        // from outputting an old pair [A, B] again, we freeze on the very last available frame [B, B].
         if (m_lastTop != m_lastBottom) {
             if (m_lastTop) m_lastTop->Release();
             m_lastTop = m_lastBottom;
@@ -262,7 +301,7 @@ void CefRenderHandlerImpl::GetSynchronizedTextures(ID3D11ShaderResourceView** sr
     }
 }
 
-ID3D11ShaderResourceView* CefRenderHandlerImpl::GetTextureSRV() {
+CefFrameResource CefRenderHandlerImpl::GetTextureSRV() {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (m_lastBottom) {
         m_lastBottom->AddRef();

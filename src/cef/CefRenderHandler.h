@@ -3,22 +3,39 @@
 #include <mutex>
 #include <vector>
 #include <atomic>
-#include <d3d11.h>
 #include <chrono>
 #include <queue>
 
+#ifdef _WIN32
+#include <d3d11.h>
+typedef ID3D11ShaderResourceView* CefFrameResource;
+#else
+struct MacFrameResource {
+    std::vector<uint8_t> buffer;
+    int refCount = 1;
+    void AddRef() { refCount++; }
+    void Release() {
+        if (--refCount <= 0) delete this;
+    }
+};
+typedef MacFrameResource* CefFrameResource;
+#endif
+
 class CefRenderHandlerImpl : public CefRenderHandler {
 public:
+#ifdef _WIN32
     CefRenderHandlerImpl(ID3D11Device* device);
+#else
+    CefRenderHandlerImpl();
+#endif
     ~CefRenderHandlerImpl();
 
     // CefRenderHandler methods
     void GetViewRect(CefRefPtr<CefBrowser> browser, CefRect& rect) override;
     void OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type, const RectList& dirtyRects, const void* buffer, int width, int height) override;
 
-    // Custom methods for DX11 Interop
-    // Returns the SRV of the texture that is safe to use (completely uploaded)
-    ID3D11ShaderResourceView* GetTextureSRV();
+    // Custom methods for interop
+    CefFrameResource GetTextureSRV();
     
     // Set the expected size
     void Resize(int width, int height);
@@ -28,7 +45,7 @@ public:
 
     // Get the two most recent distinct textures
     // Retreives a synchronized pair of frames for interlaced output, applying stutter prevention logic.
-    void GetSynchronizedTextures(ID3D11ShaderResourceView** srvTop, ID3D11ShaderResourceView** srvBottom);
+    void GetSynchronizedTextures(CefFrameResource* srvTop, CefFrameResource* srvBottom);
 
     // Diagnostics
     int GetAndResetFrameCount() { return m_frameCount.exchange(0); }
@@ -42,25 +59,27 @@ public:
     int GetAndResetDuplicatedFrames() { return m_duplicatedFrames.exchange(0); }
 
 private:
+    static const int kBufferCount = 32;
     int m_width = 1920;
     int m_height = 1080;
+
+#ifdef _WIN32
     ID3D11Device* m_device = nullptr;
-    
-    // Triple Buffering (Ring Buffer) -> Now 32 to prevent aliasing with large preroll queues
-    static const int kBufferCount = 32;
-    
     ID3D11Texture2D* m_textures[kBufferCount] = { nullptr };
     ID3D11ShaderResourceView* m_textureSRVs[kBufferCount] = { nullptr };
+#else
+    CefFrameResource m_textures[kBufferCount] = { nullptr };
+#endif
     
     struct TextureEntry {
-        ID3D11ShaderResourceView* srv;
+        CefFrameResource srv;
         std::chrono::steady_clock::time_point timestamp;
     };
 
     // The history of recent textures for decoupled retrieval
     std::queue<TextureEntry> m_readyTextures;
-    ID3D11ShaderResourceView* m_lastTop = nullptr;
-    ID3D11ShaderResourceView* m_lastBottom = nullptr;
+    CefFrameResource m_lastTop = nullptr;
+    CefFrameResource m_lastBottom = nullptr;
     bool m_isConsuming = false;
     bool m_hadStarvation = false; // Tracks if we hit size==1 recently
     int m_prerollDelay = 3; // DeckLink cycles to wait before consuming

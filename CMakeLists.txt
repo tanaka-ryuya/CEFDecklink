@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.21)
 project(DeckLinkDX11 CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -23,11 +23,7 @@ message(STATUS "Build commit: ${GIT_COMMIT_HASH}")
 
 # --- Dependencies ---
 
-# 1. DeckLink SDK API (Bumped to 1 as ImGui removed)
-
-# 2. DeckLink SDK API
-# Try to find DeckLink SDK. 
-# Look in vendor, vender (typo), and standard paths
+# 1. DeckLink SDK API
 if(NOT DEFINED DECKLINK_SDK_PATH)
     if(EXISTS "${CMAKE_SOURCE_DIR}/vendor/Blackmagic DeckLink SDK 15.3")
         set(DECKLINK_SDK_PATH "${CMAKE_SOURCE_DIR}/vendor/Blackmagic DeckLink SDK 15.3")
@@ -38,39 +34,41 @@ if(NOT DEFINED DECKLINK_SDK_PATH)
     endif()
 endif()
 
-if(EXISTS "${DECKLINK_SDK_PATH}/Win/include/DeckLinkAPI.idl")
-    message(STATUS "Found DeckLink SDK (IDL) at ${DECKLINK_SDK_PATH}")
-    include_directories(${DECKLINK_SDK_PATH}/Win/include)
-    
-    # We need to compile IDL files if using MSVC
-    # Adding them to sources usually triggers MIDL in VS generator
-    set(DECKLINK_SOURCES 
-        "${DECKLINK_SDK_PATH}/Win/include/DeckLinkAPI.idl"
-    )
-    # The generated header will be accessible. 
-    # Usually generated as DeckLinkAPI_h.h or DeckLinkAPI.h 
-    # We might need to include CMAKE_CURRENT_BINARY_DIR to find it?
-    # Actually VS puts it in intermediate dir. 
-    # But let's check.
-    
-elseif(EXISTS "${DECKLINK_SDK_PATH}/include/DeckLinkAPI.h")
-    # Older or custom structure
-    message(STATUS "Found DeckLink SDK (header style) at ${DECKLINK_SDK_PATH}")
-    include_directories(${DECKLINK_SDK_PATH}/include)
-    set(DECKLINK_SOURCES 
-        ${DECKLINK_SDK_PATH}/include/DeckLinkAPI_i.c
-    )
-else()
-    message(WARNING "DeckLink SDK not found. Checked: ${DECKLINK_SDK_PATH}")
+if(WIN32)
+    if(EXISTS "${DECKLINK_SDK_PATH}/Win/include/DeckLinkAPI.idl")
+        message(STATUS "Found DeckLink SDK (IDL) at ${DECKLINK_SDK_PATH}")
+        include_directories(${DECKLINK_SDK_PATH}/Win/include)
+        set(DECKLINK_SOURCES 
+            "${DECKLINK_SDK_PATH}/Win/include/DeckLinkAPI.idl"
+        )
+    elseif(EXISTS "${DECKLINK_SDK_PATH}/include/DeckLinkAPI.h")
+        message(STATUS "Found DeckLink SDK (header style) at ${DECKLINK_SDK_PATH}")
+        include_directories(${DECKLINK_SDK_PATH}/include)
+        set(DECKLINK_SOURCES 
+            ${DECKLINK_SDK_PATH}/include/DeckLinkAPI_i.c
+        )
+    else()
+        message(WARNING "DeckLink SDK not found. Checked: ${DECKLINK_SDK_PATH}")
+    endif()
+elseif(APPLE)
+    if(EXISTS "${DECKLINK_SDK_PATH}/Mac/include/DeckLinkAPI.h")
+        message(STATUS "Found DeckLink SDK (Mac headers) at ${DECKLINK_SDK_PATH}")
+        include_directories(${DECKLINK_SDK_PATH}/Mac/include)
+        set(DECKLINK_SOURCES 
+            "${DECKLINK_SDK_PATH}/Mac/include/DeckLinkAPIDispatch.cpp"
+        )
+    else()
+        message(WARNING "DeckLink SDK not found for Mac. Checked: ${DECKLINK_SDK_PATH}")
+    endif()
 endif()
 
-
-# 3. CEF
+# 2. CEF
 set(CEF_ROOT "${CMAKE_SOURCE_DIR}/vender/cef")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CEF_ROOT}/cmake")
 
-# Force CEF to use dynamic runtime (MD) to match our app
-set(CEF_RUNTIME_LIBRARY_FLAG "/MD")
+if(WIN32)
+    set(CEF_RUNTIME_LIBRARY_FLAG "/MD")
+endif()
 
 if(EXISTS "${CEF_ROOT}/CMakeLists.txt")
     message(STATUS "Found CEF at ${CEF_ROOT}")
@@ -82,71 +80,26 @@ endif()
 # --- Sources ---
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h" "src/*.rc")
 
-# Console App (Removed WIN32 flag)
-add_executable(${PROJECT_NAME} 
-    ${SOURCES}
-    ${DECKLINK_SOURCES}
-)
+# Exclude macOS helper implementation from the main binary sources
+list(FILTER SOURCES EXCLUDE REGEX "process_helper_mac\\.cpp$")
+
+# Create executable
+if(APPLE)
+    add_executable(${PROJECT_NAME} MACOSX_BUNDLE
+        ${SOURCES}
+        ${DECKLINK_SOURCES}
+    )
+else()
+    add_executable(${PROJECT_NAME} 
+        ${SOURCES}
+        ${DECKLINK_SOURCES}
+    )
+endif()
 
 # Pass git commit hash as compile-time definition
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     GIT_COMMIT_HASH="${GIT_COMMIT_HASH}"
 )
-
-# --- Linking ---
-
-# Link CEF
-target_link_libraries(${PROJECT_NAME} PRIVATE libcef_dll_wrapper libcef)
-
-# Add custom build step to copy CEF resources to the output directory
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CEF_ROOT}/Resources"
-    "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-    COMMENT "Copying CEF Resources..."
-)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CEF_ROOT}/Release"
-    "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-    COMMENT "Copying CEF Binaries..."
-)
-
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_SOURCE_DIR}/src/render/shaders"
-    "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders"
-    COMMENT "Copying Shaders..."
-)
-
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "${CMAKE_SOURCE_DIR}/config.json"
-    "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-    COMMENT "Copying config.json..."
-)
-
-# Create installer using Inno Setup (if available)
-find_program(INNO_SETUP_COMPILER ISCC.exe
-    PATHS
-    "C:/Program Files (x86)/Inno Setup 6"
-    "C:/Program Files/Inno Setup 6"
-    "C:/Program Files (x86)/Inno Setup 5"
-    "C:/Program Files/Inno Setup 5"
-    DOC "Inno Setup Compiler"
-)
-
-if(INNO_SETUP_COMPILER)
-    message(STATUS "Found Inno Setup: ${INNO_SETUP_COMPILER}")
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${INNO_SETUP_COMPILER} "${CMAKE_SOURCE_DIR}/installer.iss"
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-        COMMENT "Creating installer with Inno Setup..."
-    )
-else()
-    message(WARNING "Inno Setup not found. Installer will not be created. Download from: https://jrsoftware.org/isdl.php")
-endif()
-
 
 # Include Directories
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -156,23 +109,154 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src/cef
     ${CEF_ROOT}
     ${CMAKE_BINARY_DIR}
-    ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.dir/$<CONFIG>
 )
 
-# Link Directories
-target_link_directories(${PROJECT_NAME} PRIVATE ${CEF_ROOT}/Release)
+if(WIN32)
+    target_include_directories(${PROJECT_NAME} PRIVATE
+        ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.dir/$<CONFIG>
+    )
+endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE 
-    d3d11.lib 
-    d3d11.lib
-    dxgi.lib
-    d3dcompiler.lib
-    dbghelp.lib
-    libcef_dll_wrapper
-    "${CEF_ROOT}/Release/libcef.lib"
-    gdi32.lib
-    user32.lib
-)
+# --- Platform Configuration & Linking ---
 
-# Unicode support for Win32
-add_definitions(-DUNICODE -D_UNICODE)
+if(WIN32)
+    # Link CEF
+    target_link_libraries(${PROJECT_NAME} PRIVATE libcef_dll_wrapper libcef)
+
+    # Post-build copy steps for Windows
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CEF_ROOT}/Resources"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+        COMMENT "Copying CEF Resources..."
+    )
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CEF_ROOT}/Release"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+        COMMENT "Copying CEF Binaries..."
+    )
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/src/render/shaders"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders"
+        COMMENT "Copying Shaders..."
+    )
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/config.json"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+        COMMENT "Copying config.json..."
+    )
+
+    # Create installer using Inno Setup (if available)
+    find_program(INNO_SETUP_COMPILER ISCC.exe
+        PATHS
+        "C:/Program Files (x86)/Inno Setup 6"
+        "C:/Program Files/Inno Setup 6"
+        "C:/Program Files (x86)/Inno Setup 5"
+        "C:/Program Files/Inno Setup 5"
+        DOC "Inno Setup Compiler"
+    )
+
+    if(INNO_SETUP_COMPILER)
+        message(STATUS "Found Inno Setup: ${INNO_SETUP_COMPILER}")
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${INNO_SETUP_COMPILER} "${CMAKE_SOURCE_DIR}/installer.iss"
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+            COMMENT "Creating installer with Inno Setup..."
+        )
+    else()
+        message(WARNING "Inno Setup not found. Installer will not be created. Download from: https://jrsoftware.org/isdl.php")
+    endif()
+
+    target_link_directories(${PROJECT_NAME} PRIVATE ${CEF_ROOT}/Release)
+    target_link_libraries(${PROJECT_NAME} PRIVATE 
+        d3d11.lib 
+        dxgi.lib
+        d3dcompiler.lib
+        dbghelp.lib
+        libcef_dll_wrapper
+        "${CEF_ROOT}/Release/libcef.lib"
+        gdi32.lib
+        user32.lib
+    )
+
+    # Unicode support for Win32
+    add_definitions(-DUNICODE -D_UNICODE)
+
+elseif(APPLE)
+    # Link CEF wrapper and framework
+    target_link_libraries(${PROJECT_NAME} PRIVATE libcef_dll_wrapper ${CEF_STANDARD_LIBS})
+
+    # Link Mac system frameworks (needed for CEF / DeckLink)
+    find_library(COREFOUNDATION_FRAMEWORK CoreFoundation REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${COREFOUNDATION_FRAMEWORK})
+    
+    # Configure bundle plists
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/src/cef/mac/Info.plist.in
+    )
+    
+    # Output path for the main app bundle
+    SET_CEF_TARGET_OUT_DIR()
+    set(CEF_APP "${CEF_TARGET_OUT_DIR}/${PROJECT_NAME}.app")
+    
+    # Copy CEF framework bundle to Contents/Frameworks/
+    COPY_MAC_FRAMEWORK("${PROJECT_NAME}" "${CEF_BINARY_DIR}" "${CEF_APP}")
+
+    # Build and bundle the standard CEF Helper processes
+    foreach(_suffix_list ${CEF_HELPER_APP_SUFFIXES})
+        string(REPLACE ":" ";" _suffix_list ${_suffix_list})
+        list(GET _suffix_list 0 _name_suffix)
+        list(GET _suffix_list 1 _target_suffix)
+        list(GET _suffix_list 2 _plist_suffix)
+
+        set(_helper_target "${PROJECT_NAME}_Helper${_target_suffix}")
+        set(_helper_output_name "${PROJECT_NAME} Helper${_name_suffix}")
+
+        set(_helper_info_plist "${CMAKE_CURRENT_BINARY_DIR}/helper-Info${_target_suffix}.plist")
+        file(READ "${CMAKE_SOURCE_DIR}/src/cef/mac/helper-Info.plist.in" _plist_contents)
+        string(REPLACE "\${EXECUTABLE_NAME}" "${_helper_output_name}" _plist_contents ${_plist_contents})
+        string(REPLACE "\${PRODUCT_NAME}" "${_helper_output_name}" _plist_contents ${_plist_contents})
+        string(REPLACE "\${BUNDLE_ID_SUFFIX}" "${_plist_suffix}" _plist_contents ${_plist_contents})
+        file(WRITE ${_helper_info_plist} ${_plist_contents})
+
+        # Helper executable target
+        add_executable(${_helper_target} MACOSX_BUNDLE 
+            "${CMAKE_SOURCE_DIR}/src/cef/process_helper_mac.cpp"
+        )
+        SET_EXECUTABLE_TARGET_PROPERTIES(${_helper_target})
+        add_dependencies(${_helper_target} libcef_dll_wrapper)
+        target_link_libraries(${_helper_target} libcef_dll_wrapper ${CEF_STANDARD_LIBS})
+        set_target_properties(${_helper_target} PROPERTIES
+            MACOSX_BUNDLE_INFO_PLIST ${_helper_info_plist}
+            OUTPUT_NAME "${_helper_output_name}"
+        )
+
+        add_dependencies(${PROJECT_NAME} "${_helper_target}")
+        
+        # Copy Helper app bundle to Contents/Frameworks/
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CEF_TARGET_OUT_DIR}/${_helper_output_name}.app"
+            "${CEF_APP}/Contents/Frameworks/${_helper_output_name}.app"
+            COMMENT "Copying ${_helper_output_name}.app to main bundle..."
+        )
+    endforeach()
+
+    # Copy shaders and config into the main bundle resources
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/src/render/shaders"
+        "${CEF_APP}/Contents/Resources/shaders"
+        COMMENT "Copying Shaders to App Bundle..."
+    )
+    
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/config.json"
+        "${CEF_APP}/Contents/Resources"
+        COMMENT "Copying config.json to App Bundle..."
+    )
+endif()

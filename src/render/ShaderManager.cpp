@@ -1,26 +1,38 @@
 #include "ShaderManager.h"
-#include <d3dcompiler.h>
 #include <iostream>
 #include <vector>
+#include <cmath>
+#include <algorithm>
 
+#ifdef _WIN32
+#include <d3dcompiler.h>
 #pragma comment(lib, "d3dcompiler.lib")
-
-#include <string>
 #include <windows.h>
 
 ShaderManager::ShaderManager(ID3D11Device* device, ID3D11DeviceContext* context) 
     : m_device(device), m_context(context) {
 }
+#else
+ShaderManager::ShaderManager() {
+}
+#endif
 
 ShaderManager::~ShaderManager() {
 }
 
 bool ShaderManager::Initialize(int width, int height) {
+#ifdef _WIN32
     if (!LoadShader()) return false;
     if (!CreateBuffers(width, height)) return false;
     return true;
+#else
+    m_width = width;
+    m_height = height;
+    return true;
+#endif
 }
 
+#ifdef _WIN32
 bool ShaderManager::LoadShader() {
     ComPtr<ID3DBlob> blob;
     ComPtr<ID3DBlob> errorBlob;
@@ -62,7 +74,7 @@ bool ShaderManager::LoadShader() {
         } else {
              std::cerr << "Shader Compile Failed. Tried paths:" << std::endl;
              for (const auto& path : possiblePaths) {
-                 std::wcerr << L"  " << path << std::endl;
+                  std::wcerr << L"  " << path << std::endl;
              }
         }
         return false;
@@ -114,7 +126,7 @@ bool ShaderManager::CreateBuffers(int width, int height) {
     return true;
 }
 
-void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D11ShaderResourceView* inputSRV2, void* outputBuffer) {
+void ShaderManager::ConvertAndDownload(CefFrameResource inputSRV1, CefFrameResource inputSRV2, void* outputBuffer) {
     if (!m_computeShader || !inputSRV1 || !inputSRV2) return;
 
     static int logCounter = 0;
@@ -166,14 +178,11 @@ void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D
     m_context->CopyResource(m_stagingOutputs[bufferIdx].Get(), m_outputTextures[bufferIdx].Get());
     
     // === READBACK (Pipelined) ===
-    // Option B: Map the staging buffer from 2 frames ago
     if (m_frameIndex >= 2) {
         int readbackIdx = (m_frameIndex - 2) % kBufferCount;
         
         // Map and Download (ARGB)
         D3D11_MAPPED_SUBRESOURCE mapped;
-        // Optimization: Use D3D11_MAP_FLAG_DO_NOT_WAIT? 
-        // For now, normal map, as pipeline should ensure it's ready.
         hr = m_context->Map(m_stagingOutputs[readbackIdx].Get(), 0, D3D11_MAP_READ, 0, &mapped);
         
         if (SUCCEEDED(hr)) {
@@ -189,13 +198,117 @@ void ShaderManager::ConvertAndDownload(ID3D11ShaderResourceView* inputSRV1, ID3D
             if (doLog) std::cerr << "[Shader] Failed to map staging texture: " << std::hex << hr << std::endl;
         }
     } else {
-        // First 2 frames: output buffer is not filled with valid data yet.
-        // Option: Clear to Black to avoid garbage
         memset(outputBuffer, 0, m_width * m_height * 4);
     }
 
     m_frameIndex++;
 }
+#else
+// Helper float4 structure for CPU conversion
+struct Float4 {
+    float r, g, b, a;
+    Float4() : r(0), g(0), b(0), a(0) {}
+    Float4(float r, float g, float b, float a) : r(r), g(g), b(b), a(a) {}
+    Float4 operator*(float scalar) const {
+        return Float4(r * scalar, g * scalar, b * scalar, a * scalar);
+    }
+    Float4 operator+(const Float4& other) const {
+        return Float4(r + other.r, g + other.g, b + other.b, a + other.a);
+    }
+    Float4 operator-(const Float4& other) const {
+        return Float4(r - other.r, g - other.g, b - other.b, a - other.a);
+    }
+    Float4 abs() const {
+        return Float4(std::abs(r), std::abs(g), std::abs(b), std::abs(a));
+    }
+};
+
+static Float4 SampleFiltered(int x, int y, int width, int height, const uint8_t* p, int filterMode) {
+    int idx = (y * width + x) * 4;
+    Float4 center((float)p[idx+2] / 255.0f, (float)p[idx+1] / 255.0f, (float)p[idx] / 255.0f, (float)p[idx+3] / 255.0f);
+    if (filterMode == 0) return center;
+
+    int yM1 = std::max(y - 1, 0);
+    int yP1 = std::min(y + 1, height - 1);
+    int idxM1 = (yM1 * width + x) * 4;
+    int idxP1 = (yP1 * width + x) * 4;
+    Float4 above1((float)p[idxM1+2] / 255.0f, (float)p[idxM1+1] / 255.0f, (float)p[idxM1] / 255.0f, (float)p[idxM1+3] / 255.0f);
+    Float4 below1((float)p[idxP1+2] / 255.0f, (float)p[idxP1+1] / 255.0f, (float)p[idxP1] / 255.0f, (float)p[idxP1+3] / 255.0f);
+
+    if (filterMode == 1) {
+        return above1 * 0.25f + center * 0.50f + below1 * 0.25f;
+    }
+
+    int yM2 = std::max(y - 2, 0);
+    int yP2 = std::min(y + 2, height - 1);
+    int idxM2 = (yM2 * width + x) * 4;
+    int idxP2 = (yP2 * width + x) * 4;
+    Float4 above2((float)p[idxM2+2] / 255.0f, (float)p[idxM2+1] / 255.0f, (float)p[idxM2] / 255.0f, (float)p[idxM2+3] / 255.0f);
+    Float4 below2((float)p[idxP2+2] / 255.0f, (float)p[idxP2+1] / 255.0f, (float)p[idxP2] / 255.0f, (float)p[idxP2+3] / 255.0f);
+
+    return above2 * 0.0625f + above1 * 0.25f + center * 0.375f + below1 * 0.25f + below2 * 0.0625f;
+}
+
+// macOS CPU color conversion pipeline
+void ShaderManager::ConvertAndDownload(CefFrameResource srv1, CefFrameResource srv2, void* outputBuffer) {
+    if (!srv1 || !srv2 || !outputBuffer) {
+        if (outputBuffer) {
+            memset(outputBuffer, 0, m_width * m_height * 4);
+        }
+        return;
+    }
+
+    const uint8_t* p1 = srv1->buffer.data();
+    const uint8_t* p2 = srv2->buffer.data();
+    uint32_t* out = static_cast<uint32_t*>(outputBuffer);
+
+    for (int y = 0; y < m_height; ++y) {
+        int rowOffset = y * m_width;
+        for (int x = 0; x < m_width; ++x) {
+            Float4 pixel;
+            
+            if (m_viewMode == 1) { // Diff Mode
+                Float4 px1 = SampleFiltered(x, y, m_width, m_height, p1, m_filterMode);
+                Float4 px2 = SampleFiltered(x, y, m_width, m_height, p2, m_filterMode);
+                pixel = (px1 - px2).abs();
+                pixel.a = 1.0f;
+            }
+            else if (m_viewMode == 2) { // Progressive Frame 1 (Top Field Source)
+                pixel = SampleFiltered(x, y, m_width, m_height, p1, m_filterMode);
+            }
+            else if (m_viewMode == 3) { // Progressive Frame 2 (Bottom Field Source)
+                pixel = SampleFiltered(x, y, m_width, m_height, p2, m_filterMode);
+            }
+            else if (m_viewMode == 4) { // 30p Blend Mode
+                Float4 px1 = SampleFiltered(x, y, m_width, m_height, p1, m_filterMode);
+                Float4 px2 = SampleFiltered(x, y, m_width, m_height, p2, m_filterMode);
+                pixel = px1 * 0.5f + px2 * 0.5f;
+            }
+            else { // Interlaced Mode (0)
+                if (y % 2 == 0) {
+                    pixel = SampleFiltered(x, y, m_width, m_height, p1, m_filterMode);
+                } else {
+                    pixel = SampleFiltered(x, y, m_width, m_height, p2, m_filterMode);
+                }
+            }
+
+            // Unpremultiply
+            if (pixel.a > m_alphaThreshold) {
+                pixel.r /= pixel.a;
+                pixel.g /= pixel.a;
+                pixel.b /= pixel.a;
+            }
+
+            uint8_t a = (uint8_t)(std::min(std::max(pixel.a, 0.0f), 1.0f) * 255.0f);
+            uint8_t r = (uint8_t)(std::min(std::max(pixel.r, 0.0f), 1.0f) * 255.0f);
+            uint8_t g = (uint8_t)(std::min(std::max(pixel.g, 0.0f), 1.0f) * 255.0f);
+            uint8_t b = (uint8_t)(std::min(std::max(pixel.b, 0.0f), 1.0f) * 255.0f);
+
+            out[rowOffset + x] = ((uint32_t)b << 24) | ((uint32_t)g << 16) | ((uint32_t)r << 8) | a;
+        }
+    }
+}
+#endif
 
 void ShaderManager::SetAlphaThreshold(float threshold) {
     m_alphaThreshold = threshold;

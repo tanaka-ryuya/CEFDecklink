@@ -104,6 +104,11 @@ private:
     IMPLEMENT_REFCOUNTING(CefAppImpl);
 };
 
+#ifndef _WIN32
+#include <mach-o/dyld.h>
+#include <limits.h>
+#endif
+
 CefManager::CefManager() {
 }
 
@@ -111,8 +116,12 @@ CefManager::~CefManager() {
     Shutdown();
 }
 
+#ifdef _WIN32
 bool CefManager::Initialize(HINSTANCE hInstance) {
     CefMainArgs main_args(hInstance);
+#else
+bool CefManager::Initialize(CefMainArgs main_args) {
+#endif
     
     // CEF App
     CefRefPtr<CefApp> app = new CefAppImpl(this);
@@ -132,6 +141,7 @@ bool CefManager::Initialize(HINSTANCE hInstance) {
 
     // Set cache path for persistent features and DevTools stability
     // Must be absolute path
+#ifdef _WIN32
     char exePath[MAX_PATH];
     if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) > 0) {
         std::string sPath(exePath);
@@ -143,6 +153,20 @@ bool CefManager::Initialize(HINSTANCE hInstance) {
         CefString(&settings.cache_path).FromString(cachePath);
         CefString(&settings.root_cache_path).FromString(cachePath);
     }
+#else
+    char path[PATH_MAX];
+    uint32_t size = sizeof(path);
+    if (_NSGetExecutablePath(path, &size) == 0) {
+        std::string sPath(path);
+        size_t pos = sPath.find_last_of("/");
+        if (pos != std::string::npos) {
+            sPath = sPath.substr(0, pos);
+        }
+        std::string cachePath = sPath + "/cache";
+        CefString(&settings.cache_path).FromString(cachePath);
+        CefString(&settings.root_cache_path).FromString(cachePath);
+    }
+#endif
     
     // Important for transparent background
     settings.background_color = 0x00000000; 
@@ -172,6 +196,7 @@ void CefManager::Shutdown() {
     }
 }
 
+#ifdef _WIN32
 void CefManager::CreateBrowser(HWND parentHwnd, const std::string& url, ID3D11Device* device, const std::string& format) {
     m_parentHwnd = parentHwnd;
     m_initialUrl = url;
@@ -184,15 +209,29 @@ void CefManager::CreateBrowser(HWND parentHwnd, const std::string& url, ID3D11De
         ExecuteCreateBrowser();
     }
 }
+#else
+void CefManager::CreateBrowser(void* parentWindow, const std::string& url, const std::string& format) {
+    m_parentWindow = parentWindow;
+    m_initialUrl = url;
+    m_format = format;
+
+    if (m_initialized) {
+        ExecuteCreateBrowser();
+    }
+}
+#endif
 
 void CefManager::ExecuteCreateBrowser() {
     CefWindowInfo window_info;
+#ifdef _WIN32
     window_info.SetAsWindowless(m_parentHwnd); 
+    m_renderHandler = new CefRenderHandlerImpl(m_d3dDevice);
+#else
+    window_info.SetAsWindowless(nullptr); 
+    m_renderHandler = new CefRenderHandlerImpl();
+#endif
     window_info.external_begin_frame_enabled = false; // Free-running, like CasparCG
 
-    // Create Render Handler
-    m_renderHandler = new CefRenderHandlerImpl(m_d3dDevice);
-    
     // Create Client
     CefRefPtr<CefClient> client = new CefClientImpl(this, m_renderHandler);
     

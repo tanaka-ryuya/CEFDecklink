@@ -17,7 +17,11 @@ public:
     ~CefManager();
 
     // Initialize CEF with windowless rendering enabled
+#ifdef _WIN32
     bool Initialize(HINSTANCE hInstance);
+#else
+    bool Initialize(CefMainArgs main_args);
+#endif
 
     // Call this in the main loop
     void DoMessageLoopWork();
@@ -26,7 +30,11 @@ public:
     void Shutdown();
 
     // Create a browser
+#ifdef _WIN32
     void CreateBrowser(HWND parentHwnd, const std::string& url, ID3D11Device* device, const std::string& format = "5994i");
+#else
+    void CreateBrowser(void* parentWindow, const std::string& url, const std::string& format = "5994i");
+#endif
     void ExecuteCreateBrowser();
 
     void SetBrowser(CefRefPtr<CefBrowser> browser);
@@ -54,10 +62,14 @@ private:
     bool m_initialized = false;
 
     // Deferred Creation Data
+#ifdef _WIN32
     HWND m_parentHwnd = nullptr;
+    ID3D11Device* m_d3dDevice = nullptr;
+#else
+    void* m_parentWindow = nullptr;
+#endif
     std::string m_initialUrl;
     std::string m_format;
-    ID3D11Device* m_d3dDevice = nullptr;
     FullscreenCallback m_fullscreenCallback;
     bool m_isLicensed = false;
 };

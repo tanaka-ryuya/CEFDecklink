@@ -1,6 +1,11 @@
 #pragma once
 
+#ifdef _WIN32
 #include <Windows.h>
+#else
+#define STDMETHODCALLTYPE
+#endif
+
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
