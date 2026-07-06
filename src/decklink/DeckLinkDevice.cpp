@@ -4,6 +4,7 @@
 #include "DeckLinkAPI_i.c" // Helper for GUIDs
 #else
 #include <CoreFoundation/CoreFoundation.h>
+#include <cstring>
 #endif
 #include <iostream>
 #include <sstream>
@@ -159,10 +160,10 @@ bool DeckLinkDevice::Initialize(const std::string& format)
         m_frameDuration = 1000;
     }
     
-    result = m_deckLinkOutput->EnableVideoOutput(displayMode, bmdVideoOutputFlagDefault);
-    if (FAILED(result))
+    hr = m_deckLinkOutput->EnableVideoOutput(displayMode, bmdVideoOutputFlagDefault);
+    if (FAILED(hr))
     {
-        std::cerr << "[DeckLink] EnableVideoOutput failed for format " << format << ". HRESULT: 0x" << std::hex << result << std::endl;
+        std::cerr << "[DeckLink] EnableVideoOutput failed for format " << format << ". HRESULT: 0x" << std::hex << hr << std::endl;
         return false;
     }
 
@@ -172,15 +173,15 @@ bool DeckLinkDevice::Initialize(const std::string& format)
     if (m_deckLink->QueryInterface(IID_IDeckLinkKeyer, (void**)&keyer) == S_OK)
     {
         // Enable(true) = External Keying, Enable(false) = Internal Keying
-        result = keyer->Enable(true);  // TRUE for External Key!
-        if (SUCCEEDED(result))
+        hr = keyer->Enable(true);  // TRUE for External Key!
+        if (SUCCEEDED(hr))
         {
             keyer->SetLevel(255);  // Full opacity
             std::cout << "External Keying enabled successfully! Fill on SDI Out, Key on SDI Out 2." << std::endl;
         }
         else
         {
-            std::cerr << "Warning: Could not enable external keying - result = " << std::hex << result << std::endl;
+            std::cerr << "Warning: Could not enable external keying - result = " << std::hex << hr << std::endl;
         }
         keyer->Release();
     }
@@ -317,6 +318,7 @@ HRESULT DeckLinkDevice::QueryInterface(REFIID iid, LPVOID *ppv)
 
     *ppv = nullptr;
 
+#ifdef _WIN32
     if (iid == IID_IUnknown)
     {
         *ppv = static_cast<IUnknown*>(static_cast<IDeckLinkVideoOutputCallback*>(this));
@@ -329,6 +331,21 @@ HRESULT DeckLinkDevice::QueryInterface(REFIID iid, LPVOID *ppv)
         AddRef();
         result = S_OK;
     }
+#else
+    CFUUIDBytes iunknown = CFUUIDGetUUIDBytes(IUnknownUUID);
+    if (memcmp(&iid, &iunknown, sizeof(REFIID)) == 0)
+    {
+        *ppv = static_cast<IUnknown*>(static_cast<IDeckLinkVideoOutputCallback*>(this));
+        AddRef();
+        result = S_OK;
+    }
+    else if (memcmp(&iid, &IID_IDeckLinkVideoOutputCallback, sizeof(REFIID)) == 0)
+    {
+        *ppv = static_cast<IDeckLinkVideoOutputCallback*>(this);
+        AddRef();
+        result = S_OK;
+    }
+#endif
 
     return result;
 }
@@ -359,10 +376,12 @@ HRESULT DeckLinkDevice::ScheduledFrameCompleted(IDeckLinkVideoFrame *completedFr
     // Boost DeckLink SDK callback thread priority on first invocation.
     // The SDK creates this thread internally, so we can only set it from within the callback.
     static bool s_prioritySet = false;
+#ifdef _WIN32
     if (!s_prioritySet) {
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
         s_prioritySet = true;
     }
+#endif
 
     // Store result
     m_lastCompletionResult = result;
@@ -533,7 +552,9 @@ bool DeckLinkDevice::ScheduleNextFrame()
 void DeckLinkDevice::SimulationLoop() {
     // Boost simulation thread to TIME_CRITICAL so the 29.97fps pacing timer
     // is not interrupted by lower-priority threads during animations.
+#ifdef _WIN32
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#endif
 
     // 59.94 fields per second = 29.97 frames per second ?? 
     // Wait, the hardware is 1080i5994. The callback `ScheduledFrameCompleted` usually fires at field rate or frame rate?

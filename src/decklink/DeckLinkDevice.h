@@ -18,7 +18,11 @@
 // But we usually need them for inheritance.
 // Generated headers from IDL
 // DeckLinkAPI.idl includes all other IDLs, so we only need this one.
+#ifdef _WIN32
 #include "DeckLinkAPI.h" 
+#else
+#include <DeckLinkAPI.h>
+#endif
 
 class DeckLinkDevice : public IDeckLinkVideoOutputCallback
 {

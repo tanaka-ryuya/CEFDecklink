@@ -77,11 +77,40 @@ else()
     message(FATAL_ERROR "CEF not found at ${CEF_ROOT}. Please run download script.")
 endif()
 
+if(APPLE)
+  message(STATUS "Defining COPY_MAC_FRAMEWORK macro")
+  macro(COPY_MAC_FRAMEWORK target binary_path app_path)
+    message(STATUS "COPY_MAC_FRAMEWORK macro called for target: ${target}, binary_path: ${binary_path}, app_path: ${app_path}")
+    set(FRAMEWORK_DIR "${app_path}/Contents/Frameworks/Chromium Embedded Framework.framework")
+    add_custom_command(
+      TARGET ${target}
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_directory
+              "${binary_path}/Chromium Embedded Framework.framework"
+              "${FRAMEWORK_DIR}/Versions/A"
+      COMMAND cd "${FRAMEWORK_DIR}" && ln -sf
+              "Versions/A/Chromium Embedded Framework"
+              "Chromium Embedded Framework"
+      COMMAND cd "${FRAMEWORK_DIR}" && ln -sf
+              "Versions/A/Libraries"
+              "Libraries"
+      COMMAND cd "${FRAMEWORK_DIR}" && ln -sf
+              "Versions/A/Resources"
+              "Resources"
+      COMMAND cd "${FRAMEWORK_DIR}/Versions" && ln -sf
+              "A"
+              "Current"
+      VERBATIM
+      )
+  endmacro()
+endif()
+
 # --- Sources ---
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h" "src/*.rc")
 
 # Exclude macOS helper implementation from the main binary sources
 list(FILTER SOURCES EXCLUDE REGEX "process_helper_mac\\.cpp$")
+list(FILTER SOURCES EXCLUDE REGEX "CrashHandler\\.cpp$")
 
 # Create executable
 if(APPLE)
@@ -188,10 +217,13 @@ if(WIN32)
 elseif(APPLE)
     # Link CEF wrapper and framework
     target_link_libraries(${PROJECT_NAME} PRIVATE libcef_dll_wrapper ${CEF_STANDARD_LIBS})
+    SET_EXECUTABLE_TARGET_PROPERTIES(${PROJECT_NAME})
 
-    # Link Mac system frameworks (needed for CEF / DeckLink)
+    # Link Mac system frameworks (needed for CEF / DeckLink / License validation)
     find_library(COREFOUNDATION_FRAMEWORK CoreFoundation REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${COREFOUNDATION_FRAMEWORK})
+    find_library(SECURITY_FRAMEWORK Security REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${SECURITY_FRAMEWORK})
     
     # Configure bundle plists
     set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -201,9 +233,22 @@ elseif(APPLE)
     # Output path for the main app bundle
     SET_CEF_TARGET_OUT_DIR()
     set(CEF_APP "${CEF_TARGET_OUT_DIR}/${PROJECT_NAME}.app")
+    set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CEF_TARGET_OUT_DIR}")
     
+    # Set CEF binary directory path for macOS post-build copy step
+    set(CEF_BINARY_DIR "${CEF_ROOT}/$<CONFIGURATION>")
+
     # Copy CEF framework bundle to Contents/Frameworks/
     COPY_MAC_FRAMEWORK("${PROJECT_NAME}" "${CEF_BINARY_DIR}" "${CEF_APP}")
+
+    # Define CEF Helper app suffixes since they are local to CEF subdirectory scope
+    set(CEF_HELPER_APP_SUFFIXES
+      ":::"
+      " (Alerts):_alerts:alerts"
+      " (GPU):_gpu:gpu"
+      " (Plugin):_plugin:plugin"
+      " (Renderer):_renderer:renderer"
+    )
 
     # Build and bundle the standard CEF Helper processes
     foreach(_suffix_list ${CEF_HELPER_APP_SUFFIXES})
@@ -227,11 +272,13 @@ elseif(APPLE)
             "${CMAKE_SOURCE_DIR}/src/cef/process_helper_mac.cpp"
         )
         SET_EXECUTABLE_TARGET_PROPERTIES(${_helper_target})
+        target_include_directories(${_helper_target} PRIVATE ${CEF_ROOT})
         add_dependencies(${_helper_target} libcef_dll_wrapper)
         target_link_libraries(${_helper_target} libcef_dll_wrapper ${CEF_STANDARD_LIBS})
         set_target_properties(${_helper_target} PROPERTIES
             MACOSX_BUNDLE_INFO_PLIST ${_helper_info_plist}
             OUTPUT_NAME "${_helper_output_name}"
+            RUNTIME_OUTPUT_DIRECTORY "${CEF_TARGET_OUT_DIR}"
         )
 
         add_dependencies(${PROJECT_NAME} "${_helper_target}")
@@ -242,6 +289,7 @@ elseif(APPLE)
             "${CEF_TARGET_OUT_DIR}/${_helper_output_name}.app"
             "${CEF_APP}/Contents/Frameworks/${_helper_output_name}.app"
             COMMENT "Copying ${_helper_output_name}.app to main bundle..."
+            VERBATIM
         )
     endforeach()
 
@@ -251,12 +299,14 @@ elseif(APPLE)
         "${CMAKE_SOURCE_DIR}/src/render/shaders"
         "${CEF_APP}/Contents/Resources/shaders"
         COMMENT "Copying Shaders to App Bundle..."
+        VERBATIM
     )
     
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/config.json"
-        "${CEF_APP}/Contents/Resources"
-        COMMENT "Copying config.json to App Bundle..."
+        "${CEF_TARGET_OUT_DIR}"
+        COMMENT "Copying config.json next to App Bundle..."
+        VERBATIM
     )
 endif()

@@ -13,11 +13,14 @@
 #include <conio.h>
 #else
 #include <unistd.h>
+#include <sys/ioctl.h>
 #include <mach-o/dyld.h>
 #include <limits.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include "include/wrapper/cef_library_loader.h"
+using HWND = void*;
 #endif
 
 #include <iostream>
@@ -175,6 +178,30 @@ void SignalHandler(int sig) {
 }
 #endif
 
+#ifndef _WIN32
+#include <Security/Security.h>
+#include <CoreFoundation/CoreFoundation.h>
+
+static std::vector<uint8_t> Base64Decode(const std::string& in) {
+    std::vector<uint8_t> out;
+    std::vector<int> T(256, -1);
+    for (int i = 0; i < 64; i++) {
+        T["ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[i]] = i;
+    }
+    int val = 0, valb = -8;
+    for (char c : in) {
+        if (T[c] == -1) continue;
+        val = (val << 6) + T[c];
+        valb += 6;
+        if (valb >= 0) {
+            out.push_back((val >> valb) & 0xFF);
+            valb -= 8;
+        }
+    }
+    return out;
+}
+#endif
+
 bool IsLicenseValid(const std::string& key) {
 #ifdef _WIN32
     if (key.length() < 10 || key[8] != '-') return false;
@@ -245,6 +272,7 @@ bool IsLicenseValid(const std::string& key) {
     time_t now = time(nullptr);
     struct tm tm_now;
     localtime_s(&tm_now, &now);
+
     char buf[9];
     strftime(buf, sizeof(buf), "%Y%m%d", &tm_now);
     std::string current_dateStr(buf);
@@ -252,8 +280,115 @@ bool IsLicenseValid(const std::string& key) {
     if (current_dateStr > dateStr) return false; 
     return true; 
 #else
-    // macOS always valid stub
-    return true;
+    if (key.length() < 10 || key[8] != '-') return false;
+    std::string dateStr = key.substr(0, 8);
+    std::string sigStr = key.substr(9);
+
+    std::vector<uint8_t> sigData = Base64Decode(sigStr);
+    if (sigData.empty()) return false;
+
+    uint8_t pubBlob[] = {
+        0x06, 0x02, 0x00, 0x00, 0x00, 0xA4, 0x00, 0x00, 0x52, 0x53, 0x41, 0x31, 0x00, 0x08, 0x00, 0x00,
+        0x01, 0x00, 0x01, 0x00, 0x95, 0x36, 0x2D, 0x18, 0x47, 0x82, 0x3D, 0xF5, 0x5C, 0x28, 0x08, 0xD1,
+        0x9D, 0x2B, 0xAD, 0x8E, 0x41, 0xEC, 0xC7, 0x46, 0x07, 0x43, 0x3E, 0x90, 0x4F, 0x48, 0x98, 0x8A,
+        0x0A, 0x33, 0x43, 0x94, 0xA9, 0xF0, 0x24, 0x24, 0xBC, 0x18, 0xDD, 0xA3, 0xE2, 0x39, 0x48, 0x83,
+        0x4F, 0xBC, 0x84, 0x0C, 0x32, 0x0C, 0xDA, 0x9E, 0x3B, 0xD4, 0x12, 0xA0, 0x21, 0x32, 0x19, 0xD0,
+        0x30, 0xD8, 0xD4, 0xE8, 0x36, 0x15, 0xDF, 0xEA, 0x16, 0xA8, 0x3C, 0x1E, 0x95, 0x85, 0x84, 0x8C,
+        0xE3, 0xA5, 0x96, 0xD2, 0x1F, 0x5D, 0xB0, 0xC8, 0x22, 0x66, 0xB2, 0xA6, 0x4C, 0x34, 0x93, 0x9B,
+        0x3F, 0x3C, 0x3B, 0xED, 0xF0, 0x2E, 0x19, 0xDB, 0x62, 0xC5, 0xCE, 0x94, 0x39, 0x39, 0x0F, 0x85,
+        0x9D, 0x81, 0x83, 0x33, 0x12, 0xBF, 0x56, 0x1B, 0x42, 0x9B, 0x76, 0xB0, 0xE3, 0x01, 0xD6, 0x20,
+        0xED, 0xEF, 0x0B, 0x59, 0x1B, 0x07, 0x21, 0x98, 0x1F, 0xE3, 0x70, 0x77, 0x54, 0x2D, 0x1E, 0x97,
+        0x9D, 0xA7, 0xA1, 0xCC, 0x56, 0x59, 0x79, 0x9B, 0x02, 0x3D, 0xE7, 0x5A, 0x28, 0xB2, 0xD7, 0x6E,
+        0x22, 0x3B, 0x27, 0xF9, 0x38, 0x0C, 0xEC, 0x54, 0xE5, 0x94, 0xD0, 0x29, 0x17, 0xB3, 0xA3, 0x96,
+        0x49, 0x47, 0x94, 0xA7, 0x50, 0xFE, 0x8A, 0x69, 0x6D, 0x81, 0xAF, 0x23, 0x0A, 0xFD, 0xD3, 0xCA,
+        0x36, 0xE2, 0xE9, 0x1B, 0xD1, 0xD0, 0x96, 0x5B, 0x14, 0xF3, 0xE0, 0x54, 0xF5, 0x8B, 0xA5, 0xFB,
+        0x46, 0xCB, 0x7F, 0x8E, 0x7E, 0xB3, 0x41, 0x92, 0x47, 0xB2, 0xCA, 0xE1, 0x90, 0xCC, 0x7C, 0xFF,
+        0x2B, 0xED, 0x04, 0xF1, 0xC6, 0x08, 0x95, 0x64, 0x38, 0xB9, 0x0F, 0x3B, 0x9A, 0x26, 0xF3, 0x58,
+        0x97, 0x84, 0x1B, 0xC9, 0xAA, 0xD5, 0x98, 0x83, 0x0C, 0xAB, 0xCE, 0xEA, 0xD5, 0x94, 0x4E, 0x00,
+        0xAE, 0x36, 0x8A, 0xF7
+    };
+
+    // Construct DER (PKCS#1) public key manually
+    std::vector<uint8_t> der;
+    der.push_back(0x30); // SEQUENCE
+    der.push_back(0x82); // 2-byte length
+    size_t seqLenPos = der.size();
+    der.push_back(0x00);
+    der.push_back(0x00);
+
+    // Modulus INTEGER
+    der.push_back(0x02); // INTEGER
+    der.push_back(0x82); // 2-byte length
+    der.push_back(0x01); // 257 bytes
+    der.push_back(0x01);
+    der.push_back(0x00); // 0x00 padding to prevent sign bit interpretation
+    
+    // Copy Modulus (256 bytes) reversing from Little-Endian to Big-Endian
+    for (int i = 0; i < 256; ++i) {
+        der.push_back(pubBlob[20 + 255 - i]);
+    }
+
+    // Exponent INTEGER
+    der.push_back(0x02); // INTEGER
+    der.push_back(0x03); // 3 bytes length
+    der.push_back(0x01); // 0x01
+    der.push_back(0x00); // 0x00
+    der.push_back(0x01); // 0x01 (65537)
+
+    // Update SEQUENCE length
+    size_t totalLen = der.size() - 4; // Excluding SEQUENCE header bytes (30 82 XX XX)
+    der[seqLenPos] = (totalLen >> 8) & 0xFF;
+    der[seqLenPos + 1] = totalLen & 0xFF;
+
+    CFDataRef keyData = CFDataCreate(kCFAllocatorDefault, der.data(), der.size());
+    if (!keyData) return false;
+
+    // Attributes for SecKeyCreateWithData
+    CFMutableDictionaryRef attributes = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    CFDictionarySetValue(attributes, kSecAttrKeyType, kSecAttrKeyTypeRSA);
+    CFDictionarySetValue(attributes, kSecAttrKeyClass, kSecAttrKeyClassPublic);
+
+    CFErrorRef error = nullptr;
+    SecKeyRef publicKey = SecKeyCreateWithData(keyData, attributes, &error);
+    CFRelease(keyData);
+    CFRelease(attributes);
+
+    if (!publicKey) {
+        if (error) CFRelease(error);
+        return false;
+    }
+
+    CFDataRef messageData = CFDataCreate(kCFAllocatorDefault, (const UInt8*)dateStr.c_str(), dateStr.length());
+    CFDataRef signatureData = CFDataCreate(kCFAllocatorDefault, sigData.data(), sigData.size());
+
+    bool isValidSig = false;
+    if (messageData && signatureData) {
+        isValidSig = SecKeyVerifySignature(
+            publicKey,
+            kSecKeyAlgorithmRSASignatureMessagePKCS1v15SHA256,
+            messageData,
+            signatureData,
+            &error
+        );
+    }
+
+    if (messageData) CFRelease(messageData);
+    if (signatureData) CFRelease(signatureData);
+    CFRelease(publicKey);
+    if (error) CFRelease(error);
+
+    if (!isValidSig) return false;
+
+    time_t now = time(nullptr);
+    struct tm tm_now;
+    localtime_r(&now, &tm_now);
+
+    char buf[9];
+    strftime(buf, sizeof(buf), "%Y%m%d", &tm_now);
+    std::string current_dateStr(buf);
+
+    if (current_dateStr > dateStr) return false; 
+    return true; 
 #endif
 }
 
@@ -272,28 +407,86 @@ std::string GetExeDir() {
 }
 #endif
 
+// Helper: get terminal column width (cross-platform)
+static int GetTerminalCols() {
+#ifdef _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+        return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    }
+    return 80;
+#else
+    struct winsize ws;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0) {
+        return ws.ws_col;
+    }
+    return 80;
+#endif
+}
+
+// Helper: clamp a plain-text string to maxCols visible characters
+// (strips ANSI escapes for counting, returns truncated raw string)
+static std::string ClampLine(const std::string& s, int maxCols) {
+    // Walk the string: skip ANSI escape sequences when counting visible cols.
+    int visible = 0;
+    bool inEsc = false;
+    std::string out;
+    out.reserve(s.size());
+    for (size_t i = 0; i < s.size(); ++i) {
+        char c = s[i];
+        if (inEsc) {
+            out += c;
+            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
+                inEsc = false;
+            }
+        } else if (c == '\x1b' && i + 1 < s.size() && s[i+1] == '[') {
+            out += c;
+            inEsc = true;
+        } else {
+            if (visible >= maxCols - 1) {
+                out += '>';
+                break;
+            }
+            out += c;
+            ++visible;
+        }
+    }
+    return out;
+}
+
 // TUI Dashboard Console Output Helper
 void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval, float alphaThreshold, uint64_t totalCefFrames, int pendingCount) {
     static bool tuiInitialized = false;
     if (!tuiInitialized) {
         EnableVTMode();
-        std::cout << "\x1b[2J" << std::flush;
+        // Switch to alternate screen buffer, clear screen, hide cursor
+        std::cout << "\x1b[?1049h\x1b[2J\x1b[?25l" << std::flush;
         tuiInitialized = true;
     }
 
     const char* modeStr = "Interlace (0)";
     int vMode = g_viewMode.load();
-    if (vMode == 1) modeStr = "\x1b[33mDiff Mode (1)\x1b[0m"; 
+    if (vMode == 1) modeStr = "\x1b[33mDiff Mode (1)\x1b[0m";
     else if (vMode == 2) modeStr = "Progressive (2)";
-    else if (vMode == 3) modeStr = "\x1b[35m30p Blend (3)\x1b[0m"; 
+    else if (vMode == 3) modeStr = "\x1b[35m30p Blend (3)\x1b[0m";
 
     auto recentLogs = g_logger.GetRecentLogs();
 
+    // Get terminal width for line clamping
+    int cols = GetTerminalCols();
+
+    // Clamp URL to avoid wrapping
+    std::string urlDisplay = ClampLine(g_targetUrl, cols - 8); // "  URL: " prefix = 7 chars
+
     std::ostringstream oss;
+    // Move cursor to home (0,0) without clearing screen (prevents scrollback buffer growth)
     oss << "\x1b[H";
+    // Disable auto-wrap while drawing (re-enabled at the end)
+    oss << "\x1b[?7l";
+
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[1m\x1b[37m\xF0\x9F\x8D\x8C CEFDecklink Live Status Dashboard \xF0\x9F\x8D\x8C\x1b[K\x1b[0m\n";
-    oss << "  \x1b[36mURL: \x1b[0m" << g_targetUrl << "\x1b[K\n";
+    oss << "  \x1b[36mURL: \x1b[0m" << urlDisplay << "\x1b[K\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[32m[Status]\x1b[0m   DeckLink: \x1b[1m" << std::fixed << std::setprecision(2) << deckLinkFps << " fps\x1b[0m | "
         << "CEF: \x1b[1m" << cefFps << " fps\x1b[0m | "
@@ -306,10 +499,10 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     oss << " | Filter: " << filterStr << "\x1b[K\n";
     oss << "\x1b[36m-------------------------------------------------------------------------------\x1b[K\x1b[0m\n";
     oss << "  \x1b[33mRecent Events / Logs:\x1b[K\x1b[0m\n";
-    
+
     for (int i = 0; i < 5; ++i) {
         if (i < (int)recentLogs.size()) {
-            oss << "   " << recentLogs[i] << "\x1b[K\n";
+            oss << "   " << ClampLine(recentLogs[i], cols - 4) << "\x1b[K\n";
         } else {
             oss << "\x1b[K\n";
         }
@@ -319,6 +512,9 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+F(Filter)\x1b[K\x1b[0m\n";
     oss << "            \x1b[90mCtrl+A/Z(UnmultThresh) | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\x1b[J";
+
+    // Re-enable auto-wrap
+    oss << "\x1b[?7h";
 
     std::cout << oss.str() << std::flush;
 }
@@ -337,9 +533,16 @@ bool LoadConfig(std::string& url, float& alpha, std::string& format) {
     std::wstring configPath = exeDir + L"\\config.json";
     std::ifstream file(configPath);
 #else
-    std::string exeDir = GetExeDir();
-    std::string configPath = exeDir + "/config.json";
+    std::string exeDir = GetExeDir(); // .app/Contents/MacOS
+    // 1st: look next to the .app bundle (for ZIP distribution)
+    std::string appSiblingDir = exeDir + "/../../..";
+    std::string configPath = appSiblingDir + "/config.json";
     std::ifstream file(configPath);
+    // 2nd: fallback to exe directory (for in-bundle / dev usage)
+    if (!file.is_open()) {
+        configPath = exeDir + "/config.json";
+        file.open(configPath);
+    }
 #endif
     if (!file.is_open()) return false;
 
@@ -603,6 +806,11 @@ int main(int argc, char** argv)
 #ifdef _WIN32
     CefMainArgs main_args(GetModuleHandle(nullptr));
 #else
+    CefScopedLibraryLoader library_loader;
+    if (!library_loader.LoadInMain()) {
+        std::cerr << "Failed to load CEF library." << std::endl;
+        return 1;
+    }
     CefMainArgs main_args(argc, argv);
 #endif
     int exit_code = CefExecuteProcess(main_args, nullptr, nullptr);
@@ -887,7 +1095,7 @@ int main(int argc, char** argv)
     timeEndPeriod(1);
 #endif
     
-    std::cout << "\nExiting." << std::endl;
+    std::cout << "\x1b[?1049l\x1b[?25h\nExiting." << std::endl;
     return 0;
 }
 
@@ -1053,6 +1261,7 @@ BOOL WINAPI ConsoleHandler(DWORD ctrlType) {
     if (ctrlType == CTRL_C_EVENT || ctrlType == CTRL_CLOSE_EVENT || ctrlType == CTRL_BREAK_EVENT) {
         g_appDone = true;
         g_deckLink.StopOutput();
+        std::cout << "\x1b[?1049l\x1b[?25h" << std::flush;
         ExitProcess(0);
         return TRUE;
     }
