@@ -149,6 +149,7 @@ static ID3D11RenderTargetView*  g_mainRenderTargetView = nullptr;
 #endif
 static std::mutex               g_d3dContextMutex;
 static bool                     g_appDone = false;
+static std::atomic<bool>        g_isShutdownComplete(false);
 
 // Managers & Devices (Global)
 static CefManager g_cefManager;
@@ -510,7 +511,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
 
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+F(Filter)\x1b[K\x1b[0m\n";
-    oss << "            \x1b[90mCtrl+A/Z(UnmultThresh) | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
+    oss << "            \x1b[90mCtrl+A/Z(Unmult) | Ctrl+R(Reload) | Ctrl+K(Keyer: " << (g_deckLink.GetKeyerMode() ? "External" : "Internal") << ") | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\x1b[J";
 
     // Re-enable auto-wrap
@@ -672,16 +673,40 @@ void RenderFrame(HWND hWnd) {
             int fm = g_filterMode.load();
             g_filterMode.store((fm + 1) % 3);
             changed = true;
+        } else if (ch == 18 || (modified && (ch == 'r' || ch == 'R')) || (modified && ch == 0 && _kbhit() && _getch() == 63)) {
+            // Ctrl+R or Mod+R or Mod+F5
+            g_cefManager.ReloadIgnoreCache();
+        } else if (ch == 11 || (modified && (ch == 'k' || ch == 'K'))) {
+            bool current = g_deckLink.GetKeyerMode();
+            g_deckLink.SetKeyerMode(!current);
+            g_logger.Log("App", std::string("Keyer mode switched to: ") + (!current ? "Internal" : "External"));
+            changed = true;
         }
     }
 
-    // Window Fullscreen hotkey (F11)
-    if (GetForegroundWindow() == hWnd && (GetAsyncKeyState(VK_F11) & 0x8000)) {
-        static auto lastF11Time = std::chrono::steady_clock::now();
-        auto nowF11 = std::chrono::steady_clock::now();
-        if (std::chrono::duration_cast<std::chrono::milliseconds>(nowF11 - lastF11Time).count() > 300) {
-            ToggleFullscreen(hWnd);
-            lastF11Time = nowF11;
+    // Window Hotkeys
+    if (GetForegroundWindow() == hWnd) {
+        if (GetAsyncKeyState(VK_F11) & 0x8000) {
+            static auto lastF11Time = std::chrono::steady_clock::now();
+            auto nowF11 = std::chrono::steady_clock::now();
+            if (std::chrono::duration_cast<std::chrono::milliseconds>(nowF11 - lastF11Time).count() > 300) {
+                ToggleFullscreen(hWnd);
+                lastF11Time = nowF11;
+            }
+        }
+        
+        bool ctrlPressed = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+        bool shiftPressed = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+        bool altPressed = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+        bool modified = ctrlPressed || shiftPressed || altPressed;
+        
+        if (modified && ((GetAsyncKeyState('R') & 0x8000) || (GetAsyncKeyState(VK_F5) & 0x8000))) {
+            static auto lastReloadTime = std::chrono::steady_clock::now();
+            auto nowReload = std::chrono::steady_clock::now();
+            if (std::chrono::duration_cast<std::chrono::milliseconds>(nowReload - lastReloadTime).count() > 500) {
+                g_cefManager.ReloadIgnoreCache();
+                lastReloadTime = nowReload;
+            }
         }
     }
 #endif
@@ -1096,6 +1121,7 @@ int main(int argc, char** argv)
 #endif
     
     std::cout << "\x1b[?1049l\x1b[?25h\nExiting." << std::endl;
+    g_isShutdownComplete = true;
     return 0;
 }
 
@@ -1246,7 +1272,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return 0;
 
     case WM_CLOSE:
-        ::DestroyWindow(hWnd);
+        g_appDone = true;
         return 0;
 
     case WM_DESTROY:
@@ -1260,9 +1286,12 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 BOOL WINAPI ConsoleHandler(DWORD ctrlType) {
     if (ctrlType == CTRL_C_EVENT || ctrlType == CTRL_CLOSE_EVENT || ctrlType == CTRL_BREAK_EVENT) {
         g_appDone = true;
-        g_deckLink.StopOutput();
-        std::cout << "\x1b[?1049l\x1b[?25h" << std::flush;
-        ExitProcess(0);
+        
+        // Wait for the main thread to complete shutdown (up to 5 seconds by OS policy)
+        while (!g_isShutdownComplete) {
+            Sleep(10);
+        }
+        
         return TRUE;
     }
     return FALSE;

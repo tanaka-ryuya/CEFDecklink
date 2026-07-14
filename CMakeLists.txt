@@ -110,7 +110,6 @@ file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h" "src/*.rc")
 
 # Exclude macOS helper implementation from the main binary sources
 list(FILTER SOURCES EXCLUDE REGEX "process_helper_mac\\.cpp$")
-list(FILTER SOURCES EXCLUDE REGEX "CrashHandler\\.cpp$")
 
 # Create executable
 if(APPLE)

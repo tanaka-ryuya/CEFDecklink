@@ -49,7 +49,8 @@ DeckLinkDevice::DeckLinkDevice()
       m_frameDuration(1001),  // Duration per FRAME (for 59.94i)
       m_renderCallback(nullptr),
       m_isSimulated(false),
-      m_simulationRunning(false)
+      m_simulationRunning(false),
+      m_keyerExternal(true)
 {
 }
 
@@ -167,21 +168,20 @@ bool DeckLinkDevice::Initialize(const std::string& format)
         return false;
     }
 
-    // Enable External Keying using IDeckLinkKeyer
-    // This will output Fill on SDI Out and Key on SDI Out 2
+    // Enable Keying using IDeckLinkKeyer
     IDeckLinkKeyer* keyer = nullptr;
     if (m_deckLink->QueryInterface(IID_IDeckLinkKeyer, (void**)&keyer) == S_OK)
     {
         // Enable(true) = External Keying, Enable(false) = Internal Keying
-        hr = keyer->Enable(true);  // TRUE for External Key!
+        hr = keyer->Enable(m_keyerExternal);
         if (SUCCEEDED(hr))
         {
             keyer->SetLevel(255);  // Full opacity
-            std::cout << "External Keying enabled successfully! Fill on SDI Out, Key on SDI Out 2." << std::endl;
+            std::cout << (m_keyerExternal ? "External" : "Internal") << " Keying enabled successfully!" << std::endl;
         }
         else
         {
-            std::cerr << "Warning: Could not enable external keying - result = " << std::hex << hr << std::endl;
+            std::cerr << "Warning: Could not enable keying - result = " << std::hex << hr << std::endl;
         }
         keyer->Release();
     }
@@ -602,4 +602,25 @@ void DeckLinkDevice::SimulationLoop() {
              }
         }
     }
+}
+
+bool DeckLinkDevice::SetKeyerMode(bool external)
+{
+    m_keyerExternal = external;
+    if (m_isSimulated || !m_deckLink) {
+        return true;
+    }
+    IDeckLinkKeyer* keyer = nullptr;
+    if (m_deckLink->QueryInterface(IID_IDeckLinkKeyer, (void**)&keyer) == S_OK)
+    {
+        HRESULT hr = keyer->Enable(external);
+        if (SUCCEEDED(hr))
+        {
+            keyer->SetLevel(255);
+            keyer->Release();
+            return true;
+        }
+        keyer->Release();
+    }
+    return false;
 }

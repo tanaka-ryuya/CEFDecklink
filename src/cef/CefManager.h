@@ -46,6 +46,9 @@ public:
     // Resize
     void Resize(int width, int height);
 
+    // Reload
+    void ReloadIgnoreCache();
+
     // Access to render handler for texture access
     CefRefPtr<CefRenderHandlerImpl> GetRenderHandler() const { return m_renderHandler; }
 

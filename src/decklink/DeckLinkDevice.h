@@ -41,6 +41,10 @@ public:
     // Simulator Mode
     bool IsSimulated() const { return m_isSimulated; }
 
+    // Keyer Mode (External vs Internal)
+    bool GetKeyerMode() const { return m_keyerExternal; }
+    bool SetKeyerMode(bool external);
+
     // IUnknown
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv);
     virtual ULONG STDMETHODCALLTYPE AddRef();
@@ -91,4 +95,7 @@ private:
     std::thread m_simulationThread;
     std::atomic<bool> m_simulationRunning;
     void SimulationLoop();
+
+    // Keyer State
+    bool m_keyerExternal;
 };

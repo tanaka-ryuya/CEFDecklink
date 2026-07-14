@@ -190,6 +190,12 @@ void CefManager::DoMessageLoopWork() {
 }
 
 void CefManager::Shutdown() {
+    if (m_browser) {
+        m_browser->GetHost()->CloseBrowser(true);
+        m_browser = nullptr;
+    }
+    m_renderHandler = nullptr;
+
     if (m_initialized) {
         CefShutdown();
         m_initialized = false;
@@ -337,6 +343,12 @@ void CefManager::Resize(int width, int height) {
     }
     if (m_browser) {
         m_browser->GetHost()->WasResized();
+    }
+}
+
+void CefManager::ReloadIgnoreCache() {
+    if (m_browser) {
+        m_browser->ReloadIgnoreCache();
     }
 }
 
