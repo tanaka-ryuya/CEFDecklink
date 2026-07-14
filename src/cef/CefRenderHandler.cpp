@@ -174,7 +174,7 @@ void CefRenderHandlerImpl::SyncWithGPU() {
                 entry.timestamp = m_timestamps[bufferIdx];
                 m_readyTextures.push(entry);
                 
-                while(m_readyTextures.size() > 16) {
+                while(m_readyTextures.size() > 12) {
                     m_readyTextures.front().srv->Release();
                     m_readyTextures.pop();
                     m_droppedFrames++;
@@ -216,7 +216,7 @@ void CefRenderHandlerImpl::SyncWithGPU() {
             entry.timestamp = m_timestamps[bufferIdx];
             m_readyTextures.push(entry);
             
-            while(m_readyTextures.size() > 16) {
+            while(m_readyTextures.size() > 12) {
                 m_readyTextures.front().srv->Release();
                 m_readyTextures.pop();
                 m_droppedFrames++;
