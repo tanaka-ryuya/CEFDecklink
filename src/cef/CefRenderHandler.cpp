@@ -247,8 +247,8 @@ void CefRenderHandlerImpl::GetSynchronizedTextures(CefFrameResource* srvTop, Cef
     if (m_isConsuming) {
         m_framesSinceLastDrop++;
         
-        // Soft threshold drop (planned drop): drop at most 1 frame per 30 cycles if size > 10
-        if (m_readyTextures.size() > 10 && m_framesSinceLastDrop >= 30) {
+        // Soft threshold drop (planned drop): drop at most 1 frame per 30 cycles if size > 12
+        if (m_readyTextures.size() > 12 && m_framesSinceLastDrop >= 30) {
             if (m_readyTextures.front().srv) m_readyTextures.front().srv->Release();
             m_readyTextures.pop();
             m_droppedFrames++;
