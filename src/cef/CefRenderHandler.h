@@ -83,6 +83,7 @@ private:
     bool m_isConsuming = false;
     bool m_hadStarvation = false; // Tracks if we hit size==1 recently
     int m_prerollDelay = 3; // DeckLink cycles to wait before consuming
+    int m_framesSinceLastDrop = 30; // Cycles since last smooth drop (limit to at most 1 drop per 30 cycles)
     
     std::atomic<int> m_droppedFrames{0};
     std::atomic<int> m_duplicatedFrames{0};

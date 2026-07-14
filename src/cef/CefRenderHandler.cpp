@@ -174,7 +174,7 @@ void CefRenderHandlerImpl::SyncWithGPU() {
                 entry.timestamp = m_timestamps[bufferIdx];
                 m_readyTextures.push(entry);
                 
-                while(m_readyTextures.size() > 12) {
+                while(m_readyTextures.size() > 16) {
                     m_readyTextures.front().srv->Release();
                     m_readyTextures.pop();
                     m_droppedFrames++;
@@ -216,7 +216,7 @@ void CefRenderHandlerImpl::SyncWithGPU() {
             entry.timestamp = m_timestamps[bufferIdx];
             m_readyTextures.push(entry);
             
-            while(m_readyTextures.size() > 12) {
+            while(m_readyTextures.size() > 16) {
                 m_readyTextures.front().srv->Release();
                 m_readyTextures.pop();
                 m_droppedFrames++;
@@ -245,6 +245,16 @@ void CefRenderHandlerImpl::GetSynchronizedTextures(CefFrameResource* srvTop, Cef
     }
 
     if (m_isConsuming) {
+        m_framesSinceLastDrop++;
+        
+        // Soft threshold drop (planned drop): drop at most 1 frame per 30 cycles if size > 10
+        if (m_readyTextures.size() > 10 && m_framesSinceLastDrop >= 30) {
+            if (m_readyTextures.front().srv) m_readyTextures.front().srv->Release();
+            m_readyTextures.pop();
+            m_droppedFrames++;
+            m_framesSinceLastDrop = 0;
+        }
+
         if (m_readyTextures.size() >= 2) {
             if (m_hadStarvation) {
                 m_duplicatedFrames++;
