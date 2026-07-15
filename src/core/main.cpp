@@ -692,7 +692,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
 
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+F(Filter)\x1b[K\x1b[0m\n";
-    oss << "            \x1b[90mCtrl+A/Z(Unmult:0.001) | Ctrl+S/X(Unmult:0.1) | Ctrl+R(Reload) | Ctrl+K(Keyer: " << (g_deckLink.GetKeyerMode() ? "External" : "Internal") << ") | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
+    oss << "            \x1b[90mCtrl+A/Z(Unmult:0.001) | Ctrl+Up/Down(Unmult:0.1) | Ctrl+R(Reload) | Ctrl+K(Keyer: " << (g_deckLink.GetKeyerMode() ? "External" : "Internal") << ") | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
 
     std::string valStatus;
@@ -851,16 +851,30 @@ void RenderFrame(HWND hWnd) {
 #ifdef _WIN32
     while (_kbhit()) {
         int ch = _getch();
-        if (ch == 0 || ch == 224) {
-            if (_kbhit()) {
-                _getch(); // Consume key code byte
-            }
-            continue;
-        }
         bool ctrlPressed = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
         bool shiftPressed = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
         bool altPressed = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
         bool modified = ctrlPressed || shiftPressed || altPressed;
+
+        if (ch == 0 || ch == 224) {
+            if (_kbhit()) {
+                int extra = _getch();
+                if (ch == 224) {
+                    if (extra == 141 || (extra == 72 && ctrlPressed)) { // Ctrl+Up (Unmult 0.1)
+                        g_alphaThreshold += 0.1f;
+                        if (g_alphaThreshold > 1.0f) g_alphaThreshold = 1.0f;
+                        changed = true;
+                        g_tuiChanged = true;
+                    } else if (extra == 145 || (extra == 80 && ctrlPressed)) { // Ctrl+Down (Unmult 0.1)
+                        g_alphaThreshold -= 0.1f;
+                        if (g_alphaThreshold < 0.0f) g_alphaThreshold = 0.0f;
+                        changed = true;
+                        g_tuiChanged = true;
+                    }
+                }
+            }
+            continue;
+        }
 
         if (ch == 10 || (ch == 13 && ctrlPressed)) {
             StartUrlValidation(g_inputUrl);
@@ -890,14 +904,6 @@ void RenderFrame(HWND hWnd) {
             changed = true;
         } else if (ch == 26) { // Ctrl+Z (Unmult 0.001)
             g_alphaThreshold -= 0.001f;
-            if (g_alphaThreshold < 0.0f) g_alphaThreshold = 0.0f;
-            changed = true;
-        } else if (ch == 19) { // Ctrl+S (Unmult 0.1)
-            g_alphaThreshold += 0.1f;
-            if (g_alphaThreshold > 1.0f) g_alphaThreshold = 1.0f;
-            changed = true;
-        } else if (ch == 24) { // Ctrl+X (Unmult 0.1)
-            g_alphaThreshold -= 0.1f;
             if (g_alphaThreshold < 0.0f) g_alphaThreshold = 0.0f;
             changed = true;
         } else if (ch == 6) { // Ctrl+F
