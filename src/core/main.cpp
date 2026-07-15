@@ -1339,9 +1339,8 @@ int main(int argc, char** argv)
                 if (msg.message == WM_QUIT)
                     g_appDone = true;
             }
-            if (g_appDone) break;
-
             RenderFrame(hwnd);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
 #else
         while (!g_appDone)
