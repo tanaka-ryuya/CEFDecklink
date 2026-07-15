@@ -1,6 +1,6 @@
 {
-    "url": "https://cef-decklink-sale.vercel.app/sample.html",
-    "unmult_thresh": 0.0000,
+    "url": "http://localhost:9090/graphics/on_air.html?machineId=3ff6ce80-5eb3-4b5c-8906-83905de0e57f",
+    "unmult_thresh": 1.0000,
     "format": "5994i",
     "il_filter_mode": 1
 }

@@ -348,7 +348,30 @@ void CefManager::Resize(int width, int height) {
 
 void CefManager::ReloadIgnoreCache() {
     if (m_browser) {
-        m_browser->ReloadIgnoreCache();
+        CefRefPtr<CefFrame> mainFrame = m_browser->GetMainFrame();
+        if (mainFrame) {
+            std::string js = 
+                "if (navigator.serviceWorker) {\n"
+                "    navigator.serviceWorker.getRegistrations().then(regs => {\n"
+                "        if (regs.length === 0) {\n"
+                "            window.location.reload(true);\n"
+                "        } else {\n"
+                "            Promise.all(regs.map(r => r.unregister())).then(() => {\n"
+                "                window.location.reload(true);\n"
+                "            }).catch(() => {\n"
+                "                window.location.reload(true);\n"
+                "            });\n"
+                "        }\n"
+                "    }).catch(() => {\n"
+                "        window.location.reload(true);\n"
+                "    });\n"
+                "} else {\n"
+                "    window.location.reload(true);\n"
+                "}\n";
+            mainFrame->ExecuteJavaScript(js, "http://reload", 0);
+        } else {
+            m_browser->ReloadIgnoreCache();
+        }
     }
 }
 
