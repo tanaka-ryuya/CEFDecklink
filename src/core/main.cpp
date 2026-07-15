@@ -669,6 +669,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[1m\x1b[37m\xF0\x9F\x8D\x8C CEFDecklink Live Status Dashboard \xF0\x9F\x8D\x8C\x1b[K\x1b[0m\n";
     oss << "  \x1b[36mURL: \x1b[0m" << urlDisplay << "\x1b[K\n";
+    oss << "  \x1b[36mDevTools: \x1b[0mhttp://localhost:9222\x1b[K\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[32m[Status]\x1b[0m   DeckLink: \x1b[1m" << std::fixed << std::setprecision(2) << deckLinkFps << " fps\x1b[0m | "
         << "CEF: \x1b[1m" << cefFps << " fps\x1b[0m | "
@@ -681,7 +682,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     oss << " | Filter: " << filterStr << "\x1b[K\n";
     oss << "\x1b[36m-------------------------------------------------------------------------------\x1b[K\x1b[0m\n";
     oss << "  \x1b[33mRecent Events / Logs:\x1b[K\x1b[0m\n";
-
+ 
     for (int i = 0; i < 5; ++i) {
         if (i < (int)recentLogs.size()) {
             oss << "   " << ClampLine(recentLogs[i], cols - 4) << "\x1b[K\n";
@@ -689,12 +690,12 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
             oss << "\x1b[K\n";
         }
     }
-
+ 
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+F(Filter)\x1b[K\x1b[0m\n";
     oss << "            \x1b[90mCtrl+A/Z(Unmult:0.001) | Ctrl+Up/Down(Unmult:0.1) | Ctrl+R(Reload) | Ctrl+K(Keyer: " << (g_deckLink.GetKeyerMode() ? "External" : "Internal") << ") | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
-
+ 
     std::string valStatus;
     int state = g_validationState.load();
     {
@@ -709,16 +710,16 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
             valStatus = "\x1b[90mReady\x1b[0m";
         }
     }
-
+ 
     std::string keyHint = " \x1b[90m[Ctrl+Enter to Connect]\x1b[0m";
     std::string inputDisplay = ClampLine(g_inputUrl, cols - 30);
-
+ 
     oss << "  \x1b[36m>> URL:\x1b[0m " << inputDisplay << keyHint << "\x1b[K\n";
     oss << "  \x1b[36m>> Status:\x1b[0m " << valStatus << "\x1b[K\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
-
-    // Position physical console cursor right after visible URL text on line 18
-    oss << "\x1b[18;" << (11 + inputDisplay.length()) << "H";
+ 
+    // Position physical console cursor right after visible URL text on line 19
+    oss << "\x1b[19;" << (11 + inputDisplay.length()) << "H";
     // Show cursor
     oss << "\x1b[?25h";
 
