@@ -692,7 +692,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
 
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+F(Filter)\x1b[K\x1b[0m\n";
-    oss << "            \x1b[90mCtrl+A/Z(Unmult) | Ctrl+R(Reload) | Ctrl+K(Keyer: " << (g_deckLink.GetKeyerMode() ? "External" : "Internal") << ") | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
+    oss << "            \x1b[90mCtrl+S/X(Unmult) | Ctrl+R(Reload) | Ctrl+K(Keyer: " << (g_deckLink.GetKeyerMode() ? "External" : "Internal") << ") | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
 
     std::string valStatus;
@@ -884,12 +884,12 @@ void RenderFrame(HWND hWnd) {
         } else if (ch == 2) { // Ctrl+B
             g_viewMode.store(3); // 30p Blend Mode
             changed = true;
-        } else if (ch == 1) { // Ctrl+A
-            g_alphaThreshold += altPressed ? 0.1f : 0.001f;
+        } else if (ch == 19) { // Ctrl+S
+            g_alphaThreshold += shiftPressed ? 0.1f : 0.001f;
             if (g_alphaThreshold > 1.0f) g_alphaThreshold = 1.0f;
             changed = true;
-        } else if (ch == 26) { // Ctrl+Z
-            g_alphaThreshold -= altPressed ? 0.1f : 0.001f;
+        } else if (ch == 24) { // Ctrl+X
+            g_alphaThreshold -= shiftPressed ? 0.1f : 0.001f;
             if (g_alphaThreshold < 0.0f) g_alphaThreshold = 0.0f;
             changed = true;
         } else if (ch == 6) { // Ctrl+F
