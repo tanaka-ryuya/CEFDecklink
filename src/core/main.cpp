@@ -885,11 +885,11 @@ void RenderFrame(HWND hWnd) {
             g_viewMode.store(3); // 30p Blend Mode
             changed = true;
         } else if (ch == 1) { // Ctrl+A
-            g_alphaThreshold += shiftPressed ? 0.1f : 0.001f;
+            g_alphaThreshold += altPressed ? 0.1f : 0.001f;
             if (g_alphaThreshold > 1.0f) g_alphaThreshold = 1.0f;
             changed = true;
         } else if (ch == 26) { // Ctrl+Z
-            g_alphaThreshold -= shiftPressed ? 0.1f : 0.001f;
+            g_alphaThreshold -= altPressed ? 0.1f : 0.001f;
             if (g_alphaThreshold < 0.0f) g_alphaThreshold = 0.0f;
             changed = true;
         } else if (ch == 6) { // Ctrl+F
