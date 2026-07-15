@@ -48,6 +48,9 @@ public:
 
     // Reload
     void ReloadIgnoreCache();
+    
+    // Load new URL
+    void LoadURL(const std::string& url);
 
     // Access to render handler for texture access
     CefRefPtr<CefRenderHandlerImpl> GetRenderHandler() const { return m_renderHandler; }

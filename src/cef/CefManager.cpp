@@ -352,6 +352,12 @@ void CefManager::ReloadIgnoreCache() {
     }
 }
 
+void CefManager::LoadURL(const std::string& url) {
+    if (m_browser && m_browser->GetMainFrame()) {
+        m_browser->GetMainFrame()->LoadURL(url);
+    }
+}
+
 
 void CefAppImpl::OnContextInitialized() {
     if (m_manager) {

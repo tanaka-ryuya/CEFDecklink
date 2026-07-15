@@ -208,6 +208,7 @@ if(WIN32)
         "${CEF_ROOT}/Release/libcef.lib"
         gdi32.lib
         user32.lib
+        wininet.lib
     )
 
     # Unicode support for Win32

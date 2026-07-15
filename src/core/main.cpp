@@ -11,6 +11,8 @@
 #include <wincrypt.h>
 #pragma comment(lib, "crypt32.lib")
 #include <conio.h>
+#include <wininet.h>
+#pragma comment(lib, "wininet.lib")
 #else
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -455,13 +457,192 @@ static std::string ClampLine(const std::string& s, int maxCols) {
     return out;
 }
 
+// --- TUI URL Input & Validation Globals ---
+static std::string g_inputUrl;
+static std::atomic<bool> g_tuiChanged(false);
+static std::atomic<int> g_validationState(0); // 0=Idle, 1=Checking, 2=Accepted, 3=Rejected
+static std::string g_validationStatusText;
+static std::mutex g_validationMutex;
+static std::atomic<bool> g_isValidating(false);
+
+#ifdef _WIN32
+
+struct UrlCheckResult {
+    bool success = false;
+    int statusCode = 0;
+    std::string statusText;
+};
+
+static bool CheckFileExists(const std::string& path) {
+    DWORD dwAttrib = GetFileAttributesA(path.c_str());
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES && 
+           !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+static UrlCheckResult CheckUrlAlive(const std::string& url) {
+    UrlCheckResult result;
+    if (url.rfind("file://", 0) == 0) {
+        std::string path = url.substr(7);
+        while (!path.empty() && path[0] == '/') {
+            path = path.substr(1);
+        }
+        if (path.size() >= 2 && path[1] == '|') {
+            path[1] = ':';
+        }
+        if (CheckFileExists(path)) {
+            result.success = true;
+            result.statusCode = 200;
+            result.statusText = "Accepted (Local File)";
+        } else {
+            result.success = false;
+            result.statusCode = 404;
+            result.statusText = "404 File Not Found";
+        }
+        return result;
+    }
+
+    HINTERNET hInternet = InternetOpenA("CEFDecklink-TUI", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+    if (!hInternet) {
+        result.statusText = "Failed to init Internet";
+        return result;
+    }
+
+    // Set connection and receive timeouts to 3 seconds
+    DWORD timeout = 3000;
+    InternetSetOptionA(hInternet, INTERNET_OPTION_CONNECT_TIMEOUT, &timeout, sizeof(timeout));
+    InternetSetOptionA(hInternet, INTERNET_OPTION_RECEIVE_TIMEOUT, &timeout, sizeof(timeout));
+
+    DWORD flags = INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE | INTERNET_FLAG_NO_AUTO_REDIRECT;
+    if (url.rfind("https://", 0) == 0) {
+        flags |= INTERNET_FLAG_SECURE;
+    }
+
+    HINTERNET hUrl = InternetOpenUrlA(hInternet, url.c_str(), NULL, 0, flags, 0);
+    if (!hUrl) {
+        DWORD err = GetLastError();
+        result.statusCode = 0;
+        if (err == ERROR_INTERNET_TIMEOUT) {
+            result.statusText = "Timeout (3s)";
+        } else {
+            result.statusText = "Connection failed (" + std::to_string(err) + ")";
+        }
+        InternetCloseHandle(hInternet);
+        return result;
+    }
+
+    char statusBuffer[256] = {0};
+    DWORD bufferLength = sizeof(statusBuffer);
+    if (HttpQueryInfoA(hUrl, HTTP_QUERY_STATUS_CODE, statusBuffer, &bufferLength, NULL)) {
+        try {
+            result.statusCode = std::stoi(statusBuffer);
+        } catch (...) {
+            result.statusCode = 0;
+        }
+        
+        if (result.statusCode >= 200 && result.statusCode < 400) {
+            result.success = true;
+            result.statusText = "Accepted";
+        } else {
+            char phraseBuffer[256] = {0};
+            DWORD phraseLength = sizeof(phraseBuffer);
+            if (HttpQueryInfoA(hUrl, HTTP_QUERY_STATUS_TEXT, phraseBuffer, &phraseLength, NULL)) {
+                result.statusText = std::string(statusBuffer) + " " + phraseBuffer;
+            } else {
+                result.statusText = std::string(statusBuffer) + " Error";
+            }
+        }
+    } else {
+        result.statusText = "Query failed";
+    }
+
+    InternetCloseHandle(hUrl);
+    InternetCloseHandle(hInternet);
+    return result;
+}
+
+static bool SaveConfig(const std::string& url, float alpha, const std::string& format, int filterMode) {
+    wchar_t exePath[MAX_PATH];
+    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    std::wstring exeDir = exePath;
+    size_t lastSlash = exeDir.find_last_of(L"\\/");
+    if (lastSlash != std::wstring::npos) {
+        exeDir = exeDir.substr(0, lastSlash);
+    }
+    
+    // 1. Save to executable directory (where app runs from)
+    std::wstring configPath = exeDir + L"\\config.json";
+    {
+        std::ofstream file(configPath, std::ios::out | std::ios::trunc);
+        if (file.is_open()) {
+            file << "{\n";
+            file << "    \"url\": \"" << url << "\",\n";
+            file << "    \"unmult_thresh\": " << std::fixed << std::setprecision(4) << alpha << ",\n";
+            file << "    \"format\": \"" << format << "\",\n";
+            file << "    \"il_filter_mode\": " << filterMode << "\n";
+            file << "}\n";
+        }
+    }
+
+    // 2. Save to project root directory (so rebuilding doesn't overwrite build folder's config with outdated root config)
+    std::wstring rootConfigPath = exeDir + L"\\..\\..\\config.json";
+    {
+        std::ofstream file(rootConfigPath, std::ios::out | std::ios::trunc);
+        if (file.is_open()) {
+            file << "{\n";
+            file << "    \"url\": \"" << url << "\",\n";
+            file << "    \"unmult_thresh\": " << std::fixed << std::setprecision(4) << alpha << ",\n";
+            file << "    \"format\": \"" << format << "\",\n";
+            file << "    \"il_filter_mode\": " << filterMode << "\n";
+            file << "}\n";
+        }
+    }
+    return true;
+}
+
+static void StartUrlValidation(const std::string& url) {
+    if (g_isValidating.load()) return;
+    g_isValidating.store(true);
+    g_validationState.store(1); // Checking
+    {
+        std::lock_guard<std::mutex> lock(g_validationMutex);
+        g_validationStatusText = "Checking...";
+    }
+    g_tuiChanged = true;
+
+    std::thread([url]() {
+        UrlCheckResult res = CheckUrlAlive(url);
+        if (res.success) {
+            g_validationState.store(2); // Accepted
+            {
+                std::lock_guard<std::mutex> lock(g_validationMutex);
+                g_validationStatusText = "Accepted";
+            }
+            g_targetUrl = url;
+            g_cefManager.LoadURL(url);
+            g_inputUrl.clear(); // Clear URL input box on success
+            SaveConfig(g_targetUrl, g_alphaThreshold, g_format, g_filterMode.load());
+            g_logger.Log("[TUI]", "URL changed and saved: " + url);
+        } else {
+            g_validationState.store(3); // Rejected
+            {
+                std::lock_guard<std::mutex> lock(g_validationMutex);
+                g_validationStatusText = "Rejected: " + res.statusText;
+            }
+            g_logger.Log("[TUI]", "URL connection rejected: " + url + " (" + res.statusText + ")");
+        }
+        g_isValidating.store(false);
+        g_tuiChanged = true;
+    }).detach();
+}
+#endif
+
 // TUI Dashboard Console Output Helper
 void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval, float alphaThreshold, uint64_t totalCefFrames, int pendingCount) {
     static bool tuiInitialized = false;
     if (!tuiInitialized) {
         EnableVTMode();
-        // Switch to alternate screen buffer, clear screen, hide cursor
-        std::cout << "\x1b[?1049h\x1b[2J\x1b[?25l" << std::flush;
+        // Switch to alternate screen buffer, clear screen, show cursor
+        std::cout << "\x1b[?1049h\x1b[2J\x1b[?25h" << std::flush;
         tuiInitialized = true;
     }
 
@@ -512,7 +693,34 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+F(Filter)\x1b[K\x1b[0m\n";
     oss << "            \x1b[90mCtrl+A/Z(Unmult) | Ctrl+R(Reload) | Ctrl+K(Keyer: " << (g_deckLink.GetKeyerMode() ? "External" : "Internal") << ") | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
-    oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\x1b[J";
+    oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
+
+    std::string valStatus;
+    int state = g_validationState.load();
+    {
+        std::lock_guard<std::mutex> lock(g_validationMutex);
+        if (state == 1) {
+            valStatus = "\x1b[1m\x1b[33mChecking...\x1b[0m";
+        } else if (state == 2) {
+            valStatus = "\x1b[1m\x1b[32mAccepted\x1b[0m";
+        } else if (state == 3) {
+            valStatus = "\x1b[1m\x1b[31mRejected: " + g_validationStatusText + "\x1b[0m";
+        } else {
+            valStatus = "\x1b[90mReady\x1b[0m";
+        }
+    }
+
+    std::string keyHint = " \x1b[90m[Ctrl+Enter to Connect]\x1b[0m";
+    std::string inputDisplay = ClampLine(g_inputUrl, cols - 30);
+
+    oss << "  \x1b[36m>> URL:\x1b[0m " << inputDisplay << keyHint << "\x1b[K\n";
+    oss << "  \x1b[36m>> Status:\x1b[0m " << valStatus << "\x1b[K\n";
+    oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
+
+    // Position physical console cursor right after visible URL text on line 18
+    oss << "\x1b[18;" << (11 + inputDisplay.length()) << "H";
+    // Show cursor
+    oss << "\x1b[?25h";
 
     // Re-enable auto-wrap
     oss << "\x1b[?7h";
@@ -641,42 +849,56 @@ bool LoadConfig(std::string& url, float& alpha, std::string& format) {
 void RenderFrame(HWND hWnd) {
     bool changed = false;
 #ifdef _WIN32
-    // --- Console TUI Keyboard Input (_kbhit / _getch) ---
     while (_kbhit()) {
         int ch = _getch();
+        if (ch == 0 || ch == 224) {
+            if (_kbhit()) {
+                _getch(); // Consume key code byte
+            }
+            continue;
+        }
         bool ctrlPressed = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
         bool shiftPressed = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
         bool altPressed = (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
         bool modified = ctrlPressed || shiftPressed || altPressed;
 
-        if (ch == 4 || (modified && (ch == 'd' || ch == 'D'))) {
+        if (ch == 10 || (ch == 13 && ctrlPressed)) {
+            StartUrlValidation(g_inputUrl);
+        } else if (ch == 8) { // Backspace
+            if (!g_inputUrl.empty()) {
+                g_inputUrl.pop_back();
+                g_tuiChanged = true;
+            }
+        } else if (ch >= 32 && ch <= 126 && !altPressed) {
+            g_inputUrl.push_back((char)ch);
+            g_tuiChanged = true;
+        } else if (ch == 4) { // Ctrl+D
             g_viewMode.store(1); // Diff Mode
             changed = true;
-        } else if (ch == 16 || (modified && (ch == 'p' || ch == 'P'))) {
+        } else if (ch == 16) { // Ctrl+P
             g_viewMode.store(2); // Progressive Mode
             changed = true;
-        } else if ((ch == 9 && ctrlPressed) || (modified && (ch == 'i' || ch == 'I'))) {
+        } else if (ch == 9) { // Ctrl+I / Tab
             g_viewMode.store(0); // Interlace Mode
             changed = true;
-        } else if (ch == 2 || (modified && (ch == 'b' || ch == 'B'))) {
+        } else if (ch == 2) { // Ctrl+B
             g_viewMode.store(3); // 30p Blend Mode
             changed = true;
-        } else if (ch == 1 || (modified && (ch == 'a' || ch == 'A'))) {
+        } else if (ch == 1) { // Ctrl+A
             g_alphaThreshold += 0.001f;
             if (g_alphaThreshold > 1.0f) g_alphaThreshold = 1.0f;
             changed = true;
-        } else if (ch == 26 || (modified && (ch == 'z' || ch == 'Z'))) {
+        } else if (ch == 26) { // Ctrl+Z
             g_alphaThreshold -= 0.001f;
             if (g_alphaThreshold < 0.0f) g_alphaThreshold = 0.0f;
             changed = true;
-        } else if (ch == 6 || (modified && (ch == 'f' || ch == 'F'))) {
+        } else if (ch == 6) { // Ctrl+F
             int fm = g_filterMode.load();
             g_filterMode.store((fm + 1) % 3);
             changed = true;
-        } else if (ch == 18 || (modified && (ch == 'r' || ch == 'R')) || (modified && ch == 0 && _kbhit() && _getch() == 63)) {
-            // Ctrl+R or Mod+R or Mod+F5
+        } else if (ch == 18) { // Ctrl+R
             g_cefManager.ReloadIgnoreCache();
-        } else if (ch == 11 || (modified && (ch == 'k' || ch == 'K'))) {
+        } else if (ch == 11) { // Ctrl+K
             bool current = g_deckLink.GetKeyerMode();
             g_deckLink.SetKeyerMode(!current);
             g_logger.Log("App", std::string("Keyer mode switched to: ") + (!current ? "Internal" : "External"));
@@ -734,6 +956,14 @@ void RenderFrame(HWND hWnd) {
 
     auto now = std::chrono::steady_clock::now();
     uint64_t elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastLogTime).count();
+    bool tuiChanged = g_tuiChanged.exchange(false);
+
+    static double s_deckLinkFps = 0.0;
+    static int s_cefFps = 0;
+    static int s_normalizedUnique = 0;
+    static uint64_t s_totalCef = 0;
+    static int s_pendingCef = 0;
+
     if (elapsedMs >= 1000) {
         static uint64_t lastUniqueTotal = 0;
         double deckLinkFps = (double)frameCount * 1000.0 / elapsedMs;
@@ -754,7 +984,11 @@ void RenderFrame(HWND hWnd) {
         double cefFps = (double)cefTotalInInterval * 1000.0 / elapsedMs;
         double normalizedUnique = (double)diffUnique * 1000.0 / elapsedMs;
 
-        LogStatus(true, deckLinkFps, (int)(cefFps + 0.5), (int)(normalizedUnique + 0.5), g_alphaThreshold, totalCef, pendingCef);
+        s_deckLinkFps = deckLinkFps;
+        s_cefFps = (int)(cefFps + 0.5);
+        s_normalizedUnique = (int)(normalizedUnique + 0.5);
+        s_totalCef = totalCef;
+        s_pendingCef = pendingCef;
 
         lastCefTotal = totalCef;
 
@@ -778,6 +1012,11 @@ void RenderFrame(HWND hWnd) {
         
         frameCount = 0;
         lastLogTime = now;
+        tuiChanged = true;
+    }
+
+    if (tuiChanged) {
+        LogStatus(true, s_deckLinkFps, s_cefFps, s_normalizedUnique, g_alphaThreshold, s_totalCef, s_pendingCef);
     }
 
     uint64_t hbElapsedSec = std::chrono::duration_cast<std::chrono::seconds>(now - lastHeartbeatTime).count();
@@ -827,6 +1066,7 @@ int main(int argc, char** argv)
             g_format = argv[++i];
         }
     }
+    g_inputUrl = "";
     
 #ifdef _WIN32
     CefMainArgs main_args(GetModuleHandle(nullptr));
