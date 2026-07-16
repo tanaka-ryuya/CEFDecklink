@@ -646,11 +646,12 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
         tuiInitialized = true;
     }
 
-    const char* modeStr = "Interlace (0)";
+    std::string modeStr;
     int vMode = g_viewMode.load();
-    if (vMode == 1) modeStr = "\x1b[33mDiff Mode (1)\x1b[0m";
-    else if (vMode == 2) modeStr = "Progressive (2)";
-    else if (vMode == 3) modeStr = "\x1b[35m30p Blend (3)\x1b[0m";
+    if (vMode == 0) modeStr = "\x1b[1m\x1b[32mInterlace (0)\x1b[0m";
+    else if (vMode == 1) modeStr = "\x1b[1m\x1b[31mDiff Mode (1)\x1b[0m";
+    else if (vMode == 2) modeStr = "\x1b[1m\x1b[31mProgressive (2)\x1b[0m";
+    else if (vMode == 3) modeStr = "\x1b[1m\x1b[31m30p Blend (3)\x1b[0m";
 
     auto recentLogs = g_logger.GetRecentLogs();
 
@@ -671,23 +672,67 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     oss << "  \x1b[36mURL: \x1b[0m" << urlDisplay << "\x1b[K\n";
     oss << "  \x1b[36mDevTools: \x1b[0mhttp://localhost:9222\x1b[K\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
+    
+    std::string dlFpsColor = (deckLinkFps >= 29.9 && deckLinkFps <= 30.1) ? "\x1b[1m\x1b[32m" : "\x1b[1m\x1b[31m";
+    std::string cefFpsColor = (cefFps >= 70) ? "\x1b[1m\x1b[31m" : "\x1b[1m\x1b[32m";
+    std::string queueColor = (pendingCount >= 13) ? "\x1b[1m\x1b[31m" : "\x1b[1m\x1b[32m";
     std::string keyerStr = g_deckLink.GetKeyerMode() ? "External" : "\x1b[1m\x1b[31mInternal\x1b[0m";
-    oss << "  \x1b[32m[Status]\x1b[0m   DeckLink: \x1b[1m" << std::fixed << std::setprecision(2) << deckLinkFps << " fps\x1b[0m | "
-        << "CEF: \x1b[1m" << cefFps << " fps\x1b[0m | "
-        << "Queue: \x1b[1m" << pendingCount << "\x1b[0m | "
+    
+    oss << "  \x1b[32m[Status]\x1b[0m   DeckLink: " << dlFpsColor << std::fixed << std::setprecision(2) << deckLinkFps << " fps\x1b[0m | "
+        << "CEF: " << cefFpsColor << cefFps << " fps\x1b[0m | "
+        << "Queue: " << queueColor << pendingCount << "\x1b[0m | "
         << "Keyer: " << keyerStr << "\x1b[K\n";
-    oss << "  \x1b[32m[Config]\x1b[0m   ViewMode: " << modeStr << " | Format: " << g_format << " | UnmultThresh: " << std::fixed << std::setprecision(4) << alphaThreshold;
+        
+    std::string formatColor = (g_format == "5994i" || g_format == "50i") ? "\x1b[1m\x1b[32m" : "\x1b[1m\x1b[31m";
+    std::string threshColor = (alphaThreshold >= 0.0f && alphaThreshold <= 0.1f) ? "\x1b[1m\x1b[32m" : "\x1b[1m\x1b[31m";
+    
+    oss << "  \x1b[32m[Config]\x1b[0m   ViewMode: " << modeStr 
+        << " | Format: " << formatColor << g_format << "\x1b[0m"
+        << " | UnmultThresh: " << threshColor << std::fixed << std::setprecision(4) << alphaThreshold << "\x1b[0m";
+        
     int fMode = g_filterMode.load();
-    const char* filterStr = "None";
-    if (fMode == 1) filterStr = "3tap";
-    else if (fMode == 2) filterStr = "5tap";
+    std::string filterStr;
+    if (fMode == 1) filterStr = "\x1b[1m\x1b[32m3tap\x1b[0m";
+    else if (fMode == 2) filterStr = "\x1b[1m\x1b[31m5tap\x1b[0m";
+    else filterStr = "\x1b[1m\x1b[31mNone\x1b[0m";
+    
     oss << " | Filter: " << filterStr << "\x1b[K\n";
     oss << "\x1b[36m-------------------------------------------------------------------------------\x1b[K\x1b[0m\n";
     oss << "  \x1b[33mRecent Events / Logs:\x1b[K\x1b[0m\n";
  
     for (int i = 0; i < 5; ++i) {
         if (i < (int)recentLogs.size()) {
-            oss << "   " << ClampLine(recentLogs[i], cols - 4) << "\x1b[K\n";
+            std::string logLine = recentLogs[i];
+            size_t skipsPos = logLine.find("skips(d:");
+            if (skipsPos != std::string::npos) {
+                size_t dPos = skipsPos + 8; // length of "skips(d:"
+                size_t uPos = logLine.find(" u:", dPos);
+                if (uPos != std::string::npos) {
+                    size_t uValPos = uPos + 3; // length of " u:"
+                    size_t endPos = logLine.find(")", uValPos);
+                    if (endPos != std::string::npos) {
+                        std::string dStr = logLine.substr(dPos, uPos - dPos);
+                        std::string uStr = logLine.substr(uValPos, endPos - uValPos);
+                        try {
+                            int dVal = std::stoi(dStr);
+                            int uVal = std::stoi(uStr);
+                            
+                            std::string dColor = "\x1b[32m"; // green (0)
+                            if (dVal == 1) dColor = "\x1b[33m"; // yellow (1)
+                            else if (dVal >= 2) dColor = "\x1b[31m"; // red (2+)
+                            
+                            std::string uColor = "\x1b[32m"; // green (0)
+                            if (uVal >= 1) uColor = "\x1b[31m"; // red (1+)
+                            
+                            std::string newSkips = "skips(d:" + dColor + std::to_string(dVal) + "\x1b[0m u:" + uColor + std::to_string(uVal) + "\x1b[0m)";
+                            logLine.replace(skipsPos, endPos + 1 - skipsPos, newSkips);
+                        } catch (...) {
+                            // ignore conversion errors
+                        }
+                    }
+                }
+            }
+            oss << "   " << ClampLine(logLine, cols - 4) << "\x1b[K\n";
         } else {
             oss << "\x1b[K\n";
         }
