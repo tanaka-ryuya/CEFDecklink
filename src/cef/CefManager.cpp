@@ -32,6 +32,34 @@ public:
     void OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int httpStatusCode) override {
         if (m_manager && frame->IsMain()) {
             m_manager->UpdateWatermark();
+            
+            // Inject a dummy element that translates by 1px and changes color slightly every frame.
+            // This forces Chromium to schedule layout and paint cycles without optimizations skipping it.
+            std::string jsCode = R"(
+                (function() {
+                    if (document.getElementById('cef-keepalive-trigger')) return;
+                    var div = document.createElement('div');
+                    div.id = 'cef-keepalive-trigger';
+                    div.style.position = 'absolute';
+                    div.style.left = '0px';
+                    div.style.top = '0px';
+                    div.style.width = '2px';
+                    div.style.height = '2px';
+                    div.style.pointerEvents = 'none';
+                    div.style.background = 'rgba(255,255,255,0.01)';
+                    document.body.appendChild(div);
+
+                    var tick = 0;
+                    function pulse() {
+                        tick = (tick + 1) % 2;
+                        div.style.transform = 'translate(' + tick + 'px, 0px)';
+                        div.style.background = 'rgba(255,255,255,' + (0.01 + tick * 0.001) + ')';
+                        requestAnimationFrame(pulse);
+                    }
+                    requestAnimationFrame(pulse);
+                })();
+            )";
+            frame->ExecuteJavaScript(jsCode, frame->GetURL(), 0);
         }
     }
     
