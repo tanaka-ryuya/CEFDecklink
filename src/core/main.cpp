@@ -745,13 +745,9 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
         }
     }
  
-    std::string ctrlModeStr = modeStr + "\x1b[90m";
-    std::string ctrlFilterStr = filterStr + "\x1b[90m";
-    std::string ctrlKeyerStr = (g_deckLink.GetKeyerMode() ? "\x1b[1m\x1b[32mExternal\x1b[90m" : "\x1b[1m\x1b[31mInternal\x1b[90m");
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
-    oss << "  \x1b[90mControls: Ctrl+O(Output: " << ctrlModeStr << ") | Ctrl+F(int-filter: " << ctrlFilterStr << ")\x1b[K\x1b[0m\n";
-    oss << "            \x1b[90mCtrl+K(Keyer: " << ctrlKeyerStr << ") | Ctrl+A/Z(Unmult:0.001) | Ctrl+Up/Down(Unmult:0.1)\x1b[K\x1b[0m\n";
-    oss << "            \x1b[90mCtrl+R(Reload) | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
+    oss << "  \x1b[90mControls: Ctrl+O(output-mode) | Ctrl+F(int-filter-mode) | Ctrl+K(keyer-mode)\x1b[K\x1b[0m\n";
+    oss << "            Ctrl+A/Z(unmult-th:0.001) | Ctrl+Up/Down(unmult-th:0.1) | Ctrl+R(reload) | Ctrl+C(exit)\x1b[K\x1b[0m\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
  
     std::string valStatus;
@@ -776,8 +772,8 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     oss << "  \x1b[36m>> Status:\x1b[0m " << valStatus << "\x1b[K\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
  
-    // Position physical console cursor right after visible URL text on line 20
-    oss << "\x1b[20;" << (11 + inputDisplay.length()) << "H";
+    // Position physical console cursor right after visible URL text on line 19
+    oss << "\x1b[19;" << (11 + inputDisplay.length()) << "H";
     // Show cursor
     oss << "\x1b[?25h";
 
