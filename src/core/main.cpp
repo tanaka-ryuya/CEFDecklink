@@ -683,7 +683,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
         cefFpsColor = (cefFps >= 70) ? "\x1b[1m\x1b[31m" : "\x1b[1m\x1b[32m";
     }
     std::string queueColor = (pendingCount >= 13) ? "\x1b[1m\x1b[31m" : "\x1b[1m\x1b[32m";
-    std::string keyerStr = g_deckLink.GetKeyerMode() ? "External" : "\x1b[1m\x1b[31mInternal\x1b[0m";
+    std::string keyerStr = g_deckLink.GetKeyerMode() ? "\x1b[1m\x1b[32mExternal\x1b[0m" : "\x1b[1m\x1b[31mInternal\x1b[0m";
     
     oss << "  \x1b[32m[Status]\x1b[0m   DeckLink: " << dlFpsColor << std::fixed << std::setprecision(2) << deckLinkFps << " fps\x1b[0m | "
         << "CEF: " << cefFpsColor << cefFps << " fps\x1b[0m | "
@@ -747,7 +747,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
  
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+F(Filter)\x1b[K\x1b[0m\n";
-    oss << "            \x1b[90mCtrl+A/Z(Unmult:0.001) | Ctrl+Up/Down(Unmult:0.1) | Ctrl+R(Reload) | Ctrl+K(Keyer: " << (g_deckLink.GetKeyerMode() ? "External" : "\x1b[1m\x1b[31mInternal\x1b[90m") << ") | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
+    oss << "            \x1b[90mCtrl+A/Z(Unmult:0.001) | Ctrl+Up/Down(Unmult:0.1) | Ctrl+R(Reload) | Ctrl+K(Keyer: " << (g_deckLink.GetKeyerMode() ? "\x1b[1m\x1b[32mExternal\x1b[90m" : "\x1b[1m\x1b[31mInternal\x1b[90m") << ") | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
  
     std::string valStatus;
