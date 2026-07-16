@@ -745,8 +745,10 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
         }
     }
  
+    std::string ctrlModeStr = modeStr + "\x1b[90m";
+    std::string ctrlFilterStr = filterStr + "\x1b[90m";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
-    oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+F(Filter)\x1b[K\x1b[0m\n";
+    oss << "  \x1b[90mControls: Ctrl+O(Output: " << ctrlModeStr << ") | Ctrl+F(Filter: " << ctrlFilterStr << ")\x1b[K\x1b[0m\n";
     oss << "            \x1b[90mCtrl+A/Z(Unmult:0.001) | Ctrl+Up/Down(Unmult:0.1) | Ctrl+R(Reload) | Ctrl+K(Keyer: " << (g_deckLink.GetKeyerMode() ? "\x1b[1m\x1b[32mExternal\x1b[90m" : "\x1b[1m\x1b[31mInternal\x1b[90m") << ") | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
  
@@ -941,18 +943,10 @@ void RenderFrame(HWND hWnd) {
         } else if (ch >= 32 && ch <= 126 && !altPressed) {
             g_inputUrl.push_back((char)ch);
             g_tuiChanged = true;
-        } else if (ch == 4) { // Ctrl+D
-            g_viewMode.store(1); // Diff Mode
-            changed = true;
-        } else if (ch == 16) { // Ctrl+P
-            g_viewMode.store(2); // Progressive Mode
-            changed = true;
-        } else if (ch == 9) { // Ctrl+I / Tab
-            g_viewMode.store(0); // Interlace Mode
-            changed = true;
-        } else if (ch == 2) { // Ctrl+B
-            g_viewMode.store(3); // 30p Blend Mode
-            changed = true;
+        } else if (ch == 15) { // Ctrl+O
+            int vm = g_viewMode.load();
+            g_viewMode.store((vm + 1) % 4);
+            g_tuiChanged = true;
         } else if (ch == 1) { // Ctrl+A (Unmult 0.001)
             g_alphaThreshold += 0.001f;
             if (g_alphaThreshold > 1.0f) g_alphaThreshold = 1.0f;
