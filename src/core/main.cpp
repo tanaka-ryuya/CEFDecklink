@@ -747,7 +747,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
  
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[90mControls: Ctrl+O(output-mode) | Ctrl+F(int-filter-mode) | Ctrl+K(keyer-mode)\x1b[K\x1b[0m\n";
-    oss << "            Ctrl+A/Z(unmult-th:0.001) | Ctrl+Up/Down(unmult-th:0.1) | Ctrl+R(reload) | Ctrl+C(exit)\x1b[K\x1b[0m\n";
+    oss << "            \x1b[90mCtrl+A/Z(unmult-th:0.001) | Ctrl+Up/Down(unmult-th:0.1) | Ctrl+R(reload) | Ctrl+C(exit)\x1b[K\x1b[0m\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
  
     std::string valStatus;
