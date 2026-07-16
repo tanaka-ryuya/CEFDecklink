@@ -1002,10 +1002,13 @@ void RenderFrame(HWND hWnd) {
     }
 #endif
     
-    if (changed && g_shaderManager) {
-        std::lock_guard<std::mutex> lock(g_d3dContextMutex);
-        g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
-        g_shaderManager->SetFilterMode(g_filterMode.load());
+    if (changed) {
+        if (g_shaderManager) {
+            std::lock_guard<std::mutex> lock(g_d3dContextMutex);
+            g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
+            g_shaderManager->SetFilterMode(g_filterMode.load());
+        }
+        SaveConfig(g_targetUrl, g_alphaThreshold, g_format, g_filterMode.load());
     }
 
     // CEF Message Loop
