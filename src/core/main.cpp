@@ -671,9 +671,11 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     oss << "  \x1b[36mURL: \x1b[0m" << urlDisplay << "\x1b[K\n";
     oss << "  \x1b[36mDevTools: \x1b[0mhttp://localhost:9222\x1b[K\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
+    std::string keyerStr = g_deckLink.GetKeyerMode() ? "External" : "\x1b[1m\x1b[31mInternal\x1b[0m";
     oss << "  \x1b[32m[Status]\x1b[0m   DeckLink: \x1b[1m" << std::fixed << std::setprecision(2) << deckLinkFps << " fps\x1b[0m | "
         << "CEF: \x1b[1m" << cefFps << " fps\x1b[0m | "
-        << "Queue: \x1b[1m" << pendingCount << "\x1b[0m\x1b[K\n";
+        << "Queue: \x1b[1m" << pendingCount << "\x1b[0m | "
+        << "Keyer: " << keyerStr << "\x1b[K\n";
     oss << "  \x1b[32m[Config]\x1b[0m   ViewMode: " << modeStr << " | Format: " << g_format << " | UnmultThresh: " << std::fixed << std::setprecision(4) << alphaThreshold;
     int fMode = g_filterMode.load();
     const char* filterStr = "None";
@@ -693,7 +695,7 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
  
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     oss << "  \x1b[90mControls: Ctrl+I(Interlace) | Ctrl+D(Diff) | Ctrl+P(Prog) | Ctrl+F(Filter)\x1b[K\x1b[0m\n";
-    oss << "            \x1b[90mCtrl+A/Z(Unmult:0.001) | Ctrl+Up/Down(Unmult:0.1) | Ctrl+R(Reload) | Ctrl+K(Keyer: " << (g_deckLink.GetKeyerMode() ? "External" : "Internal") << ") | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
+    oss << "            \x1b[90mCtrl+A/Z(Unmult:0.001) | Ctrl+Up/Down(Unmult:0.1) | Ctrl+R(Reload) | Ctrl+K(Keyer: " << (g_deckLink.GetKeyerMode() ? "External" : "\x1b[1m\x1b[31mInternal\x1b[90m") << ") | Ctrl+C(Exit)\x1b[K\x1b[0m\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
  
     std::string valStatus;
