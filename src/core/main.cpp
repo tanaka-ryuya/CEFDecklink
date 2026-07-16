@@ -673,8 +673,15 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     oss << "  \x1b[36mDevTools: \x1b[0mhttp://localhost:9222\x1b[K\n";
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
     
-    std::string dlFpsColor = (deckLinkFps >= 29.9 && deckLinkFps <= 30.1) ? "\x1b[1m\x1b[32m" : "\x1b[1m\x1b[31m";
-    std::string cefFpsColor = (cefFps >= 70) ? "\x1b[1m\x1b[31m" : "\x1b[1m\x1b[32m";
+    std::string dlFpsColor;
+    std::string cefFpsColor;
+    if (g_format == "50i") {
+        dlFpsColor = (deckLinkFps >= 24.9 && deckLinkFps <= 25.1) ? "\x1b[1m\x1b[32m" : "\x1b[1m\x1b[31m";
+        cefFpsColor = (cefFps >= 60) ? "\x1b[1m\x1b[31m" : "\x1b[1m\x1b[32m";
+    } else {
+        dlFpsColor = (deckLinkFps >= 29.9 && deckLinkFps <= 30.1) ? "\x1b[1m\x1b[32m" : "\x1b[1m\x1b[31m";
+        cefFpsColor = (cefFps >= 70) ? "\x1b[1m\x1b[31m" : "\x1b[1m\x1b[32m";
+    }
     std::string queueColor = (pendingCount >= 13) ? "\x1b[1m\x1b[31m" : "\x1b[1m\x1b[32m";
     std::string keyerStr = g_deckLink.GetKeyerMode() ? "External" : "\x1b[1m\x1b[31mInternal\x1b[0m";
     
