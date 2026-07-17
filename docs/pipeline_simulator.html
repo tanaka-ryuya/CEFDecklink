@@ -1,0 +1,1975 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEF-DeckLink パイプラインシミュレータ</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: #141b2d;
+            --panel-border: #1f2a45;
+            --accent-cyan: #00f0ff;
+            --accent-violet: #8a2be2;
+            --accent-amber: #ffaa00;
+            --text-color: #e2e8f0;
+            --text-muted: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--panel-border);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-violet));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1::before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-cyan);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* 制御パネル */
+        .control-bar {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn {
+            background-color: #1e293b;
+            color: var(--text-color);
+            border: 1px solid #334155;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background-color: #334155;
+            border-color: #475569;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background-color: #0f172a;
+            border-color: #1e293b;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+            border: none;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+        }
+
+        .btn-danger:hover {
+            background-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        select, input[type="range"], input[type="number"] {
+            background-color: #0f172a;
+            border: 1px solid var(--panel-border);
+            color: var(--text-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            outline: none;
+            font-size: 0.85rem;
+        }
+
+        select:focus, input[type="number"]:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        /* パイプライン・ビジュアルフロー */
+        .pipeline-container {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            overflow-x: auto;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border-left: 3px solid var(--accent-cyan);
+            padding-left: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .flow-line {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            min-width: 1400px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        /* パイプライン上の各ステージのカード (幅を固定化してがたつきを防止) */
+        .stage-card {
+            background-color: #0f172a;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 12px;
+            position: relative;
+            transition: border-color 0.3s;
+        }
+
+        #card-cef { flex: 0 0 220px; width: 220px; }
+        #card-queues { flex: 0 0 280px; width: 280px; }
+        #card-shader { flex: 0 0 260px; width: 260px; }
+        #card-staging { flex: 0 0 220px; width: 220px; }
+        #card-hw { flex: 0 0 240px; width: 240px; }
+
+        .stage-card.active {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+        }
+
+        .stage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 6px;
+        }
+
+        .stage-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+
+        .stage-badge {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .badge-producer {
+            background-color: rgba(0, 240, 255, 0.15);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+        }
+
+        .badge-queue {
+            background-color: rgba(255, 170, 0, 0.15);
+            color: var(--accent-amber);
+            border: 1px solid rgba(255, 170, 0, 0.3);
+        }
+
+        .badge-consumer {
+            background-color: rgba(138, 43, 226, 0.15);
+            color: #a855f7;
+            border: 1px solid rgba(138, 43, 226, 0.3);
+        }
+
+        /* 矢印コネクタ */
+        .arrow-connector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100px;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            font-weight: bold;
+            user-select: none;
+        }
+
+        .arrow-connector.active {
+            color: var(--accent-cyan);
+            text-shadow: 0 0 8px var(--accent-cyan);
+            animation: pulse-arrow 1.5s infinite;
+        }
+
+        @keyframes pulse-arrow {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; transform: translateX(3px); }
+            100% { opacity: 0.4; }
+        }
+
+        /* プレロールなどのステータス表示 */
+        .status-panel {
+            background-color: #0f172a;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-val {
+            font-family: monospace;
+            font-weight: bold;
+            color: var(--accent-cyan);
+        }
+
+        /* キャンバス表示 */
+        .canvas-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            background-color: #020617;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #1e293b;
+        }
+
+        .pixel-canvas {
+            width: 192px;
+            height: 192px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background-color: #000;
+            border: 1px solid #334155;
+            display: block;
+        }
+
+        .canvas-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+
+        /* CPUキュー用の1x4グリッド */
+        .cpu-grid-flow {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            background-color: #020617;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #1e293b;
+            width: 100%;
+        }
+
+        /* GPUキュー用の4x4グリッド */
+        .gpu-grid-flow {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 6px;
+            background-color: #020617;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #1e293b;
+            width: 100%;
+        }
+
+        /* 空スロットのデザイン (点線枠) */
+        .queue-slot-empty {
+            aspect-ratio: 1;
+            border: 1px dashed #1f2a45;
+            background-color: #0b0f19;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            color: #3b82f6;
+            opacity: 0.3;
+            font-family: monospace;
+            user-select: none;
+        }
+
+        /* グリッド内アイテム */
+        .queue-item-grid {
+            aspect-ratio: 1;
+            border: 1px solid #475569;
+            border-radius: 4px;
+            position: relative;
+            background-color: #000;
+            cursor: pointer;
+            transition: transform 0.1s;
+            overflow: hidden;
+        }
+
+        .queue-item-grid:hover {
+            transform: scale(1.05);
+            border-color: var(--accent-cyan);
+            z-index: 10;
+        }
+
+        .queue-item-grid canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        .queue-item-badge {
+            position: absolute;
+            bottom: 0px;
+            right: 0px;
+            background-color: var(--accent-amber);
+            color: black;
+            font-family: monospace;
+            font-size: 0.55rem;
+            font-weight: bold;
+            padding: 0px 3px;
+            border-radius: 2px;
+            border-top: 1px solid #000;
+            border-left: 1px solid #000;
+        }
+
+        /* 詳細ビジュアルグリッド */
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 20px;
+        }
+
+        .details-panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 拡大ピクセルグリッド */
+        .zoom-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .zoom-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .zoom-box {
+            background-color: #0f172a;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 12px;
+            flex: 1;
+            min-width: 250px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .zoom-title {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        /* ピクセルグリッド（ホバーで数値を出す用） */
+        .pixel-inspect-grid {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(32, 1fr);
+            grid-template-rows: repeat(32, 1fr);
+            width: 256px;
+            height: 256px;
+            background-color: #000;
+            border: 1px solid #334155;
+            cursor: crosshair;
+        }
+
+        .inspect-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .pixel-info-card {
+            background-color: #020617;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px;
+            width: 100%;
+            margin-top: 10px;
+            font-size: 0.75rem;
+            font-family: monospace;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .info-label {
+            color: var(--text-muted);
+        }
+
+        .info-val {
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+
+        /* ログ & デバッグコンソール */
+        .log-panel {
+            background-color: #020617;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px;
+            height: 230px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.75rem;
+            line-height: 1.4;
+            color: #a7f3d0;
+        }
+
+        .log-line {
+            margin-bottom: 4px;
+            border-left: 2px solid var(--accent-cyan);
+            padding-left: 6px;
+        }
+
+        .log-time {
+            color: var(--text-muted);
+            margin-right: 6px;
+        }
+
+        .log-system {
+            color: #f472b6;
+            font-weight: bold;
+        }
+
+        .log-warning {
+            color: var(--accent-amber);
+            border-left-color: var(--accent-amber);
+        }
+
+        /* パラメータの数式解説カード */
+        .formula-card {
+            background-color: #0f172a;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+
+        .formula-card h3 {
+            font-size: 0.85rem;
+            color: var(--accent-cyan);
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 6px;
+        }
+
+        code {
+            background-color: #020617;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #fb7185;
+        }
+
+        .formula-box {
+            background-color: #020617;
+            border: 1px solid #1e293b;
+            border-radius: 6px;
+            padding: 8px;
+            font-family: monospace;
+            margin: 8px 0;
+            overflow-x: auto;
+            color: var(--success);
+        }
+
+        /* タイムライン情報表示 */
+        .timeline-ticks {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .tick-box {
+            background-color: #0f172a;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .tick-title {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .tick-val {
+            font-size: 1.1rem;
+            font-family: monospace;
+            font-weight: bold;
+            color: var(--accent-cyan);
+        }
+
+        /* レンジ入力のスタイル調整 */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 120px;
+            height: 6px;
+            background: #1e293b;
+            border: none;
+            outline: none;
+            padding: 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            box-shadow: 0 0 5px var(--accent-cyan);
+        }
+
+        .legend {
+            display: flex;
+            gap: 15px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <h1>CEF-DeckLink パイプラインシミュレータ</h1>
+            <div class="subtitle">CEFフリーラン描画 (60fps) から DeckLink 放送出力 (59.94i) への同期とシェーダーの挙動再現</div>
+        </div>
+        <div style="text-align: right;">
+            <div class="subtitle">ステート監視コンソール</div>
+            <div style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: bold;" id="sys-status">システム稼働中 - STANDBY</div>
+        </div>
+    </header>
+
+    <!-- コマ送り・パラメータ制御バー -->
+    <div class="control-bar">
+        <button class="btn btn-primary" id="btn-play-pause">▶ 自動再生</button>
+        <button class="btn" id="btn-undo" disabled>⇠ 戻る (Undo)</button>
+        <button class="btn" id="btn-cef-tick">⚙ 仮想時間 +16.7ms 進む</button>
+        <button class="btn" id="btn-dl-tick">⚙ 仮想時間 +33.3ms 進む</button>
+        <div class="control-group">
+            <input type="number" id="input-advance-ms" value="100" min="1" max="1000" style="width: 80px; background-color: #0f172a; border: 1px solid var(--panel-border); color: var(--text-color); padding: 6px; border-radius: 6px; outline: none; font-size: 0.85rem;">
+            <button class="btn" id="btn-advance-ms">⚙ 指定ms進む</button>
+        </div>
+        <button class="btn btn-danger" id="btn-reset">↺ リセット</button>
+
+        <div style="border-left: 1px solid var(--panel-border); height: 25px; margin: 0 5px;"></div>
+
+        <div class="control-group">
+            <label for="select-mode">ビューモード:</label>
+            <select id="select-mode">
+                <option value="0">0: Interlace (標準)</option>
+                <option value="1">1: Diff (差分可視化)</option>
+                <option value="2">2: Progressive F1</option>
+                <option value="3">3: Progressive F2</option>
+                <option value="4">4: 30p Blend</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="select-lpf">垂直LPF:</label>
+            <select id="select-lpf">
+                <option value="0">0: フィルターなし</option>
+                <option value="1">1: 3-Tap LPF</option>
+                <option value="2">2: 5-Tap LPF</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="range-threshold">アルファ閾値:</label>
+            <input type="range" id="range-threshold" min="0" max="0.5" step="0.01" value="0.05">
+            <span style="font-family: monospace; font-size: 0.8rem; min-width: 30px;" id="val-threshold">0.05</span>
+        </div>
+
+        <div class="control-group">
+            <label for="range-speed">再生速度:</label>
+            <input type="range" id="range-speed" min="1" max="10" step="1" value="5">
+            <span style="font-family: monospace; font-size: 0.8rem;" id="val-speed">1.0x</span>
+        </div>
+
+        <div class="control-group" style="margin-left: auto;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="chk-cef-active" checked> CEF描画を有効にする
+            </label>
+        </div>
+    </div>
+
+    <!-- タイムライン / チックカウンター -->
+    <div class="timeline-ticks">
+        <div class="tick-box">
+            <div class="tick-title">仮想時間 (エポック)</div>
+            <div class="tick-val" id="val-time">0.0 ms</div>
+        </div>
+        <div class="tick-box">
+            <div class="tick-title">CEF 生成フレーム数</div>
+            <div class="tick-val" id="val-cef-count">0</div>
+        </div>
+        <div class="tick-box">
+            <div class="tick-title">DeckLink サイクルカウント</div>
+            <div class="tick-val" id="val-dl-count">0</div>
+        </div>
+        <div class="tick-box">
+            <div class="tick-title">プレロール状態</div>
+            <div class="tick-val" id="val-preroll">待機中 (0/3)</div>
+        </div>
+        <div class="tick-box" style="border-left: 2px solid var(--accent-amber);">
+            <div class="tick-title">CPU Queue 負荷</div>
+            <div class="tick-val" id="val-cpu-q-load">0 / 4</div>
+        </div>
+        <div class="tick-box" style="border-left: 2px solid var(--accent-violet);">
+            <div class="tick-title">GPU Queue 負荷</div>
+            <div class="tick-val" id="val-gpu-q-load">0 / 16</div>
+        </div>
+    </div>
+
+    <!-- 左から右へ一直線に進むパイプライン・フローマップ -->
+    <div class="pipeline-container">
+        <div class="section-title">
+            <span>映像データ・ストリーム・パイプライン</span>
+            <span class="subtitle">※各段階の画像(32x32)を256x256サイズに拡大表示しています</span>
+        </div>
+
+        <div class="flow-line">
+            <!-- 1. CEF WebCore -->
+            <div class="stage-card active" id="card-cef">
+                <div class="stage-header">
+                    <span class="stage-name">1. CEF WebCore</span>
+                    <span class="stage-badge badge-producer">60 fps</span>
+                </div>
+                <div class="canvas-container">
+                    <canvas class="pixel-canvas" id="canvas-cef" width="32" height="32"></canvas>
+                    <span class="canvas-label">生成フレーム(Premultiplied)</span>
+                </div>
+                <div class="status-panel">
+                    <span>描画:</span>
+                    <span class="status-val" id="status-cef-draw">ACTIVE</span>
+                </div>
+            </div>
+
+            <!-- コネクタ -->
+            <div class="arrow-connector" id="arrow-cef-cpu">➔</div>
+
+            <!-- 2. Queue Buffer (CPU & GPU 上下二段) -->
+            <div id="card-queues" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- CPU Queue -->
+                <div class="stage-card" id="card-cpu-q" style="border: 1px solid var(--panel-border); padding: 12px; width: 100%;">
+                    <div class="stage-header">
+                        <span class="stage-name">2. CPU Frame Queue</span>
+                        <span class="stage-badge badge-queue">Max 4</span>
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <div class="cpu-grid-flow" id="cpu-queue-flow"></div>
+                    </div>
+                    <div class="status-panel" style="margin-top: 8px; padding: 6px 10px;">
+                        <span>未アップロード数:</span>
+                        <span class="status-val" id="status-cpu-count">0枚</span>
+                    </div>
+                </div>
+
+                <!-- 縦コネクタ (SyncWithGPU) -->
+                <div class="arrow-connector" id="arrow-cpu-gpu-vert" style="height: 30px; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; user-select: none;">▼</div>
+
+                <!-- GPU Queue -->
+                <div class="stage-card" id="card-gpu-q" style="border: 1px solid var(--panel-border); padding: 12px; width: 100%;">
+                    <div class="stage-header">
+                        <span class="stage-name">3. GPU Texture Queue</span>
+                        <span class="stage-badge badge-queue">Max 16</span>
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <div class="gpu-grid-flow" id="gpu-queue-flow"></div>
+                    </div>
+                    <div class="status-panel" style="margin-top: 8px; padding: 6px 10px;">
+                        <span>VRAM保持数:</span>
+                        <span class="status-val" id="status-gpu-count">0枚</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- コネクタ -->
+            <div class="arrow-connector" id="arrow-gpu-shader">➔</div>
+
+            <!-- 4. Compute Shader -->
+            <div class="stage-card" id="card-shader">
+                <div class="stage-header">
+                    <span class="stage-name">4. Compute Shader</span>
+                    <span class="stage-badge badge-consumer">29.97 Hz</span>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                    <div class="canvas-container" style="padding: 5px; flex: 1;">
+                        <canvas class="pixel-canvas" id="canvas-f2" width="32" height="32" style="width: 80px; height: 80px;"></canvas>
+                        <span class="canvas-label" style="font-size: 0.6rem;">F2 (Bot Field用)</span>
+                    </div>
+                    <div class="canvas-container" style="padding: 5px; flex: 1;">
+                        <canvas class="pixel-canvas" id="canvas-f1" width="32" height="32" style="width: 80px; height: 80px;"></canvas>
+                        <span class="canvas-label" style="font-size: 0.6rem;">F1 (Top Field用)</span>
+                    </div>
+                </div>
+                <div class="canvas-container" style="margin-top: 10px;">
+                    <canvas class="pixel-canvas" id="canvas-shader-out" width="32" height="32" style="height: 120px; width: 120px;"></canvas>
+                    <span class="canvas-label">合成結果 (Weave + LPF + Unmult)</span>
+                </div>
+                <div class="status-panel">
+                    <span>演算モード:</span>
+                    <span class="status-val" id="status-shader-mode">INTERLACE</span>
+                </div>
+            </div>
+
+            <!-- コネクタ -->
+            <div class="arrow-connector" id="arrow-shader-staging">➔</div>
+
+            <!-- 5. Staging Buffer -->
+            <div class="stage-card" id="card-staging">
+                <div class="stage-header">
+                    <span class="stage-name">5. Staging Buffer</span>
+                    <span class="stage-badge badge-queue">2F Delay</span>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                    <div class="canvas-container" style="padding: 5px; flex: 1;">
+                        <canvas class="pixel-canvas" id="canvas-stage0" width="32" height="32" style="width: 80px; height: 80px;"></canvas>
+                        <span class="canvas-label" style="font-size: 0.6rem;">Staging[0] (N-1)</span>
+                    </div>
+                    <div class="canvas-container" style="padding: 5px; flex: 1;">
+                        <canvas class="pixel-canvas" id="canvas-stage1" width="32" height="32" style="width: 80px; height: 80px;"></canvas>
+                        <span class="canvas-label" style="font-size: 0.6rem;">Staging[1] (N-2)</span>
+                    </div>
+                </div>
+                <div class="status-panel">
+                    <span>転送待機:</span>
+                    <span class="status-val">非同期 Map</span>
+                </div>
+            </div>
+
+            <!-- コネクタ -->
+            <div class="arrow-connector" id="arrow-staging-hw">➔</div>
+
+            <!-- 6. DeckLink HW -->
+            <div class="stage-card" id="card-hw">
+                <div class="stage-header">
+                    <span class="stage-name">6. DeckLink HW Output</span>
+                    <span class="stage-badge badge-consumer">59.94i</span>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                    <div class="canvas-container" style="padding: 5px; flex: 1;">
+                        <canvas class="pixel-canvas" id="canvas-hw-fill" width="32" height="32" style="width: 90px; height: 90px;"></canvas>
+                        <span class="canvas-label" style="font-size: 0.6rem;">Fill (映像出力)</span>
+                    </div>
+                    <div class="canvas-container" style="padding: 5px; flex: 1;">
+                        <canvas class="pixel-canvas" id="canvas-hw-key" width="32" height="32" style="width: 90px; height: 90px;"></canvas>
+                        <span class="canvas-label" style="font-size: 0.6rem;">Key (Alpha出力)</span>
+                    </div>
+                </div>
+                <div class="status-panel">
+                    <span>出力信号:</span>
+                    <span class="status-val" style="color: var(--success);" id="status-hw-signal">1080i59.94</span>
+                </div>
+            </div>
+        </div>
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background-color: var(--accent-cyan);"></div> CEF 生産領域</div>
+            <div class="legend-item"><div class="legend-color" style="background-color: var(--accent-amber);"></div> キューバッファ領域</div>
+            <div class="legend-item"><div class="legend-color" style="background-color: var(--accent-violet);"></div> GPU / Compute Shader 処理領域</div>
+            <div class="legend-item"><div class="legend-color" style="background-color: var(--success);"></div> 最終放送出力領域</div>
+        </div>
+    </div>
+
+    <!-- 詳細解説とピクセル解析器 -->
+    <div class="details-grid">
+        <!-- ピクセルレベル可視化と解析器 -->
+        <div class="details-panel">
+            <div class="section-title">ピクセルレベル詳細解析器（1画素の計算追跡）</div>
+            <div class="zoom-section">
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
+                    出力画像の任意のピクセルをマウスホバーすると、該当座標 of F1 / F2 / 出力ピクセルの RGBA値の変化を追跡できます。
+                </div>
+                <div class="zoom-row">
+                    <div class="zoom-box">
+                        <div class="zoom-title">F2 (Bottom Field)</div>
+                        <div class="pixel-inspect-grid" id="inspect-f2">
+                            <div class="inspect-overlay" id="overlay-f2"></div>
+                        </div>
+                    </div>
+                    <div class="zoom-box">
+                        <div class="zoom-title">F1 (Top Field)</div>
+                        <div class="pixel-inspect-grid" id="inspect-f1">
+                            <div class="inspect-overlay" id="overlay-f1"></div>
+                        </div>
+                    </div>
+                    <div class="zoom-box" style="border-color: var(--accent-cyan);">
+                        <div class="zoom-title">Compute Shader 出力</div>
+                        <div class="pixel-inspect-grid" id="inspect-out">
+                            <div class="inspect-overlay" id="overlay-out"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ホバーしたピクセルの詳細情報 -->
+                <div class="pixel-info-card" id="pixel-details">
+                    <div class="info-row">
+                        <span class="info-label">選択座標:</span>
+                        <span class="info-val" id="det-coord">X: 0, Y: 0</span>
+                    </div>
+                    <div class="info-row" style="border-top: 1px solid #1e293b; padding-top: 6px; margin-top: 6px;">
+                        <span class="info-label">Frame 1 (Top) 生 RGBA:</span>
+                        <span class="info-val" id="det-f1-raw">R: 0, G: 0, B: 0, A: 0.00</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Frame 2 (Bottom) 生 RGBA:</span>
+                        <span class="info-val" id="det-f2-raw">R: 0, G: 0, B: 0, A: 0.00</span>
+                    </div>
+                    <div class="info-row" style="border-top: 1px solid #1e293b; padding-top: 6px; margin-top: 6px;">
+                        <span class="info-label">偶奇ラインサンプリング:</span>
+                        <span class="info-val" id="det-sampling">Top Field サンプリング (偶数ライン)</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">垂直 LPF 適用結果:</span>
+                        <span class="info-val" id="det-lpf-val">R: 0, G: 0, B: 0, A: 0.00</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Unpremultiply 処理 (RGB /= A):</span>
+                        <span class="info-val" id="det-unmult-val">R: 0, G: 0, B: 0, A: 0.00 (閾値以下無処理)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- アルゴリズム解説パネル -->
+        <div class="details-panel" style="display: flex; flex-direction: column; gap: 15px;">
+            <div class="section-title">パイプラインロジック解説</div>
+
+            <!-- プレロール説明 -->
+            <div class="formula-card">
+                <h3>A. プレロール同期キュー (時間制御)</h3>
+                <div>
+                    CEFがフリーランで描画データをプッシュし、DeckLinkがポーリングでテクスチャを取り出します。
+                </div>
+                <ul>
+                    <li><strong>プレロール待機</strong>: キューが0から増えた時、3サイクル（約100ms）消費を一時停止してキューを「貯金」します。ジッターを吸収するためです。</li>
+                    <li><strong>枯渇時 Freeze</strong>: キューが空になると、前回出力フレームを複製し、プレロール待機にリセットします。</li>
+                </ul>
+            </div>
+
+            <!-- インターレース weave -->
+            <div class="formula-card">
+                <h3>B. Weave（織り交ぜ）インターレース合成</h3>
+                <div class="formula-box">
+if (y % 2 == 0) {
+    pixel = SampleFiltered1(x, y); // Frame 1
+} else {
+    pixel = SampleFiltered2(x, y); // Frame 2
+}
+                </div>
+                <div>
+                    縦のライン座標 <code>y</code> の偶数行を過去フレーム (F1)、奇数行を最新フレーム (F2) からマッピングします。動きがある箇所では、1枚の絵の中に前後のコマが混在するため<b>「櫛状のブレ（インターレース縞）」</b>が発生します。
+                </div>
+            </div>
+
+            <!-- 垂直 LPF -->
+            <div class="formula-card">
+                <h3>C. 垂直 LPF（Anti-Flicker）</h3>
+                <div>
+                    インターレース出力時に、隣接する走査線間の極端な色の差によって発生する「線フリッカー（チラつき）」を抑えるため、縦方向にローパスフィルタ（ぼかし）を適用します。
+                </div>
+                <div class="formula-box">
+// 3-Tap Kernel: [0.25, 0.50, 0.25]
+pixel[y] = above*0.25 + center*0.50 + below*0.25;
+
+// 5-Tap Kernel: [0.0625, 0.25, 0.375, 0.25, 0.0625]
+pixel[y] = above2*0.0625 + above*0.25 + center*0.375 + ...
+                </div>
+            </div>
+
+            <!-- Unpremultiply -->
+            <div class="formula-card">
+                <h3>D. Unpremultiply（アルファ復元）</h3>
+                <div>
+                    CEFの描画バッファは透明度を含んだ RGB がアルファ値で事前に乗算された <code>Premultiplied Alpha</code> 状態です。DeckLinkで「透明マスク（Key）」と「色信号（Fill）」を完全に切り分けるため、アルファ値で割り算を行い元の鮮やかなRGBカラーを復元します。
+                </div>
+                <div class="formula-box">
+if (pixel.a > alphaThreshold) {
+    pixel.rgb /= pixel.a;
+}
+                </div>
+                <div>
+                    ※アルファ値が小さすぎる（透明に近い）ときに割り算を行うと、ゼロ除算（または数値の暴走）が発生するため、<code>alphaThreshold</code>（閾値）を下回る場合は処理をスキップします。
+                </div>
+            </div>
+
+            <!-- システムログ -->
+            <div class="section-title" style="margin-top: 10px;">シミュレータ動作ログ</div>
+            <div class="log-panel" id="log-console">
+                <div class="log-line"><span class="log-time">[00:00:00]</span><span class="log-system">SYSTEM:</span> パイプラインシミュレータが起動しました。</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. グローバル定数と初期状態 ---
+        const WIDTH = 32;
+        const HEIGHT = 32;
+        
+        let state = {
+            time: 0.0,
+            cefCount: 0,
+            dlCount: 0,
+            nextCefTime: 16.68,
+            nextDlTime: 33.36,
+            
+            // C++ 同期変数
+            isConsuming: false,
+            prerollDelay: 3,
+            framesSinceLastDrop: 0,
+            
+            // 各種設定
+            viewMode: 0, // 0=Interlace, 1=Diff, 2=Prog F1, 3=Prog F2, 4=Blend
+            filterMode: 1, // 0=None, 1=3-tap, 2=5-tap
+            alphaThreshold: 0.05,
+            playSpeed: 1.0,
+            cefActive: true,
+            isPlaying: false,
+
+            // キュー (配列)
+            cpuQueue: [], // タイムスタンプ付フレームオブジェクトの配列。C++の m_cpuBuffers に相当 (最大 kBufferCount = 32)
+            gpuQueue: [], // D3D11テクスチャに見立てたフレームオブジェクトの配列。C++の m_readyTextures に相当 (最大 16)
+            
+            // 消費中フレーム
+            frame1: null, // Top field source
+            frame2: null, // Bottom field source
+            
+            // Compute Shader 出力バッファ
+            shaderOutput: null, 
+            
+            // Stagingバッファ
+            staging0: null,
+            staging1: null,
+            
+            // 最終出力
+            hwFill: null,
+            hwKey: null,
+            
+            // 前回の最終出力 (Freeze用のホールドデータ)
+            lastHwFill: null,
+            lastHwKey: null,
+            
+            // インスペクタで現在選択されているピクセル座標
+            inspectX: 16,
+            inspectY: 16
+        };
+
+        // Undo用の履歴スタック
+        let historyStack = [];
+        const MAX_HISTORY = 100;
+
+        // ログ出力用
+        function logMsg(msg, isWarning = false) {
+            const consoleEl = document.getElementById('log-console');
+            if (!consoleEl) return;
+            const timeStr = new Date().toLocaleTimeString();
+            const logLine = document.createElement('div');
+            logLine.className = 'log-line' + (isWarning ? ' log-warning' : '');
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'log-time';
+            timeSpan.innerText = `[${timeStr}]`;
+            
+            const systemSpan = document.createElement('span');
+            systemSpan.className = 'log-system';
+            systemSpan.innerText = isWarning ? 'WARNING:' : 'SYSTEM:';
+            
+            logLine.appendChild(timeSpan);
+            logLine.appendChild(systemSpan);
+            logLine.appendChild(document.createTextNode(' ' + msg));
+            
+            consoleEl.appendChild(logLine);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        // --- 2. テストフレームジェネレータ（CEFの描画シミュレーション） ---
+        // 32x32の Premultiplied Alpha 形式のカラーバッファを生成する
+        class FrameGenerator {
+            // アニメーションをframeId（cefCount）から決定論的に生成する
+            nextFrame(cefCount) {
+                const canvas = document.createElement('canvas');
+                canvas.width = WIDTH;
+                canvas.height = HEIGHT;
+                const ctx = canvas.getContext('2d');
+
+                // 背景は透明（RGBA = 0,0,0,0）
+                ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+                // アニメーション更新 (決定論的)
+                const angle = cefCount * 0.08;
+                const xPos = (cefCount * 0.4) % (WIDTH + 16);
+
+                // 1. 動く半透明の円 (カラー: 鮮やかな赤 RGBA = 255, 0, 0, 0.5)
+                // Premultiplied では画素値は (127.5, 0, 0, 0.5) になるはず
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                ctx.beginPath();
+                ctx.arc(xPos - 8, 16, 7, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 2. 回転する斜めバー (カラー: 緑 RGBA = 0, 255, 0, 0.8)
+                ctx.save();
+                ctx.translate(16, 16);
+                ctx.rotate(angle);
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+                ctx.fillRect(-2, -12, 4, 24);
+                ctx.restore();
+
+                // 3. 静的なグラデーションの四角 (カラー: 青 RGBA = 0, 0, 255, A)
+                ctx.fillStyle = 'rgba(0, 0, 255, 0.3)';
+                ctx.fillRect(2, 2, 8, 8);
+
+                // 4. アルファ閾値のデモ用：極端に薄いアルファの領域 (カラー: マゼンタ RGBA = 255, 0, 255, 0.02)
+                ctx.fillStyle = 'rgba(255, 0, 255, 0.02)';
+                ctx.fillRect(24, 2, 6, 6);
+
+                // ImageDataの取得
+                const imgData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
+                const data = imgData.data;
+
+                const pmBuffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i+1];
+                    const b = data[i+2];
+                    const a = data[i+3] / 255.0; // 0.0 ~ 1.0
+
+                    // Premultiply 処理
+                    pmBuffer[i]   = Math.round(r * a);
+                    pmBuffer[i+1] = Math.round(g * a);
+                    pmBuffer[i+2] = Math.round(b * a);
+                    pmBuffer[i+3] = data[i+3]; // Alphaはそのまま
+                }
+
+                return {
+                    timestamp: state.time,
+                    data: pmBuffer,
+                    id: cefCount
+                };
+            }
+        }
+
+        const generator = new FrameGenerator();
+
+        // --- 3. ステートのディープコピー（Undo用） ---
+        function cloneState(s) {
+            return {
+                time: s.time,
+                cefCount: s.cefCount,
+                dlCount: s.dlCount,
+                nextCefTime: s.nextCefTime,
+                nextDlTime: s.nextDlTime,
+                isConsuming: s.isConsuming,
+                prerollDelay: s.prerollDelay,
+                framesSinceLastDrop: s.framesSinceLastDrop,
+                viewMode: s.viewMode,
+                filterMode: s.filterMode,
+                alphaThreshold: s.alphaThreshold,
+                playSpeed: s.playSpeed,
+                cefActive: s.cefActive,
+                isPlaying: s.isPlaying,
+                
+                cpuQueue: s.cpuQueue.map(f => ({ id: f.id, timestamp: f.timestamp, data: new Uint8ClampedArray(f.data) })),
+                gpuQueue: s.gpuQueue.map(f => ({ id: f.id, timestamp: f.timestamp, data: new Uint8ClampedArray(f.data) })),
+                
+                frame1: s.frame1 ? { id: s.frame1.id, timestamp: s.frame1.timestamp, data: new Uint8ClampedArray(s.frame1.data) } : null,
+                frame2: s.frame2 ? { id: s.frame2.id, timestamp: s.frame2.timestamp, data: new Uint8ClampedArray(s.frame2.data) } : null,
+                
+                shaderOutput: s.shaderOutput ? { id: s.shaderOutput.id, data: new Uint8ClampedArray(s.shaderOutput.data) } : null,
+                
+                staging0: s.staging0 ? { data: new Uint8ClampedArray(s.staging0.data) } : null,
+                staging1: s.staging1 ? { data: new Uint8ClampedArray(s.staging1.data) } : null,
+                
+                hwFill: s.hwFill ? new Uint8ClampedArray(s.hwFill) : null,
+                hwKey: s.hwKey ? new Uint8ClampedArray(s.hwKey) : null,
+                
+                lastHwFill: s.lastHwFill ? new Uint8ClampedArray(s.lastHwFill) : null,
+                lastHwKey: s.lastHwKey ? new Uint8ClampedArray(s.lastHwKey) : null,
+                
+                inspectX: s.inspectX,
+                inspectY: s.inspectY
+            };
+        }
+
+        function saveHistory() {
+            if (historyStack.length >= MAX_HISTORY) {
+                historyStack.shift();
+            }
+            historyStack.push(cloneState(state));
+            updateUndoButtonState();
+        }
+
+        function updateUndoButtonState() {
+            const btnUndo = document.getElementById('btn-undo');
+            if (btnUndo) {
+                btnUndo.disabled = (historyStack.length === 0 || state.isPlaying);
+            }
+        }
+
+        // --- 4. パイプラインシミュレータのコアロジック ---
+
+        // CEF (60fps = 16.67ms) Tick 処理 (内部)
+        function cefTickInternal() {
+            if (!state.cefActive) return;
+            
+            // C++の OnPaint に合わせたバッファ上限制御 (最新を捨てるポリシー、kBufferCount = 32)
+            if (state.cpuQueue.length >= 32) {
+                logMsg(`OnPaint: CPU Queue が上限に達しているため、最新のフレーム生成をドロップしました (kBufferCount=32 制限)`, true);
+                return;
+            }
+            
+            state.cefCount++;
+            const frame = generator.nextFrame(state.cefCount);
+            state.cpuQueue.push(frame);
+            
+            logMsg(`CEF OnPaint: 新規フレーム #${frame.id} を生成。CPU Queue へ格納。 (現在: ${state.cpuQueue.length}/32)`);
+        }
+
+        // DeckLink (29.97Hz = 33.36ms) Tick 処理 (内部)
+        function deckLinkTickInternal() {
+            state.dlCount++;
+            logMsg(`DeckLink: サイクル #${state.dlCount} 開始。ポーリング中...`);
+            
+            // 1. SyncWithGPU(): CPU Queue -> GPU Queue (VRAMアップロード)
+            // CEFで溜まっている未アップロードのフレームをすべてD3D11テクスチャへアップロード（whileループで全て処理）
+            const uploadedCount = state.cpuQueue.length;
+            let syncCount = 0;
+            while(state.cpuQueue.length > 0) {
+                const f = state.cpuQueue.shift();
+                
+                // GPUテクスチャキューのサイズ上限は16枚。溢れた場合は最古をドロップ（pop）
+                if (state.gpuQueue.length >= 16) {
+                    const dropped = state.gpuQueue.shift();
+                    logMsg(`SyncWithGPU: GPU Texture Queue が一杯のため、古いテクスチャ #${dropped.id} をドロップしました`, true);
+                }
+                state.gpuQueue.push(f);
+                syncCount++;
+            }
+            if (uploadedCount > 0) {
+                logMsg(`SyncWithGPU: 保留中の ${syncCount}枚 のフレームを VRAM (GPU Queue) へアップロードしました。 (現在: ${state.gpuQueue.length}/16)`);
+            }
+
+            // 2. プレロール同期機構 (GetSynchronizedTextures() 準拠)
+            handlePrerollAndConsume();
+
+            // 3. Compute Shader の実行 (YUVConvert.hlsl)
+            executeComputeShader();
+
+            // 4. 遅延リードバック (2フレーム遅延)
+            executeReadback();
+        }
+
+        // 仮想時間を進める核心ロジック
+        function advanceTime(ms) {
+            if (ms <= 0) return;
+            
+            // 進行開始前に履歴を保存する
+            saveHistory();
+
+            const step = 0.5; // 時間を進める分解能（ミリ秒）
+            const targetTime = state.time + ms;
+            
+            logMsg(`仮想時間進行: +${ms.toFixed(2)}ms (目標時間: ${targetTime.toFixed(2)}ms)`);
+            
+            while (state.time < targetTime) {
+                // 時間をインクリメント
+                state.time = Math.min(state.time + step, targetTime);
+                
+                // DeckLinkの消費判定 (29.97Hz = 33.36msごと)
+                if (state.time >= state.nextDlTime) {
+                    deckLinkTickInternal();
+                    state.nextDlTime += 33.36;
+                }
+
+                // CEFの生成判定 (60fps = 16.68msごと)
+                if (state.time >= state.nextCefTime) {
+                    cefTickInternal();
+                    state.nextCefTime += 16.68;
+                }
+            }
+            
+            updateUI();
+        }
+
+        // プレロール・同期キューのステートマシン (C++ CefRenderHandler.cpp::GetSynchronizedTextures 準拠)
+        function handlePrerollAndConsume() {
+            const queueSize = state.gpuQueue.length;
+            
+            // 1. Time-based Preroll logic
+            if (!state.isConsuming) {
+                if (queueSize > 0) {
+                    if (state.prerollDelay > 0) {
+                        state.prerollDelay--;
+                        logMsg(`GetSynchronizedTextures: プレロール待機中... (残り: ${state.prerollDelay} サイクル)`);
+                    } else {
+                        state.isConsuming = true;
+                        logMsg(`GetSynchronizedTextures: プレロール完了。フレームの通常消費を開始します。`);
+                    }
+                }
+            }
+            
+            let poppedPair = false;
+            let poppedSingle = false;
+            
+            // 2. Consume logic (通常消費)
+            if (state.isConsuming) {
+                state.framesSinceLastDrop++;
+                
+                // Soft threshold drop (planned drop) - C++: size > 12 && framesSinceLastDrop >= 30
+                if (state.gpuQueue.length > 12 && state.framesSinceLastDrop >= 30) {
+                    const dropped = state.gpuQueue.shift();
+                    state.framesSinceLastDrop = 0;
+                    logMsg(`GetSynchronizedTextures: キュー滞留過多 (>12) のため、計画的ドロップ(Soft Threshold Drop)を実行しました (フレーム #${dropped.id} 破棄)`, true);
+                }
+                
+                // 通常消費 (2枚ポップしてマッピング)
+                if (state.gpuQueue.length >= 2) {
+                    state.frame1 = state.gpuQueue.shift(); // 古い (Top)
+                    state.frame2 = state.gpuQueue.shift(); // 新しい (Bottom)
+                    poppedPair = true;
+                    logMsg(`GetSynchronizedTextures: GPU Queue から F1(#${state.frame1.id}), F2(#${state.frame2.id}) を引き出して消費します。`);
+                } 
+                // 1枚のみの場合は枯渇警告 (Starvation) で同一フレーム複製
+                else if (state.gpuQueue.length === 1) {
+                    const singleFrame = state.gpuQueue.shift();
+                    state.frame1 = singleFrame;
+                    state.frame2 = { ...singleFrame }; // 複製
+                    poppedSingle = true;
+                    logMsg(`GetSynchronizedTextures: フレーム不足(1枚のみ)。同一フレーム(#${singleFrame.id})を複製適用し、枯渇警告状態へ移行します。`, true);
+                } 
+                // 完全に空になったらプレロール待機へリセット
+                else {
+                    state.isConsuming = false;
+                    state.prerollDelay = 3;
+                    logMsg(`GetSynchronizedTextures: キューが完全に空になりました。消費を停止しプレロール(delay=3)にリセットします。`, true);
+                }
+            }
+            
+            // 3. 静止時のブレ解除 (消費が発生しないサイクル)
+            if (!poppedPair && !poppedSingle) {
+                freezeOutput();
+            }
+        }
+
+        // アニメーションが停止またはプレロール中に、前回のフレームをホールドする (インターレースブレ解除)
+        function freezeOutput() {
+            // もし過去のフレームが存在すれば、F1 (Top) を F2 (Bottom) と同じにして、インターレースブレ（奇偶ラインのズレ）を解除して静止させる
+            // C++コードの `m_lastTop = m_lastBottom` (!poppedPair && !poppedSingle 時) に相当
+            if (state.frame1 && state.frame2) {
+                if (state.frame1.id !== state.frame2.id) {
+                    state.frame1 = { ...state.frame2 }; // TopをBottomと同一にする
+                    logMsg(`GetSynchronizedTextures: 消費なし。インターレースブレを解除し、直近フレーム (#${state.frame2.id}) で完全静止させます。`);
+                }
+            } else {
+                // 完全な初期状態
+                const blackData = new Uint8ClampedArray(WIDTH * HEIGHT * 4); // ALL 0
+                const emptyFrame = { id: 0, timestamp: 0, data: blackData };
+                state.frame1 = emptyFrame;
+                state.frame2 = emptyFrame;
+            }
+        }
+
+        // Compute Shader (YUVConvert.hlsl) のシミュレーション
+        function executeComputeShader() {
+            const f1Data = state.frame1.data;
+            const f2Data = state.frame2.data;
+            const outBuffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            
+            const threshold = state.alphaThreshold;
+            const viewMode = state.viewMode;
+            const filterMode = state.filterMode;
+            
+            // 縦フィルタ関数の定義 (YUVConvert.hlslの SampleFiltered に相当)
+            function getFilteredPixel(frameData, x, y, isFrame1) {
+                const getPixelRGBA = (fx, fy) => {
+                    const idx = (fy * WIDTH + fx) * 4;
+                    return [
+                        frameData[idx] / 255.0,
+                        frameData[idx+1] / 255.0,
+                        frameData[idx+2] / 255.0,
+                        frameData[idx+3] / 255.0
+                    ];
+                };
+
+                const center = getPixelRGBA(x, y);
+                if (filterMode === 0) return center; // フィルターなし
+
+                const yM1 = Math.max(y - 1, 0);
+                const yP1 = Math.min(y + 1, HEIGHT - 1);
+                const above1 = getPixelRGBA(x, yM1);
+                const below1 = getPixelRGBA(x, yP1);
+
+                if (filterMode === 1) {
+                    // 3-tap kernel: [0.25, 0.50, 0.25]
+                    return [
+                        above1[0]*0.25 + center[0]*0.50 + below1[0]*0.25,
+                        above1[1]*0.25 + center[1]*0.50 + below1[1]*0.25,
+                        above1[2]*0.25 + center[2]*0.50 + below1[2]*0.25,
+                        above1[3]*0.25 + center[3]*0.50 + below1[3]*0.25
+                    ];
+                }
+
+                // 5-tap kernel: [0.0625, 0.25, 0.375, 0.25, 0.0625]
+                const yM2 = Math.max(y - 2, 0);
+                const yP2 = Math.min(y + 2, HEIGHT - 1);
+                const above2 = getPixelRGBA(x, yM2);
+                const below2 = getPixelRGBA(x, yP2);
+
+                return [
+                    above2[0]*0.0625 + above1[0]*0.25 + center[0]*0.375 + below1[0]*0.25 + below2[0]*0.0625,
+                    above2[1]*0.0625 + above1[1]*0.25 + center[0]*0.375 + below1[1]*0.25 + below2[1]*0.0625,
+                    above2[2]*0.0625 + above1[2]*0.25 + center[0]*0.375 + below1[2]*0.25 + below2[2]*0.0625,
+                    above2[3]*0.0625 + above1[3]*0.25 + center[0]*0.375 + below1[3]*0.25 + below2[3]*0.0625
+                ];
+            }
+
+            // 全ピクセルを走査
+            for (let y = 0; y < HEIGHT; y++) {
+                for (let x = 0; x < WIDTH; x++) {
+                    const idx = (y * WIDTH + x) * 4;
+                    let pixel = [0, 0, 0, 0]; // R, G, B, A (0.0 ~ 1.0)
+                    
+                    // --- モード別のサンプリング処理 ---
+                    if (viewMode === 1) {
+                        // Mode 1: Diff 差分モード (F1とF2の差分を求める)
+                        const p1 = getFilteredPixel(f1Data, x, y, true);
+                        const p2 = getFilteredPixel(f2Data, x, y, false);
+                        pixel = [
+                            Math.abs(p1[0] - p2[0]),
+                            Math.abs(p1[1] - p2[1]),
+                            Math.abs(p1[2] - p2[2]),
+                            1.0 // 差分可視化のためアルファは1.0固定
+                        ];
+                    } 
+                    else if (viewMode === 2) {
+                        // Mode 2: Progressive Frame 1
+                        pixel = getFilteredPixel(f1Data, x, y, true);
+                    } 
+                    else if (viewMode === 3) {
+                        // Mode 3: Progressive Frame 2
+                        pixel = getFilteredPixel(f2Data, x, y, false);
+                    } 
+                    else if (viewMode === 4) {
+                        // Mode 4: 30p Blend
+                        const p1 = getFilteredPixel(f1Data, x, y, true);
+                        const p2 = getFilteredPixel(f2Data, x, y, false);
+                        pixel = [
+                            p1[0] * 0.5 + p2[0] * 0.5,
+                            p1[1] * 0.5 + p2[1] * 0.5,
+                            p1[2] * 0.5 + p2[2] * 0.5,
+                            p1[3] * 0.5 + p2[3] * 0.5
+                        ];
+                    } 
+                    else {
+                        // Mode 0: Interlaced Normal
+                        if (y % 2 === 0) {
+                            // 偶数行 = Frame 1 (Top Field)
+                            pixel = getFilteredPixel(f1Data, x, y, true);
+                        } else {
+                            // 奇数行 = Frame 2 (Bottom Field)
+                            pixel = getFilteredPixel(f2Data, x, y, false);
+                        }
+                    }
+
+                    // --- Unpremultiply: RGB /= Alpha ---
+                    let originalAlpha = pixel[3];
+                    if (pixel[3] > threshold) {
+                        pixel[0] /= pixel[3];
+                        pixel[1] /= pixel[3];
+                        pixel[2] /= pixel[3];
+                    }
+                    // 計算結果を飽和(Saturate)させて0~255のバイト配列へ戻す
+                    outBuffer[idx]   = Math.min(Math.max(Math.round(pixel[0] * 255.0), 0), 255);
+                    outBuffer[idx+1] = Math.min(Math.max(Math.round(pixel[1] * 255.0), 0), 255);
+                    outBuffer[idx+2] = Math.min(Math.max(Math.round(pixel[2] * 255.0), 0), 255);
+                    outBuffer[idx+3] = Math.min(Math.max(Math.round(originalAlpha * 255.0), 0), 255);
+                }
+            }
+
+            state.shaderOutput = {
+                data: outBuffer,
+                id: Math.max(state.frame1.id, state.frame2.id)
+            };
+        }
+
+        // 遅延リードバックシミュレーション
+        function executeReadback() {
+            // パフォーマンスのための2フレーム遅延のリードバック
+            if (!state.lastHwFill) {
+                // 初回のみ黒画像でバッファ初期化
+                const black = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+                state.staging0 = { data: black.slice() };
+                state.staging1 = { data: black.slice() };
+                state.lastHwFill = black.slice();
+                state.lastHwKey = black.slice();
+            }
+
+            // 出力信号の作成：Staging[1] (2サイクル前) から DeckLink HW へ
+            const srcData = state.staging1.data;
+            const fillBuffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            const keyBuffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+
+            for (let i = 0; i < srcData.length; i += 4) {
+                // Fill 出力: アルファの影響を除いたRGB
+                fillBuffer[i]   = srcData[i];
+                fillBuffer[i+1] = srcData[i+1];
+                fillBuffer[i+2] = srcData[i+2];
+                fillBuffer[i+3] = 255;
+
+                // Key 出力: アルファをグレイスケール（白黒）で表現
+                const aVal = srcData[i+3];
+                keyBuffer[i]   = aVal;
+                keyBuffer[i+1] = aVal;
+                keyBuffer[i+2] = aVal;
+                keyBuffer[i+3] = 255;
+            }
+
+            state.hwFill = fillBuffer;
+            state.hwKey = keyBuffer;
+
+            // キューのシフト（2サイクル遅延パイプ）
+            state.staging1 = { data: state.staging0.data.slice() };
+            state.staging0 = { data: state.shaderOutput.data.slice() };
+            
+            logMsg(`遅延リードバック: Staging[1] (Tick N-2) を Map し、DeckLink HWから Fill / Key 出力しました。`);
+        }
+
+        // リセット処理
+        function resetState() {
+            state.time = 0.0;
+            state.cefCount = 0;
+            state.dlCount = 0;
+            state.nextCefTime = 16.68; // 最初のCEF描画は16.68msで発生（1ステップ目で1枚になるようにする）
+            state.nextDlTime = 33.36; // 最初のDeckLinkサイクルは33.36msで動作
+            state.isConsuming = false;
+            state.prerollDelay = 3;
+            state.framesSinceLastDrop = 0;
+            state.cpuQueue = [];
+            state.gpuQueue = [];
+            
+            // 最初はすべて黒画像
+            const blackData = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            const emptyFrame = { id: 0, timestamp: 0, data: blackData.slice() };
+            state.frame1 = emptyFrame;
+            state.frame2 = emptyFrame;
+            state.shaderOutput = emptyFrame;
+            state.staging0 = emptyFrame;
+            state.staging1 = emptyFrame;
+            state.hwFill = blackData.slice();
+            state.hwKey = blackData.slice();
+            state.lastHwFill = blackData.slice();
+            state.lastHwKey = blackData.slice();
+
+            // 履歴もリセット
+            historyStack = [];
+            updateUndoButtonState();
+
+            logMsg("シミュレータの内部ステートをリセットしました。初期状態（待機中）です。");
+            updateUI();
+        }
+
+        // --- 5. キャンバス描画と UI アップデート ---
+
+        function drawToCanvas(canvasId, pixelBuffer) {
+            if (!pixelBuffer) return;
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const imgData = ctx.createImageData(WIDTH, HEIGHT);
+            
+            imgData.data.set(pixelBuffer);
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        // キュー内のサムネイル一覧をレンダリングする (固定グリッドスロットシステム)
+        function renderQueueFlow(elementId, queueArray) {
+            const flowEl = document.getElementById(elementId);
+            if (!flowEl) return;
+            flowEl.innerHTML = '';
+            
+            const isCpu = elementId.includes('cpu');
+            const totalSlots = isCpu ? 4 : 16;
+            
+            for (let i = 0; i < totalSlots; i++) {
+                if (i < queueArray.length) {
+                    // データが存在するスロット：サムネイル描画
+                    const frame = queueArray[i];
+                    const item = document.createElement('div');
+                    item.className = 'queue-item-grid';
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = WIDTH;
+                    canvas.height = HEIGHT;
+                    const ctx = canvas.getContext('2d');
+                    const imgData = ctx.createImageData(WIDTH, HEIGHT);
+                    imgData.data.set(frame.data);
+                    ctx.putImageData(imgData, 0, 0);
+                    
+                    const badge = document.createElement('div');
+                    badge.className = 'queue-item-badge';
+                    badge.innerText = `#${frame.id}`;
+
+                    item.appendChild(canvas);
+                    item.appendChild(badge);
+                    
+                    item.addEventListener('click', () => {
+                        logMsg(`インスペクタ: キュー内のフレーム #${frame.id} を選択しました。`);
+                        drawToCanvas('canvas-cef', frame.data);
+                    });
+
+                    flowEl.appendChild(item);
+                } else {
+                    // 空のスロット：点線枠
+                    const slot = document.createElement('div');
+                    slot.className = 'queue-slot-empty';
+                    slot.innerText = `[${i}]`;
+                    flowEl.appendChild(slot);
+                }
+            }
+        }
+
+        // ピクセルインスペクタ（ドット格子）の作成
+        function updateInspectGrids() {
+            if (!state.frame1 || !state.frame2 || !state.shaderOutput) return;
+
+            const x = state.inspectX;
+            const y = state.inspectY;
+
+            const getRGBString = (buffer, px, py) => {
+                const idx = (py * WIDTH + px) * 4;
+                const r = buffer[idx];
+                const g = buffer[idx+1];
+                const b = buffer[idx+2];
+                const a = (buffer[idx+3] / 255.0).toFixed(2);
+                return `R: ${r}, G: ${g}, B: ${b}, A: ${a}`;
+            };
+
+            document.getElementById('det-coord').innerText = `X: ${x}, Y: ${y}`;
+            document.getElementById('det-f1-raw').innerText = getRGBString(state.frame1.data, x, y) + " (Premultiplied)";
+            document.getElementById('det-f2-raw').innerText = getRGBString(state.frame2.data, x, y) + " (Premultiplied)";
+
+            // 偶奇判定の表示
+            const isEven = (y % 2 === 0);
+            if (state.viewMode === 0) {
+                document.getElementById('det-sampling').innerText = isEven 
+                    ? `偶数ラインのため [Frame 1 (Top Field)] を選択サンプリング` 
+                    : `奇数ラインのため [Frame 2 (Bottom Field)] を選択サンプリング`;
+                document.getElementById('det-sampling').style.color = isEven ? 'var(--accent-cyan)' : 'var(--accent-violet)';
+            } else if (state.viewMode === 1) {
+                document.getElementById('det-sampling').innerText = `差分モード: abs(F1 - F2) をサンプリング`;
+                document.getElementById('det-sampling').style.color = 'var(--accent-amber)';
+            } else {
+                document.getElementById('det-sampling').innerText = `プログレッシブ/ブレンドサンプリング中`;
+                document.getElementById('det-sampling').style.color = 'var(--success)';
+            }
+
+            // フィルター計算の中間状態の表示
+            const getLPFPixelVal = (buffer, px, py) => {
+                const getVal = (gx, gy) => {
+                    const idx = (gy * WIDTH + gx) * 4;
+                    return [buffer[idx], buffer[idx+1], buffer[idx+2], buffer[idx+3]];
+                };
+                
+                const center = getVal(px, py);
+                if (state.filterMode === 0) return center;
+                
+                const yM1 = Math.max(py - 1, 0);
+                const yP1 = Math.min(py + 1, HEIGHT - 1);
+                const above1 = getVal(px, yM1);
+                const below1 = getVal(px, yP1);
+                
+                if (state.filterMode === 1) {
+                    return [
+                        above1[0]*0.25 + center[0]*0.5 + below1[0]*0.25,
+                        above1[1]*0.25 + center[1]*0.5 + below1[1]*0.25,
+                        above1[2]*0.25 + center[2]*0.5 + below1[2]*0.25,
+                        above1[3]*0.25 + center[3]*0.5 + below1[3]*0.25
+                    ];
+                }
+                
+                const yM2 = Math.max(py - 2, 0);
+                const yP2 = Math.min(py + 2, HEIGHT - 1);
+                const above2 = getVal(px, yM2);
+                const below2 = getVal(px, yP2);
+                
+                return [
+                    above2[0]*0.0625 + above1[0]*0.25 + center[0]*0.375 + below1[0]*0.25 + below2[0]*0.0625,
+                    above2[1]*0.0625 + above1[1]*0.25 + center[0]*0.375 + below1[1]*0.25 + below2[1]*0.0625,
+                    above2[2]*0.0625 + above1[2]*0.25 + center[0]*0.375 + below1[2]*0.25 + below2[2]*0.0625,
+                    above2[3]*0.0625 + above1[3]*0.25 + center[0]*0.375 + below1[3]*0.25 + below2[3]*0.0625
+                ];
+            };
+
+            const activeSrcBuffer = (isEven || state.viewMode !== 0) ? state.frame1.data : state.frame2.data;
+            const lpfVal = getLPFPixelVal(activeSrcBuffer, x, y);
+            const lpfA = (lpfVal[3] / 255.0).toFixed(2);
+            document.getElementById('det-lpf-val').innerText = `R: ${Math.round(lpfVal[0])}, G: ${Math.round(lpfVal[1])}, B: ${Math.round(lpfVal[2])}, A: ${lpfA}`;
+
+            // Unpremultiply計算の表示
+            const finalIdx = (y * WIDTH + x) * 4;
+            const finalVal = state.shaderOutput.data;
+            const outA = (finalVal[finalIdx+3] / 255.0).toFixed(2);
+            const rawA = lpfVal[3] / 255.0;
+            
+            if (rawA > state.alphaThreshold) {
+                document.getElementById('det-unmult-val').innerText = `R: ${finalVal[finalIdx]}, G: ${finalVal[finalIdx+1]}, B: ${finalVal[finalIdx+2]}, A: ${outA} (復元適用: RGB /= ${rawA.toFixed(2)})`;
+                document.getElementById('det-unmult-val').style.color = 'var(--success)';
+            } else {
+                document.getElementById('det-unmult-val').innerText = `R: ${finalVal[finalIdx]}, G: ${finalVal[finalIdx+1]}, B: ${finalVal[finalIdx+2]}, A: ${outA} (閾値以下無処理)`;
+                document.getElementById('det-unmult-val').style.color = 'var(--text-muted)';
+            }
+
+            const redrawInspectCanvas = (containerId, buffer) => {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                let canvas = container.querySelector('canvas');
+                if (!canvas) {
+                    canvas = document.createElement('canvas');
+                    canvas.width = WIDTH;
+                    canvas.height = HEIGHT;
+                    canvas.className = 'pixel-canvas';
+                    canvas.style.width = '256px';
+                    canvas.style.height = '256px';
+                    container.appendChild(canvas);
+                }
+                const ctx = canvas.getContext('2d');
+                const imgData = ctx.createImageData(WIDTH, HEIGHT);
+                imgData.data.set(buffer);
+                ctx.putImageData(imgData, 0, 0);
+
+                ctx.strokeStyle = 'var(--accent-cyan)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, y, 1, 1);
+            };
+
+            redrawInspectCanvas('inspect-f1', state.frame1.data);
+            redrawInspectCanvas('inspect-f2', state.frame2.data);
+            redrawInspectCanvas('inspect-out', state.shaderOutput.data);
+        }
+
+        // 全体UIの同期
+        function updateUI() {
+            document.getElementById('val-time').innerText = `${state.time.toFixed(2)} ms`;
+            document.getElementById('val-cef-count').innerText = state.cefCount;
+            document.getElementById('val-dl-count').innerText = state.dlCount;
+            
+            const pStateEl = document.getElementById('val-preroll');
+            if (!state.isConsuming) {
+                if (state.prerollDelay === 3 && state.gpuQueue.length === 0) {
+                    pStateEl.innerText = '待機中 (0/3)';
+                    pStateEl.style.color = 'var(--text-muted)';
+                } else {
+                    pStateEl.innerText = `プレロール中 (${3 - state.prerollDelay}/3)`;
+                    pStateEl.style.color = 'var(--accent-amber)';
+                }
+            } else {
+                pStateEl.innerText = 'ACTIVE (消費中)';
+                pStateEl.style.color = 'var(--success)';
+            }
+
+            document.getElementById('val-cpu-q-load').innerText = `${state.cpuQueue.length} / 32`;
+            document.getElementById('status-cpu-count').innerText = `${state.cpuQueue.length} 枚`;
+            
+            document.getElementById('val-gpu-q-load').innerText = `${state.gpuQueue.length} / 16`;
+            document.getElementById('status-gpu-count').innerText = `${state.gpuQueue.length} 枚`;
+
+            const toggleArrow = (id, active) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (active) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            };
+            toggleArrow('arrow-cef-cpu', state.cefActive && state.cpuQueue.length < 32);
+            toggleArrow('arrow-cpu-gpu-vert', state.cpuQueue.length > 0);
+            toggleArrow('arrow-gpu-shader', state.isConsuming && state.gpuQueue.length > 0);
+            toggleArrow('arrow-shader-staging', state.shaderOutput !== null);
+            toggleArrow('arrow-staging-hw', state.staging1 !== null);
+
+            const modes = ["INTERLACE (Normal)", "DIFF (差分表示)", "PROGRESSIVE F1", "PROGRESSIVE F2", "30p BLEND"];
+            document.getElementById('status-shader-mode').innerText = modes[state.viewMode];
+
+            if (state.cpuQueue.length > 0) {
+                drawToCanvas('canvas-cef', state.cpuQueue[state.cpuQueue.length - 1].data);
+                document.getElementById('status-cef-draw').innerText = 'ACTIVE';
+                document.getElementById('status-cef-draw').style.color = 'var(--success)';
+            } else {
+                document.getElementById('status-cef-draw').innerText = 'STANDBY';
+                document.getElementById('status-cef-draw').style.color = 'var(--text-muted)';
+            }
+
+            renderQueueFlow('cpu-queue-flow', state.cpuQueue);
+            renderQueueFlow('gpu-queue-flow', state.gpuQueue);
+
+            if (state.frame1) drawToCanvas('canvas-f1', state.frame1.data);
+            if (state.frame2) drawToCanvas('canvas-f2', state.frame2.data);
+            if (state.shaderOutput) drawToCanvas('canvas-shader-out', state.shaderOutput.data);
+
+            if (state.staging0) drawToCanvas('canvas-stage0', state.staging0.data);
+            if (state.staging1) drawToCanvas('canvas-stage1', state.staging1.data);
+
+            if (state.hwFill) drawToCanvas('canvas-hw-fill', state.hwFill);
+            if (state.hwKey) drawToCanvas('canvas-hw-key', state.hwKey);
+
+            updateInspectGrids();
+            updateUndoButtonState();
+        }
+
+        // --- 6. 自動再生ループ & イベントハンドラ ---
+        let mainTimer = null;
+
+        function runPlayLoop() {
+            if (!state.isPlaying) return;
+
+            const interval = 16.68 / state.playSpeed;
+            advanceTime(16.68);
+
+            mainTimer = setTimeout(runPlayLoop, interval);
+        }
+
+        // イベント設定
+        document.getElementById('btn-play-pause').addEventListener('click', (e) => {
+            state.isPlaying = !state.isPlaying;
+            if (state.isPlaying) {
+                e.target.innerText = '⏸ 一時停止';
+                e.target.classList.add('btn-primary');
+                logMsg("自動シミュレーションを開始しました。");
+                document.getElementById('sys-status').innerText = 'シミュレータ稼働中 - RUNNING';
+                runPlayLoop();
+            } else {
+                e.target.innerText = '▶ 自動再生';
+                e.target.classList.remove('btn-primary');
+                logMsg("自動シミュレーションを一時停止しました。");
+                document.getElementById('sys-status').innerText = 'シミュレータ一時停止 - PAUSED';
+                clearTimeout(mainTimer);
+            }
+            updateUndoButtonState();
+        });
+
+        // 戻る (Undo)
+        document.getElementById('btn-undo').addEventListener('click', () => {
+            if (state.isPlaying) return;
+            if (historyStack.length > 0) {
+                state = historyStack.pop();
+                logMsg(`Undo: 1ステップ前の状態に巻き戻しました。 (時間: ${state.time.toFixed(2)} ms)`);
+                updateUI();
+            }
+        });
+
+        document.getElementById('btn-cef-tick').addEventListener('click', () => {
+            if (state.isPlaying) return;
+            advanceTime(16.68);
+        });
+
+        document.getElementById('btn-dl-tick').addEventListener('click', () => {
+            if (state.isPlaying) return;
+            advanceTime(33.36);
+        });
+
+        document.getElementById('btn-advance-ms').addEventListener('click', () => {
+            if (state.isPlaying) return;
+            const ms = parseFloat(document.getElementById('input-advance-ms').value);
+            if (!isNaN(ms) && ms > 0) {
+                advanceTime(ms);
+            }
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            if (state.isPlaying) {
+                document.getElementById('btn-play-pause').click(); // 停止
+            }
+            resetState();
+        });
+
+        document.getElementById('select-mode').addEventListener('change', (e) => {
+            state.viewMode = parseInt(e.target.value);
+            logMsg(`設定変更: ビューモードを ${e.target.options[e.target.selectedIndex].text} に切り替えました。`);
+            if (state.frame1 && state.frame2) {
+                executeComputeShader();
+                updateUI();
+            }
+        });
+
+        document.getElementById('select-lpf').addEventListener('change', (e) => {
+            state.filterMode = parseInt(e.target.value);
+            logMsg(`設定変更: 垂直 LPF モードを ${e.target.options[e.target.selectedIndex].text} に切り替えました。`);
+            if (state.frame1 && state.frame2) {
+                executeComputeShader();
+                updateUI();
+            }
+        });
+
+        document.getElementById('range-threshold').addEventListener('input', (e) => {
+            state.alphaThreshold = parseFloat(e.target.value);
+            document.getElementById('val-threshold').innerText = state.alphaThreshold.toFixed(2);
+            if (state.frame1 && state.frame2) {
+                executeComputeShader();
+                updateUI();
+            }
+        });
+
+        document.getElementById('range-speed').addEventListener('input', (e) => {
+            state.playSpeed = parseFloat(e.target.value) / 5.0; // 0.2x ~ 2.0x
+            document.getElementById('val-speed').innerText = `${state.playSpeed.toFixed(1)}x`;
+        });
+
+        document.getElementById('chk-cef-active').addEventListener('change', (e) => {
+            state.cefActive = e.target.checked;
+            logMsg(`設定変更: CEFフレーム生成を ${state.cefActive ? '有効' : '無効'} にしました。`);
+        });
+
+        function setupInspectEvents(gridId) {
+            const el = document.getElementById(gridId);
+            if (!el) return;
+            
+            const handleMove = (e) => {
+                const rect = el.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                const px = Math.min(Math.max(Math.floor(mouseX / 8), 0), WIDTH - 1);
+                const py = Math.min(Math.max(Math.floor(mouseY / 8), 0), HEIGHT - 1);
+                
+                if (px !== state.inspectX || py !== state.inspectY) {
+                    state.inspectX = px;
+                    state.inspectY = py;
+                    updateInspectGrids();
+                }
+            };
+
+            el.addEventListener('mousemove', handleMove);
+            el.addEventListener('mouseenter', handleMove);
+        }
+
+        setupInspectEvents('inspect-f1');
+        setupInspectEvents('inspect-f2');
+        setupInspectEvents('inspect-out');
+
+        // アプリ起動時の初期処理
+        resetState();
+
+    </script>
+</body>
+</html>
