@@ -189,12 +189,51 @@
 
         .flow-line {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: flex-start;
+            flex-direction: column;
+            align-items: center;
             gap: 20px;
             position: relative;
             padding-bottom: 10px;
+        }
+
+        /* スレッド分割の境界線 */
+        .thread-group {
+            border: 2px solid;
+            border-radius: 16px;
+            padding: 15px 20px 20px 20px;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: stretch;
+            position: relative;
+            width: 100%;
+            max-width: 1800px;
+        }
+
+        .thread-title {
+            width: 100%;
+            margin-bottom: 5px;
+            padding: 5px 10px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .thread-sync-point {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin: 0 10px;
+            text-align: center;
+            user-select: none;
         }
 
         /* ハードウェアドメインの境界線 */
@@ -730,13 +769,13 @@
 
         <div class="control-group">
             <label for="range-threshold">アルファ閾値:</label>
-            <input type="range" id="range-threshold" min="0" max="0.5" step="0.01" value="0.05">
+            <input type="range" id="range-threshold" min="0" max="1.0" step="0.01" value="0.05">
             <span style="font-family: monospace; font-size: 0.8rem; min-width: 30px;" id="val-threshold">0.05</span>
         </div>
 
         <div class="control-group">
             <label for="range-speed">再生速度:</label>
-            <input type="range" id="range-speed" min="1" max="10" step="1" value="5">
+            <input type="range" id="range-speed" min="1" max="50" step="1" value="5">
             <span style="font-family: monospace; font-size: 0.8rem;" id="val-speed">1.0x</span>
         </div>
 
@@ -750,6 +789,7 @@
                 <option value="4">4: 点滅市松模様 (Diff/60pチェッカー)</option>
                 <option value="5">5: スクロール文字 (テキストWeave確認)</option>
                 <option value="6">6: 回転文字 (テキストLPF/ジャギー確認)</option>
+                <option value="7">7: 何も描画しない (完全透明/真っ暗)</option>
             </select>
         </div>
 
@@ -797,8 +837,12 @@
 
         <div class="flow-line">
             
-            <!-- Domain: CPU / Main Memory (Producer) -->
-            <div class="hw-domain" style="border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.05);">
+            <!-- THREAD 1: Producer -->
+            <div class="thread-group" style="border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.02);">
+                <div class="thread-title" style="color: #60a5fa;">🧵 スレッドA: CEF Render Thread (プロデューサー 60Hz駆動)</div>
+            
+                <!-- Domain: CPU / Main Memory (Producer) -->
+                <div class="hw-domain" style="border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.05);">
                 <div class="domain-label" style="color: #60a5fa;">CPU / メインメモリ (CEF Thread)</div>
                 <div class="domain-content">
                     <!-- 1. CEF WebCore -->
@@ -821,7 +865,7 @@
                     <div class="arrow-connector" id="arrow-cef-cpu">➔</div>
 
                     <!-- 2. CPU Queue -->
-                    <div id="card-queues">
+                    <div id="card-queues" style="width: 260px;">
                         <div class="stage-card" id="card-cpu-q" style="border: 1px solid var(--panel-border); padding: 12px; width: 100%;">
                             <div class="stage-header">
                                 <span class="stage-name">2. CPU Frame Queue</span>
@@ -838,12 +882,21 @@
                     </div>
                 </div>
             </div>
+            
+            </div> <!-- End Thread 1 -->
 
-            <!-- 縦コネクタ (SyncWithGPU) -> 横方向のコネクタに変更して次のドメインへ接続 -->
-            <div class="arrow-connector" id="arrow-cpu-gpu-vert">➔</div>
+            <!-- Thread Sync Barrier -->
+            <div class="thread-sync-point" style="color: var(--accent-amber);">
+                <div style="font-size: 1.8rem; margin-bottom: 5px;">▼</div>
+                <div>Mutex Lock<br>(Queue Sync)</div>
+            </div>
 
-            <!-- Domain: GPU / VRAM -->
-            <div class="hw-domain" style="border-color: #8b5cf6; background-color: rgba(139, 92, 246, 0.05);">
+            <!-- THREAD 2: Consumer -->
+            <div class="thread-group" style="border-color: #a78bfa; background-color: rgba(167, 139, 250, 0.02);">
+                <div class="thread-title" style="color: #c4b5fd;">🧵 スレッドB: DeckLink Callback Thread (コンシューマー 29.97Hz駆動)</div>
+
+                <!-- Domain: GPU / VRAM -->
+                <div class="hw-domain" style="border-color: #8b5cf6; background-color: rgba(139, 92, 246, 0.05);">
                 <div class="domain-label" style="color: #a78bfa;">GPU / ビデオメモリ (DirectX 11)</div>
                 <div class="domain-content">
                     <!-- 3. GPU Queue -->
@@ -973,18 +1026,27 @@
                     </div>
                 </div>
             </div>
+            
+            </div> <!-- End Thread 2 -->
 
-            <!-- コネクタ -->
-            <div class="arrow-connector" id="arrow-hw-wire">➔</div>
+            <!-- HW Boundary -->
+            <div class="thread-sync-point" style="color: var(--accent-cyan);">
+                <div style="font-size: 1.8rem; margin-bottom: 5px;">▼</div>
+                <div>Thunderbolt Transfer<br>(PCIe)</div>
+            </div>
 
-            <!-- Domain: UltraStudio Hardware -->
-            <div class="hw-domain" style="border-color: #10b981; background-color: rgba(16, 185, 129, 0.05);">
+            <!-- THREAD 3: External Hardware -->
+            <div class="thread-group" style="border-color: #10b981; background-color: rgba(16, 185, 129, 0.02);">
+                <div class="thread-title" style="color: #34d399;">⏱ 外部クロック: UltraStudio Hardware (59.94i)</div>
+
+                <!-- Domain: UltraStudio Hardware -->
+                <div class="hw-domain" style="border-color: #10b981; background-color: rgba(16, 185, 129, 0.05);">
                 <div class="domain-label" style="color: #34d399;">UltraStudio ハードウェア (外部機器)</div>
                 <div class="domain-content">
-                    <!-- 7. SDI Hardware Output (Wire) -->
+                    <!-- 7. UltraStudio SDI Output (BNC Wire) -->
             <div class="stage-card" id="card-wire" style="border: 2px solid var(--accent-cyan);">
                 <div class="stage-header">
-                    <span class="stage-name">7. SDI Hardware Output (Wire)</span>
+                    <span class="stage-name">7. UltraStudio SDI Output (BNC Wire)</span>
                     <span class="stage-badge badge-consumer" id="badge-wire-field">Field 1</span>
                 </div>
                 <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
@@ -1025,6 +1087,9 @@
                     </div>
                 </div>
             </div>
+            
+            </div> <!-- End Thread 3 -->
+
         </div>
         <div class="legend">
             <div class="legend-item"><div class="legend-color" style="background-color: var(--accent-cyan);"></div> CEF 生産領域</div>
@@ -1301,6 +1366,12 @@ if (pixel.a > alphaThreshold) {
             logLine.appendChild(document.createTextNode(' ' + msg));
             
             consoleEl.appendChild(logLine);
+            
+            // パフォーマンス低下（メモリリーク）を防ぐため、ログの行数を200行に制限
+            while (consoleEl.children.length > 200) {
+                consoleEl.removeChild(consoleEl.firstChild);
+            }
+            
             consoleEl.scrollTop = consoleEl.scrollHeight;
         }
 
@@ -1541,8 +1612,10 @@ if (pixel.a > alphaThreshold) {
         function advanceTime(ms) {
             if (ms <= 0) return;
             
-            // 進行開始前に履歴を保存する
-            saveHistory();
+            // 進行開始前に履歴を保存する（自動再生中は重いためスキップ）
+            if (!state.isPlaying) {
+                saveHistory();
+            }
 
             const step = 0.1; // 時間を進める分解能（ミリ秒）
             const targetTime = state.time + ms;
@@ -1905,10 +1978,13 @@ if (pixel.a > alphaThreshold) {
             const isCpu = elementId.includes('cpu');
             const totalSlots = isCpu ? 4 : 16;
             
-            for (let i = 0; i < totalSlots; i++) {
-                if (i < queueArray.length) {
+            for (let slotIndex = 0; slotIndex < totalSlots; slotIndex++) {
+                // キュー内のアイテムを右詰め（Consumer側）に配置し、Producer（左）から右へ流れるように見せる
+                const qIndex = totalSlots - 1 - slotIndex;
+                
+                if (qIndex >= 0 && qIndex < queueArray.length) {
                     // データが存在するスロット：サムネイル描画
-                    const frame = queueArray[i];
+                    const frame = queueArray[qIndex];
                     const item = document.createElement('div');
                     item.className = 'queue-item-grid';
                     
@@ -1937,7 +2013,7 @@ if (pixel.a > alphaThreshold) {
                     // 空のスロット：点線枠
                     const slot = document.createElement('div');
                     slot.className = 'queue-slot-empty';
-                    slot.innerText = `[${i}]`;
+                    slot.innerText = `[${slotIndex}]`;
                     flowEl.appendChild(slot);
                 }
             }
@@ -2338,7 +2414,7 @@ if (pixel.a > alphaThreshold) {
         });
 
         document.getElementById('range-speed').addEventListener('input', (e) => {
-            state.playSpeed = parseFloat(e.target.value) / 5.0; // 0.2x ~ 2.0x
+            state.playSpeed = parseFloat(e.target.value) / 5.0; // 0.2x ~ 10.0x
             document.getElementById('val-speed').innerText = `${state.playSpeed.toFixed(1)}x`;
         });
 
