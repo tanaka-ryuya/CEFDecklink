@@ -25,12 +25,38 @@
             padding: 0;
         }
 
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
             font-family: var(--font-family);
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .top-fixed-section {
+            flex: 0 0 auto;
+            padding: 20px 20px 0 20px;
+            background-color: var(--bg-color);
+            z-index: 1000;
+            border-bottom: 1px solid var(--panel-border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+
+        .scrollable-content {
+            flex: 1 1 auto;
+            overflow-y: auto;
             padding: 20px;
-            overflow-x: hidden;
         }
 
         header {
@@ -81,9 +107,11 @@
             gap: 15px;
             align-items: center;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            position: sticky;
-            top: 10px;
-            z-index: 1000;
+        }
+
+        .main-controls-sticky {
+            /* Now handled by flexbox parent */
+            padding-bottom: 15px;
         }
 
         .btn {
@@ -189,27 +217,33 @@
 
         .flow-line {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
             position: relative;
             padding-bottom: 10px;
+            width: max-content;
         }
 
         /* スレッド分割の境界線 */
         .thread-group {
             border: 2px solid;
             border-radius: 16px;
-            padding: 15px 20px 20px 20px;
+            padding: 10px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            justify-content: flex-start;
+            align-items: flex-start;
+            position: relative;
+            width: max-content;
+        }
+
+        .thread-domains {
             display: flex;
             flex-direction: row;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-            align-items: stretch;
-            position: relative;
-            width: 100%;
-            max-width: 1800px;
+            align-items: center;
+            gap: 15px;
         }
 
         .thread-title {
@@ -231,7 +265,7 @@
             justify-content: center;
             font-size: 0.75rem;
             font-weight: bold;
-            margin: 0 10px;
+            margin: 0 5px;
             text-align: center;
             user-select: none;
         }
@@ -240,7 +274,7 @@
         .hw-domain {
             border: 2px dashed;
             border-radius: 12px;
-            padding: 15px;
+            padding: 10px 12px;
             display: flex;
             flex-direction: column;
             position: relative;
@@ -251,7 +285,7 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -261,8 +295,8 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            align-items: flex-start;
-            gap: 20px;
+            align-items: center;
+            gap: 10px;
         }
 
         /* パイプライン上の各ステージのカード (幅を固定化してがたつきを防止) */
@@ -270,7 +304,7 @@
             background-color: #0f172a;
             border: 1px solid var(--panel-border);
             border-radius: 8px;
-            padding: 12px;
+            padding: 10px;
             position: relative;
             transition: border-color 0.3s;
         }
@@ -331,7 +365,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100px;
+            padding: 0 5px;
             color: var(--text-muted);
             font-size: 1.5rem;
             font-weight: bold;
@@ -398,10 +432,11 @@
             font-weight: bold;
         }
 
-        /* CPUキュー用の1x4グリッド */
+        /* CPUキュー用の8x4グリッド */
         .cpu-grid-flow {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(4, 1fr);
             gap: 6px;
             background-color: #020617;
             padding: 8px;
@@ -410,10 +445,10 @@
             width: 100%;
         }
 
-        /* GPUキュー用の4x4グリッド */
+        /* GPUキュー用の8x4グリッド */
         .gpu-grid-flow {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(4, 1fr);
             gap: 6px;
             background-color: #020617;
@@ -425,14 +460,16 @@
 
         /* 空スロットのデザイン (点線枠) */
         .queue-slot-empty {
-            aspect-ratio: 1;
+            width: 24px;
+            height: 24px;
+            box-sizing: border-box;
             border: 1px dashed #1f2a45;
             background-color: #0b0f19;
             border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.65rem;
+            font-size: 0.55rem;
             color: #3b82f6;
             opacity: 0.3;
             font-family: monospace;
@@ -441,7 +478,9 @@
 
         /* グリッド内アイテム */
         .queue-item-grid {
-            aspect-ratio: 1;
+            width: 24px;
+            height: 24px;
+            box-sizing: border-box;
             border: 1px solid #475569;
             border-radius: 4px;
             position: relative;
@@ -718,10 +757,12 @@
             height: 10px;
             border-radius: 2px;
         }
+
     </style>
 </head>
 <body>
-
+<div class="app-container">
+    <div class="top-fixed-section">
     <header>
         <div>
             <h1>CEF-DeckLink パイプラインシミュレータ</h1>
@@ -733,10 +774,12 @@
         </div>
     </header>
 
-    <!-- コマ送り・パラメータ制御バー -->
-    <div class="control-bar">
-        <button class="btn btn-primary" id="btn-play-pause">▶ 自動再生</button>
-        <button class="btn" id="btn-undo" disabled>⇠ 戻る (Undo)</button>
+    <!-- 統合操作パネル（スティッキー） -->
+    <div class="main-controls-sticky" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+        <!-- コマ送り・パラメータ制御バー -->
+        <div class="control-bar" style="margin-bottom: 0;">
+            <button class="btn btn-primary" id="btn-play-pause">▶ 自動再生</button>
+            <button class="btn" id="btn-undo" disabled>⇠ 戻る (Undo)</button>
         <button class="btn" id="btn-cef-tick">⚙ 仮想時間 +16.7ms 進む</button>
         <button class="btn" id="btn-dl-tick">⚙ 仮想時間 +33.3ms 進む</button>
         <div class="control-group">
@@ -744,6 +787,19 @@
             <button class="btn" id="btn-advance-ms">⚙ 指定ms進む</button>
         </div>
         <button class="btn btn-danger" id="btn-reset">↺ リセット</button>
+
+        <div style="display: flex; gap: 15px; font-size: 0.85rem; color: #facc15; align-items: center; margin-left: 10px;">
+            <strong>🛑 自動停止(ブレーク):</strong>
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                <input type="checkbox" id="chk-break-planned"> 計画的ドロップ
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                <input type="checkbox" id="chk-break-overflow"> 物理的溢れ
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                <input type="checkbox" id="chk-break-starve"> 枯渇
+            </label>
+        </div>
 
         <div style="border-left: 1px solid var(--panel-border); height: 25px; margin: 0 5px;"></div>
 
@@ -789,7 +845,9 @@
                 <option value="4">4: 点滅市松模様 (Diff/60pチェッカー)</option>
                 <option value="5">5: スクロール文字 (テキストWeave確認)</option>
                 <option value="6">6: 回転文字 (テキストLPF/ジャギー確認)</option>
-                <option value="7">7: 何も描画しない (完全透明/真っ暗)</option>
+                <option value="7">7: 複合アニメ文字 (スクロール＋回転/拡大)</option>
+                <option value="8">8: バウンド文字 (跳ね返りテロップシミュ)</option>
+                <option value="9">9: 何も描画しない (完全透明/真っ暗)</option>
             </select>
         </div>
 
@@ -800,6 +858,55 @@
         </div>
     </div>
 
+        </div>
+        
+        <!-- ジッタ・負荷制御バー -->
+        <div class="control-bar" style="background-color: #1e1b4b; border-color: #3730a3; margin-bottom: 0;">
+            <div style="font-weight: bold; color: #a5b4fc; width: 100%; margin-bottom: -5px;">⚡ データサイエンス用ジッタ・ノイズジェネレータ (CEF送信揺らぎ)</div>
+        
+        <div class="control-group">
+            <label for="range-jitter">ジッタ強度 (σ):</label>
+            <input type="range" id="range-jitter" min="0" max="10" step="0.1" value="0">
+            <span style="font-family: monospace; font-size: 0.8rem; min-width: 40px;" id="val-jitter">0.0 ms</span>
+        </div>
+
+        <div class="control-group">
+            <label for="range-burst-prob">CPUスパイク発生率:</label>
+            <input type="range" id="range-burst-prob" min="0" max="2" step="0.05" value="0">
+            <span style="font-family: monospace; font-size: 0.8rem; min-width: 40px;" id="val-burst-prob">0.0 %</span>
+        </div>
+
+        <div class="control-group">
+            <label for="range-burst-delay">CPUスパイク遅延:</label>
+            <input type="range" id="range-burst-delay" min="10" max="100" step="1" value="30">
+            <span style="font-family: monospace; font-size: 0.8rem; min-width: 40px;" id="val-burst-delay">30 ms</span>
+        </div>
+
+        <div class="control-group">
+            <label for="range-drift">クロックドリフト:</label>
+            <input type="range" id="range-drift" min="-100" max="100" step="1" value="0">
+            <span style="font-family: monospace; font-size: 0.8rem; min-width: 55px;" id="val-drift">0 ppm</span>
+        </div>
+
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); width: 100%; margin: 5px 0;"></div>
+        
+        <div class="control-group">
+            <label for="range-gpu-stall-prob">GPUストール発生率:</label>
+            <input type="range" id="range-gpu-stall-prob" min="0" max="2" step="0.05" value="0">
+            <span style="font-family: monospace; font-size: 0.8rem; min-width: 40px;" id="val-gpu-stall-prob">0.0 %</span>
+        </div>
+
+        <div class="control-group">
+            <label for="range-gpu-stall-ms">GPUストール遅延:</label>
+            <input type="range" id="range-gpu-stall-ms" min="10" max="100" step="1" value="30">
+            <span style="font-family: monospace; font-size: 0.8rem; min-width: 40px;" id="val-gpu-stall-ms">30 ms</span>
+        </div>
+
+
+    </div> <!-- /main-controls-sticky -->
+    </div> <!-- /top-fixed-section -->
+
+    <div class="scrollable-content">
     <!-- タイムライン / チックカウンター -->
     <div class="timeline-ticks">
         <div class="tick-box">
@@ -820,11 +927,27 @@
         </div>
         <div class="tick-box" style="border-left: 2px solid var(--accent-amber);">
             <div class="tick-title">CPU Queue 負荷</div>
-            <div class="tick-val" id="val-cpu-q-load">0 / 4</div>
+            <div class="tick-val" id="val-cpu-q-load">0 / 32</div>
         </div>
         <div class="tick-box" style="border-left: 2px solid var(--accent-violet);">
             <div class="tick-title">GPU Queue 負荷</div>
-            <div class="tick-val" id="val-gpu-q-load">0 / 16</div>
+            <div class="tick-val" id="val-gpu-q-load">0 / 32</div>
+        </div>
+        <div class="tick-box" style="border-left: 2px solid #3b82f6;">
+            <div class="tick-title">計画的ドロップ (>12)</div>
+            <div class="tick-val" id="val-drops-planned" style="color: #3b82f6;">0</div>
+        </div>
+        <div class="tick-box" style="border-left: 2px solid #f97316;">
+            <div class="tick-title">物理的溢れ (>32)</div>
+            <div class="tick-val" id="val-drops-overflow" style="color: #f97316;">0</div>
+        </div>
+        <div class="tick-box" style="border-left: 2px solid var(--danger);">
+            <div class="tick-title">枯渇 (使い回し)</div>
+            <div class="tick-val" id="val-starvation" style="color: var(--danger);">0</div>
+        </div>
+        <div class="tick-box" style="border-left: 2px solid #ec4899;">
+            <div class="tick-title">推定レイテンシ</div>
+            <div class="tick-val" id="val-latency" style="color: #ec4899;">0 ms</div>
         </div>
     </div>
 
@@ -840,7 +963,7 @@
             <!-- THREAD 1: Producer -->
             <div class="thread-group" style="border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.02);">
                 <div class="thread-title" style="color: #60a5fa;">🧵 スレッドA: CEF Render Thread (プロデューサー 60Hz駆動)</div>
-            
+                <div class="thread-domains">
                 <!-- Domain: CPU / Main Memory (Producer) -->
                 <div class="hw-domain" style="border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.05);">
                 <div class="domain-label" style="color: #60a5fa;">CPU / メインメモリ (CEF Thread)</div>
@@ -865,11 +988,11 @@
                     <div class="arrow-connector" id="arrow-cef-cpu">➔</div>
 
                     <!-- 2. CPU Queue -->
-                    <div id="card-queues" style="width: 260px;">
-                        <div class="stage-card" id="card-cpu-q" style="border: 1px solid var(--panel-border); padding: 12px; width: 100%;">
+                    <div id="card-queues">
+                        <div class="stage-card" id="card-cpu-q" style="border: 1px solid var(--panel-border);">
                             <div class="stage-header">
                                 <span class="stage-name">2. CPU Frame Queue</span>
-                                <span class="stage-badge badge-queue">Max 4</span>
+                                <span class="stage-badge badge-queue">Max 32</span>
                             </div>
                             <div style="margin-top: 8px;">
                                 <div class="cpu-grid-flow" id="cpu-queue-flow"></div>
@@ -882,29 +1005,29 @@
                     </div>
                 </div>
             </div>
-            
+            </div>
             </div> <!-- End Thread 1 -->
 
             <!-- Thread Sync Barrier -->
             <div class="thread-sync-point" style="color: var(--accent-amber);">
-                <div style="font-size: 1.8rem; margin-bottom: 5px;">▼</div>
-                <div>Mutex Lock<br>(Queue Sync)</div>
+                <div style="font-size: 1.8rem;">➔</div>
+                <div>Mutex<br>Sync</div>
             </div>
 
             <!-- THREAD 2: Consumer -->
             <div class="thread-group" style="border-color: #a78bfa; background-color: rgba(167, 139, 250, 0.02);">
                 <div class="thread-title" style="color: #c4b5fd;">🧵 スレッドB: DeckLink Callback Thread (コンシューマー 29.97Hz駆動)</div>
-
+                <div class="thread-domains">
                 <!-- Domain: GPU / VRAM -->
                 <div class="hw-domain" style="border-color: #8b5cf6; background-color: rgba(139, 92, 246, 0.05);">
                 <div class="domain-label" style="color: #a78bfa;">GPU / ビデオメモリ (DirectX 11)</div>
                 <div class="domain-content">
                     <!-- 3. GPU Queue -->
-                    <div id="card-gpu-q-container" style="width: 280px;">
-                        <div class="stage-card" id="card-gpu-q" style="border: 1px solid var(--panel-border); padding: 12px; width: 100%;">
+                    <div id="card-gpu-q-container">
+                        <div class="stage-card" id="card-gpu-q" style="border: 1px solid var(--panel-border);">
                             <div class="stage-header">
                                 <span class="stage-name">3. GPU Texture Queue</span>
-                                <span class="stage-badge badge-queue">Max 16</span>
+                                <span class="stage-badge badge-queue">Max 32</span>
                             </div>
                             <div style="margin-top: 8px;">
                                 <div class="gpu-grid-flow" id="gpu-queue-flow"></div>
@@ -1026,7 +1149,7 @@
                     </div>
                 </div>
             </div>
-            
+            </div>
             </div> <!-- End Thread 2 -->
 
             <!-- HW Boundary -->
@@ -1038,7 +1161,7 @@
             <!-- THREAD 3: External Hardware -->
             <div class="thread-group" style="border-color: #10b981; background-color: rgba(16, 185, 129, 0.02);">
                 <div class="thread-title" style="color: #34d399;">⏱ 外部クロック: UltraStudio Hardware (59.94i)</div>
-
+                <div class="thread-domains">
                 <!-- Domain: UltraStudio Hardware -->
                 <div class="hw-domain" style="border-color: #10b981; background-color: rgba(16, 185, 129, 0.05);">
                 <div class="domain-label" style="color: #34d399;">UltraStudio ハードウェア (外部機器)</div>
@@ -1087,7 +1210,7 @@
                     </div>
                 </div>
             </div>
-            
+            </div>
             </div> <!-- End Thread 3 -->
 
         </div>
@@ -1272,8 +1395,28 @@ if (pixel.a > alphaThreshold) {
                 </div>
             </div>
 
+            <!-- Jitter Model -->
+            <div class="formula-card">
+                <h3>E. ジッタ・ノイズモデル (Jitter Simulation)</h3>
+                <div>
+                    CEF（プロデューサー）とDeckLink（コンシューマー）の非同期プロセス間で発生する「リアルな遅延・ゆらぎ」を数式モデル化しています。
+                </div>
+                <ul>
+                    <li style="margin-bottom: 8px;"><strong>ガウスノイズ (σ):</strong> <code>interval = base + Normal(0, σ)</code><br>
+                    OSのスレッドスケジューラやタイマー精度の限界による微小なブレです。通常、Windowsのタイマー精度は1〜2ms程度ですが、高負荷時は5〜15msのブレ（σ）が発生し得ます。</li>
+                    <li style="margin-bottom: 8px;"><strong>スパイク遅延 (Burst):</strong> <code>if (random() < Prob) interval += BurstMs</code><br>
+                    ガベージコレクション(V8 GC)や重いリソースロードによる「突発的なスレッド停止」です。通常発生率は0.1%〜1%程度ですが、発生時は30〜100ms単位でパイプラインが停止し、バッファが一気に枯渇します。</li>
+                    <li style="margin-bottom: 8px;"><strong>クロックドリフト (PPM):</strong> <code>interval *= (1.0 + PPM / 1,000,000)</code><br>
+                    PCのマザーボードの時計とDeckLink内部のクリスタル発振器の「物理的な周波数ズレ」です。例えば +50 PPM の場合、CEF側の時計が相対的にわずかに遅れるため、数十分〜数時間ごとにバッファが定期的に枯渇（または溢れ）を引き起こします。</li>
+                </ul>
+            </div>
+
+            <!-- バッファ監視グラフ -->
+            <div class="section-title" style="margin-top: 10px;">リアルタイムバッファ推移 (Jitter Analyzer)</div>
+            <canvas id="canvas-buffer-graph" width="800" height="150" style="width: 100%; height: 150px; background-color: #020617; border: 1px solid var(--panel-border); border-radius: 6px;"></canvas>
+
             <!-- システムログ -->
-            <div class="section-title" style="margin-top: 10px;">シミュレータ動作ログ</div>
+            <div class="section-title" style="margin-top: 15px;">シミュレータ動作ログ</div>
             <div class="log-panel" id="log-console">
                 <div class="log-line"><span class="log-time">[00:00:00]</span><span class="log-system">SYSTEM:</span> パイプラインシミュレータが起動しました。</div>
             </div>
@@ -1300,15 +1443,33 @@ if (pixel.a > alphaThreshold) {
             // 各種設定
             viewMode: 0, // 0=Interlace, 1=Diff, 2=Prog F1, 3=Prog F2, 4=Blend
             filterMode: 1, // 0=None, 1=3-tap, 2=5-tap
-            testPattern: 0, // 0=Mix, 1=Circle, 2=Bar, 3=Stripes, 4=Checker
+            testPattern: 0, // 0=Mix, 1=Circle, 2=Bar, 3=Stripes, 4=Checker, 5=ScrollText, 6=RotateText, 7=CompoundText, 8=BounceText, 9=None
             alphaThreshold: 0.05,
             playSpeed: 1.0,
             cefActive: true,
             isPlaying: false,
 
+            // Jitter & Metrics
+            jitterStdDev: 0.0,
+            burstDelayProb: 0.0, // 0.0 ~ 10.0 (%)
+            burstDelayMs: 30.0,
+            clockDriftPpm: 0.0,
+            gpuStallProb: 0.0,
+            gpuStallMs: 30.0,
+            logicalCefTime: 16.666666,
+            logicalDlTime: 33.366666,
+            starvationCount: 0,
+            plannedDropCount: 0,
+            overflowDropCount: 0,
+            breakOnPlanned: false,
+            breakOnOverflow: false,
+            breakOnStarve: false,
+            breakpointHit: false,
+            bufferHistory: [],
+
             // キュー (配列)
             cpuQueue: [], // タイムスタンプ付フレームオブジェクトの配列。C++の m_cpuBuffers に相当 (最大 kBufferCount = 32)
-            gpuQueue: [], // D3D11テクスチャに見立てたフレームオブジェクトの配列。C++の m_readyTextures に相当 (最大 16)
+            gpuQueue: [], // D3D11テクスチャに見立てたフレームオブジェクトの配列。C++の m_readyTextures に相当 (最大 32)
             
             // 消費中フレーム
             frame1: null, // Top field source
@@ -1465,6 +1626,33 @@ if (pixel.a > alphaThreshold) {
                     ctx.restore();
                 }
 
+                if (state.testPattern === 7) {
+                    // 9. 複合アニメーション文字 (スクロール＋回転/拡大)
+                    ctx.save();
+                    const textX = 32 - ((cefCount * 0.8) % 64);
+                    ctx.translate(textX + 12, 16);
+                    ctx.rotate(angle);
+                    const scale = 0.8 + Math.sin(cefCount * 0.1) * 0.3;
+                    ctx.scale(scale, scale);
+                    ctx.fillStyle = 'rgba(236, 72, 153, 1.0)'; // ピンク
+                    ctx.font = 'bold 20px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('A', 0, 0);
+                    ctx.restore();
+                }
+
+                if (state.testPattern === 8) {
+                    // 10. バウンド文字 (跳ね返りテロップシミュ)
+                    const bounceX = Math.abs((cefCount * 0.6) % 36 - 18) + 7;
+                    const bounceY = Math.abs((cefCount * 0.4) % 36 - 18) + 7;
+                    ctx.fillStyle = 'rgba(16, 185, 129, 1.0)'; // グリーン
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('T', bounceX, bounceY);
+                }
+
                 // ImageDataの取得
                 const imgData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
                 const data = imgData.data;
@@ -1511,6 +1699,18 @@ if (pixel.a > alphaThreshold) {
                 playSpeed: s.playSpeed,
                 cefActive: s.cefActive,
                 isPlaying: s.isPlaying,
+                jitterStdDev: s.jitterStdDev,
+                burstDelayProb: s.burstDelayProb,
+                burstDelayMs: s.burstDelayMs,
+                clockDriftPpm: s.clockDriftPpm,
+                gpuStallProb: s.gpuStallProb,
+                gpuStallMs: s.gpuStallMs,
+                logicalCefTime: s.logicalCefTime,
+                logicalDlTime: s.logicalDlTime,
+                starvationCount: s.starvationCount,
+                plannedDropCount: s.plannedDropCount,
+                overflowDropCount: s.overflowDropCount,
+                bufferHistory: s.bufferHistory ? s.bufferHistory.map(h => ({ cpu: h.cpu, gpu: h.gpu, underrun: h.underrun })) : [],
                 
                 cpuQueue: s.cpuQueue.map(f => ({ id: f.id, timestamp: f.timestamp, data: new Uint8ClampedArray(f.data) })),
                 gpuQueue: s.gpuQueue.map(f => ({ id: f.id, timestamp: f.timestamp, data: new Uint8ClampedArray(f.data) })),
@@ -1557,12 +1757,32 @@ if (pixel.a > alphaThreshold) {
 
         // --- 4. パイプラインシミュレータのコアロジック ---
 
+        // Jitter Simulation & Interval Generator
+        function getNextCefJitter() {
+            // ガウスノイズ（正規分布）による細かな揺らぎ（ジッタ）の追加
+            let u = 0, v = 0;
+            while(u === 0) u = Math.random();
+            while(v === 0) v = Math.random();
+            let z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+            let jitter = z * state.jitterStdDev;
+            
+            // 突発的なOS/ブラウザスレッドスタック（スパイク）の判定
+            let spike = 0;
+            if (Math.random() < (state.burstDelayProb / 100.0)) {
+                spike = state.burstDelayMs;
+                logMsg(`[CPU SPIKE] CEFメインスレッドやV8 GCの停止によりプロデューサー処理が ${spike.toFixed(1)}ms 停止しました！`, true);
+            }
+            
+            return jitter + spike;
+        }
+
         // CEF (60fps = 16.67ms) Tick 処理 (内部)
         function cefTickInternal() {
             if (!state.cefActive) return;
             
             // C++の OnPaint に合わせたバッファ上限制御 (最新を捨てるポリシー、kBufferCount = 32)
             if (state.cpuQueue.length >= 32) {
+                state.overflowDropCount++;
                 logMsg(`OnPaint: CPU Queue が上限に達しているため、最新のフレーム生成をドロップしました (kBufferCount=32 制限)`, true);
                 return;
             }
@@ -1580,48 +1800,60 @@ if (pixel.a > alphaThreshold) {
             logMsg(`DeckLink: サイクル #${state.dlCount} 開始。ポーリング中...`);
             
             // 1. SyncWithGPU(): CPU Queue -> GPU Queue (VRAMアップロード)
-            // CEFで溜まっている未アップロードのフレームをすべてD3D11テクスチャへアップロード（whileループで全て処理）
             const uploadedCount = state.cpuQueue.length;
             let syncCount = 0;
+            
+            // 全てのフレームをGPUキューへ移動
             while(state.cpuQueue.length > 0) {
-                const f = state.cpuQueue.shift();
-                
-                // GPUテクスチャキューのサイズ上限は16枚。溢れた場合は最古をドロップ（pop）
-                if (state.gpuQueue.length >= 16) {
-                    const dropped = state.gpuQueue.shift();
-                    logMsg(`SyncWithGPU: GPU Texture Queue が一杯のため、古いテクスチャ #${dropped.id} をドロップしました`, true);
-                }
-                state.gpuQueue.push(f);
+                state.gpuQueue.push(state.cpuQueue.shift());
                 syncCount++;
             }
+            
+            // 物理上限(32)による強制ドロップ (古いものを捨てる)
+            while (state.gpuQueue.length > 32) {
+                const dropped = state.gpuQueue.shift();
+                state.overflowDropCount++;
+                logMsg(`SyncWithGPU: [物理的溢れ] GPU Texture Queue(32)が限界のため、古いテクスチャ #${dropped.id} を強制破棄しました`, true);
+                if (state.breakOnOverflow) state.breakpointHit = true;
+            }
+            
             if (uploadedCount > 0) {
-                logMsg(`SyncWithGPU: 保留中の ${syncCount}枚 のフレームを VRAM (GPU Queue) へアップロードしました。 (現在: ${state.gpuQueue.length}/16)`);
+                logMsg(`SyncWithGPU: 保留中の ${syncCount}枚 のフレームを VRAM (GPU Queue) へアップロード完了。 (現在: ${state.gpuQueue.length} 枚)`);
             }
 
             // 2. プレロール同期機構 (GetSynchronizedTextures() 準拠)
-            handlePrerollAndConsume();
+            const isUnderrun = handlePrerollAndConsume();
 
             // 3. Compute Shader の実行 (YUVConvert.hlsl)
             executeComputeShader();
 
             // 4. 遅延リードバック (2フレーム遅延)
             executeReadback();
+            
+            // --- Jitter Analyzer用のグラフ用履歴の保存 ---
+            state.bufferHistory.push({
+                cpu: state.cpuQueue.length,
+                gpu: state.gpuQueue.length,
+                underrun: isUnderrun
+            });
+            if (state.bufferHistory.length > 100) {
+                state.bufferHistory.shift();
+            }
         }
 
         // 仮想時間を進める核心ロジック
         function advanceTime(ms) {
             if (ms <= 0) return;
             
-            // 進行開始前に履歴を保存する（自動再生中は重いためスキップ）
-            if (!state.isPlaying) {
-                saveHistory();
-            }
+            // ブレークポイント機能で一時停止した際に巻き戻せるよう、常に履歴を保存する
+            saveHistory();
 
             const step = 0.1; // 時間を進める分解能（ミリ秒）
             const targetTime = state.time + ms;
             
             logMsg(`仮想時間進行: +${ms.toFixed(2)}ms (目標時間: ${targetTime.toFixed(2)}ms)`);
             
+            state.breakpointHit = false;
             while (state.time < targetTime) {
                 // 時間をインクリメント
                 state.time = Math.min(state.time + step, targetTime);
@@ -1629,13 +1861,41 @@ if (pixel.a > alphaThreshold) {
                 // DeckLinkの消費判定 (29.97Hz = 33.36msごと)
                 if (state.time >= state.nextDlTime) {
                     deckLinkTickInternal();
-                    state.nextDlTime += 33.366666;
+                    
+                    state.logicalDlTime += 33.366666;
+                    let stall = 0;
+                    if (state.gpuStallProb > 0 && (Math.random() * 100) < state.gpuStallProb) {
+                        stall = state.gpuStallMs;
+                        logMsg(`[GPU STALL] PCIe転送やCompute Shaderの遅延によりコンシューマー処理が ${state.gpuStallMs.toFixed(1)}ms 停止しました！`, true);
+                    }
+                    // ハードウェア駆動のため、論理時刻(絶対時間)をベースに次回の予定を組む。遅延を取り戻そうとする(スキップ耐性)。
+                    state.nextDlTime = Math.max(state.time, state.logicalDlTime) + stall;
                 }
 
-                // CEFの生成判定 (60fps = 16.66msごと)
+                // CEFの生成判定 (ジッタ加味の動的インターバル)
                 if (state.time >= state.nextCefTime) {
                     cefTickInternal();
-                    state.nextCefTime += 16.666666;
+                    
+                    const driftFactor = 1.0 + (state.clockDriftPpm / 1000000.0);
+                    state.logicalCefTime += 16.666666 * driftFactor;
+                    
+                    const jitter = getNextCefJitter();
+                    // CEFもOSタイマーやVSync駆動であるため、論理時刻(絶対時間)に復帰しようとする
+                    state.nextCefTime = Math.max(state.time, state.logicalCefTime) + jitter;
+                }
+                
+                if (state.breakpointHit) {
+                    if (state.isPlaying) {
+                        state.isPlaying = false;
+                        const btn = document.getElementById('btn-play-pause');
+                        if (btn) {
+                            btn.innerText = '▶ 自動再生';
+                            btn.classList.remove('btn-danger');
+                            btn.classList.add('btn-primary');
+                        }
+                        logMsg(`[BREAKPOINT] ブレークポイント条件を満たしたため、シミュレーションを一時停止しました。`, true);
+                    }
+                    break;
                 }
             }
             
@@ -1645,6 +1905,7 @@ if (pixel.a > alphaThreshold) {
         // プレロール・同期キューのステートマシン (C++ CefRenderHandler.cpp::GetSynchronizedTextures 準拠)
         function handlePrerollAndConsume() {
             const queueSize = state.gpuQueue.length;
+            let underrunOccurred = false;
             
             // 1. Time-based Preroll logic
             if (!state.isConsuming) {
@@ -1670,7 +1931,9 @@ if (pixel.a > alphaThreshold) {
                 if (state.gpuQueue.length > 12 && state.framesSinceLastDrop >= 30) {
                     const dropped = state.gpuQueue.shift();
                     state.framesSinceLastDrop = 0;
+                    state.plannedDropCount++;
                     logMsg(`GetSynchronizedTextures: キュー滞留過多 (>12) のため、計画的ドロップ(Soft Threshold Drop)を実行しました (フレーム #${dropped.id} 破棄)`, true);
+                    if (state.breakOnPlanned) state.breakpointHit = true;
                 }
                 
                 // 通常消費 (2枚ポップしてマッピング)
@@ -1686,13 +1949,18 @@ if (pixel.a > alphaThreshold) {
                     state.frame1 = singleFrame;
                     state.frame2 = { ...singleFrame }; // 複製
                     poppedSingle = true;
+                    state.starvationCount++;
                     logMsg(`GetSynchronizedTextures: フレーム不足(1枚のみ)。同一フレーム(#${singleFrame.id})を複製適用し、枯渇警告状態へ移行します。`, true);
+                    if (state.breakOnStarve) state.breakpointHit = true;
                 } 
                 // 完全に空になったらプレロール待機へリセット
                 else {
                     state.isConsuming = false;
                     state.prerollDelay = 3;
+                    state.starvationCount++;
+                    underrunOccurred = true;
                     logMsg(`GetSynchronizedTextures: キューが完全に空になりました。消費を停止しプレロール(delay=3)にリセットします。`, true);
+                    if (state.breakOnStarve) state.breakpointHit = true;
                 }
             }
             
@@ -1700,6 +1968,8 @@ if (pixel.a > alphaThreshold) {
             if (!poppedPair && !poppedSingle) {
                 freezeOutput();
             }
+            
+            return underrunOccurred;
         }
 
         // アニメーションが停止またはプレロール中に、前回のフレームをホールドする (インターレースブレ解除)
@@ -1926,11 +2196,17 @@ if (pixel.a > alphaThreshold) {
             state.dlCount = 0;
             state.nextCefTime = 16.666666; // 最初のCEF描画は16.66msで発生
             state.nextDlTime = 33.366666; // 最初のDeckLinkサイクルは33.36msで動作
+            state.logicalCefTime = 16.666666;
+            state.logicalDlTime = 33.366666;
             state.isConsuming = false;
             state.prerollDelay = 3;
             state.framesSinceLastDrop = 0;
             state.cpuQueue = [];
             state.gpuQueue = [];
+            state.plannedDropCount = 0;
+            state.overflowDropCount = 0;
+            state.starvationCount = 0;
+            state.bufferHistory = [];
             
             // 最初はすべて黒画像
             const blackData = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
@@ -1976,7 +2252,7 @@ if (pixel.a > alphaThreshold) {
             flowEl.innerHTML = '';
             
             const isCpu = elementId.includes('cpu');
-            const totalSlots = isCpu ? 4 : 16;
+            const totalSlots = 32;
             
             for (let slotIndex = 0; slotIndex < totalSlots; slotIndex++) {
                 // キュー内のアイテムを右詰め（Consumer側）に配置し、Producer（左）から右へ流れるように見せる
@@ -2013,7 +2289,7 @@ if (pixel.a > alphaThreshold) {
                     // 空のスロット：点線枠
                     const slot = document.createElement('div');
                     slot.className = 'queue-slot-empty';
-                    slot.innerText = `[${slotIndex}]`;
+                    slot.innerText = slotIndex;
                     flowEl.appendChild(slot);
                 }
             }
@@ -2202,7 +2478,7 @@ if (pixel.a > alphaThreshold) {
             document.getElementById('val-cpu-q-load').innerText = `${state.cpuQueue.length} / 32`;
             document.getElementById('status-cpu-count').innerText = `${state.cpuQueue.length} 枚`;
             
-            document.getElementById('val-gpu-q-load').innerText = `${state.gpuQueue.length} / 16`;
+            document.getElementById('val-gpu-q-load').innerText = `${state.gpuQueue.length} / 32`;
             document.getElementById('status-gpu-count').innerText = `${state.gpuQueue.length} 枚`;
 
             const toggleArrow = (id, active) => {
@@ -2311,8 +2587,75 @@ if (pixel.a > alphaThreshold) {
             }
             if (state.sdiMonitor) drawToCanvas('canvas-sdi-monitor', state.sdiMonitor);
 
+            // Jitter Metrics
+            if (document.getElementById('val-starvation')) {
+                document.getElementById('val-starvation').innerText = state.starvationCount;
+                document.getElementById('val-drops-planned').innerText = state.plannedDropCount;
+                document.getElementById('val-drops-overflow').innerText = state.overflowDropCount;
+                const estimatedLatency = (state.gpuQueue.length * 33.36) + (2 * 33.36);
+                document.getElementById('val-latency').innerText = estimatedLatency.toFixed(1) + ' ms';
+            }
+
+            drawBufferGraph();
+
             updateInspectGrids();
             updateUndoButtonState();
+        }
+
+        // バッファ監視グラフの描画
+        function drawBufferGraph() {
+            const canvas = document.getElementById('canvas-buffer-graph');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            // 背景の補助線
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
+            ctx.stroke();
+            
+            const history = state.bufferHistory;
+            if (history.length === 0) return;
+            
+            const pointSpacing = w / 100.0;
+            
+            // Draw GPU Queue (Purple, max 32)
+            ctx.beginPath();
+            ctx.strokeStyle = '#8a2be2';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < history.length; i++) {
+                const x = i * pointSpacing;
+                const y = h - (history[i].gpu / 32.0) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Draw CPU Queue (Blue, max 32)
+            ctx.beginPath();
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < history.length; i++) {
+                const x = i * pointSpacing;
+                const y = h - (history[i].cpu / 32.0) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Draw Underrun Bars (Red)
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.7)';
+            for (let i = 0; i < history.length; i++) {
+                if (history[i].underrun) {
+                    const x = i * pointSpacing;
+                    ctx.fillRect(x - 2, 0, 4, h);
+                }
+            }
         }
 
         // --- 6. 自動再生ループ & イベントハンドラ ---
@@ -2423,6 +2766,37 @@ if (pixel.a > alphaThreshold) {
             logMsg(`設定変更: CEFフレーム生成を ${state.cefActive ? '有効' : '無効'} にしました。`);
         });
 
+        // ジッタコントロールのイベント設定
+        document.getElementById('range-jitter').addEventListener('input', (e) => {
+            state.jitterStdDev = parseFloat(e.target.value);
+            document.getElementById('val-jitter').innerText = state.jitterStdDev.toFixed(1) + ' ms';
+        });
+        document.getElementById('range-burst-prob').addEventListener('input', (e) => {
+            state.burstDelayProb = parseFloat(e.target.value);
+            document.getElementById('val-burst-prob').innerText = state.burstDelayProb.toFixed(2) + ' %';
+        });
+        document.getElementById('range-burst-delay').addEventListener('input', (e) => {
+            state.burstDelayMs = parseFloat(e.target.value);
+            document.getElementById('val-burst-delay').innerText = state.burstDelayMs.toFixed(0) + ' ms';
+        });
+        document.getElementById('range-drift').addEventListener('input', (e) => {
+            state.clockDriftPpm = parseFloat(e.target.value);
+            document.getElementById('val-drift').innerText = state.clockDriftPpm.toFixed(0) + ' ppm';
+        });
+        document.getElementById('range-gpu-stall-prob').addEventListener('input', (e) => {
+            state.gpuStallProb = parseFloat(e.target.value);
+            document.getElementById('val-gpu-stall-prob').innerText = state.gpuStallProb.toFixed(2) + ' %';
+        });
+        document.getElementById('range-gpu-stall-ms').addEventListener('input', (e) => {
+            state.gpuStallMs = parseFloat(e.target.value);
+            document.getElementById('val-gpu-stall-ms').innerText = state.gpuStallMs.toFixed(0) + ' ms';
+        });
+
+        // ブレークポイントイベント
+        document.getElementById('chk-break-planned').addEventListener('change', (e) => state.breakOnPlanned = e.target.checked);
+        document.getElementById('chk-break-overflow').addEventListener('change', (e) => state.breakOnOverflow = e.target.checked);
+        document.getElementById('chk-break-starve').addEventListener('change', (e) => state.breakOnStarve = e.target.checked);
+
         function setupInspectEvents(gridId) {
             const el = document.getElementById(gridId);
             if (!el) return;
@@ -2459,5 +2833,7 @@ if (pixel.a > alphaThreshold) {
         resetState();
 
     </script>
+    </div> <!-- /scrollable-content -->
+</div> <!-- /app-container -->
 </body>
 </html>
