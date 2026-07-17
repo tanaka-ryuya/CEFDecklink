@@ -80,7 +80,10 @@
             flex-wrap: wrap;
             gap: 15px;
             align-items: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            position: sticky;
+            top: 10px;
+            z-index: 1000;
         }
 
         .btn {
@@ -186,11 +189,41 @@
 
         .flow-line {
             display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
             align-items: flex-start;
             gap: 20px;
-            min-width: 1400px;
             position: relative;
             padding-bottom: 10px;
+        }
+
+        /* ハードウェアドメインの境界線 */
+        .hw-domain {
+            border: 2px dashed;
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .domain-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .domain-content {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 20px;
         }
 
         /* パイプライン上の各ステージのカード (幅を固定化してがたつきを防止) */
@@ -203,11 +236,11 @@
             transition: border-color 0.3s;
         }
 
-        #card-cef { flex: 0 0 220px; width: 220px; }
-        #card-queues { flex: 0 0 280px; width: 280px; }
-        #card-shader { flex: 0 0 260px; width: 260px; }
-        #card-staging { flex: 0 0 220px; width: 220px; }
-        #card-hw { flex: 0 0 240px; width: 240px; }
+        /* 柔軟な幅に設定して折り返し可能に */
+        #card-cef, #card-queues, #card-shader, #card-staging, #card-hw, #card-wire, #card-sdi { 
+            flex: 1 1 auto; 
+            max-width: 100%; 
+        }
 
         .stage-card.active {
             border-color: var(--accent-cyan);
@@ -311,8 +344,8 @@
         }
 
         .pixel-canvas {
-            width: 192px;
-            height: 192px;
+            width: 256px;
+            height: 256px;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
             background-color: #000;
@@ -690,7 +723,7 @@
             <label for="select-lpf">垂直LPF:</label>
             <select id="select-lpf">
                 <option value="0">0: フィルターなし</option>
-                <option value="1">1: 3-Tap LPF</option>
+                <option value="1" selected>1: 3-Tap LPF</option>
                 <option value="2">2: 5-Tap LPF</option>
             </select>
         </div>
@@ -705,6 +738,19 @@
             <label for="range-speed">再生速度:</label>
             <input type="range" id="range-speed" min="1" max="10" step="1" value="5">
             <span style="font-family: monospace; font-size: 0.8rem;" id="val-speed">1.0x</span>
+        </div>
+
+        <div class="control-group">
+            <label for="select-pattern">CEF描画絵:</label>
+            <select id="select-pattern">
+                <option value="0">0: 全要素ミックス</option>
+                <option value="1">1: 動く円 (横移動ティアリング確認)</option>
+                <option value="2">2: 回転バー (斜めジャギー確認)</option>
+                <option value="3">3: 水平縞模様 (垂直LPF確認用)</option>
+                <option value="4">4: 点滅市松模様 (Diff/60pチェッカー)</option>
+                <option value="5">5: スクロール文字 (テキストWeave確認)</option>
+                <option value="6">6: 回転文字 (テキストLPF/ジャギー確認)</option>
+            </select>
         </div>
 
         <div class="control-group" style="margin-left: auto;">
@@ -746,141 +792,237 @@
     <div class="pipeline-container">
         <div class="section-title">
             <span>映像データ・ストリーム・パイプライン</span>
-            <span class="subtitle">※各段階の画像(32x32)を256x256サイズに拡大表示しています</span>
+            <span class="subtitle">※各段階の画像(32x32)を256x256フルサイズで拡大表示しています</span>
         </div>
 
         <div class="flow-line">
-            <!-- 1. CEF WebCore -->
-            <div class="stage-card active" id="card-cef">
-                <div class="stage-header">
-                    <span class="stage-name">1. CEF WebCore</span>
-                    <span class="stage-badge badge-producer">60 fps</span>
-                </div>
-                <div class="canvas-container">
-                    <canvas class="pixel-canvas" id="canvas-cef" width="32" height="32"></canvas>
-                    <span class="canvas-label">生成フレーム(Premultiplied)</span>
-                </div>
-                <div class="status-panel">
-                    <span>描画:</span>
-                    <span class="status-val" id="status-cef-draw">ACTIVE</span>
-                </div>
-            </div>
+            
+            <!-- Domain: CPU / Main Memory (Producer) -->
+            <div class="hw-domain" style="border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.05);">
+                <div class="domain-label" style="color: #60a5fa;">CPU / メインメモリ (CEF Thread)</div>
+                <div class="domain-content">
+                    <!-- 1. CEF WebCore -->
+                    <div class="stage-card active" id="card-cef">
+                        <div class="stage-header">
+                            <span class="stage-name">1. CEF WebCore</span>
+                            <span class="stage-badge badge-producer">60 fps</span>
+                        </div>
+                        <div class="canvas-container">
+                            <canvas class="pixel-canvas" id="canvas-cef" width="32" height="32"></canvas>
+                            <span class="canvas-label">生成フレーム(Premultiplied)</span>
+                        </div>
+                        <div class="status-panel">
+                            <span>描画:</span>
+                            <span class="status-val" id="status-cef-draw">ACTIVE</span>
+                        </div>
+                    </div>
 
-            <!-- コネクタ -->
-            <div class="arrow-connector" id="arrow-cef-cpu">➔</div>
+                    <!-- コネクタ -->
+                    <div class="arrow-connector" id="arrow-cef-cpu">➔</div>
 
-            <!-- 2. Queue Buffer (CPU & GPU 上下二段) -->
-            <div id="card-queues" style="display: flex; flex-direction: column; gap: 10px;">
-                <!-- CPU Queue -->
-                <div class="stage-card" id="card-cpu-q" style="border: 1px solid var(--panel-border); padding: 12px; width: 100%;">
-                    <div class="stage-header">
-                        <span class="stage-name">2. CPU Frame Queue</span>
-                        <span class="stage-badge badge-queue">Max 4</span>
-                    </div>
-                    <div style="margin-top: 8px;">
-                        <div class="cpu-grid-flow" id="cpu-queue-flow"></div>
-                    </div>
-                    <div class="status-panel" style="margin-top: 8px; padding: 6px 10px;">
-                        <span>未アップロード数:</span>
-                        <span class="status-val" id="status-cpu-count">0枚</span>
-                    </div>
-                </div>
-
-                <!-- 縦コネクタ (SyncWithGPU) -->
-                <div class="arrow-connector" id="arrow-cpu-gpu-vert" style="height: 30px; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; user-select: none;">▼</div>
-
-                <!-- GPU Queue -->
-                <div class="stage-card" id="card-gpu-q" style="border: 1px solid var(--panel-border); padding: 12px; width: 100%;">
-                    <div class="stage-header">
-                        <span class="stage-name">3. GPU Texture Queue</span>
-                        <span class="stage-badge badge-queue">Max 16</span>
-                    </div>
-                    <div style="margin-top: 8px;">
-                        <div class="gpu-grid-flow" id="gpu-queue-flow"></div>
-                    </div>
-                    <div class="status-panel" style="margin-top: 8px; padding: 6px 10px;">
-                        <span>VRAM保持数:</span>
-                        <span class="status-val" id="status-gpu-count">0枚</span>
+                    <!-- 2. CPU Queue -->
+                    <div id="card-queues">
+                        <div class="stage-card" id="card-cpu-q" style="border: 1px solid var(--panel-border); padding: 12px; width: 100%;">
+                            <div class="stage-header">
+                                <span class="stage-name">2. CPU Frame Queue</span>
+                                <span class="stage-badge badge-queue">Max 4</span>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <div class="cpu-grid-flow" id="cpu-queue-flow"></div>
+                            </div>
+                            <div class="status-panel" style="margin-top: 8px; padding: 6px 10px;">
+                                <span>未アップロード数:</span>
+                                <span class="status-val" id="status-cpu-count">0枚</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- コネクタ -->
-            <div class="arrow-connector" id="arrow-gpu-shader">➔</div>
+            <!-- 縦コネクタ (SyncWithGPU) -> 横方向のコネクタに変更して次のドメインへ接続 -->
+            <div class="arrow-connector" id="arrow-cpu-gpu-vert">➔</div>
 
-            <!-- 4. Compute Shader -->
+            <!-- Domain: GPU / VRAM -->
+            <div class="hw-domain" style="border-color: #8b5cf6; background-color: rgba(139, 92, 246, 0.05);">
+                <div class="domain-label" style="color: #a78bfa;">GPU / ビデオメモリ (DirectX 11)</div>
+                <div class="domain-content">
+                    <!-- 3. GPU Queue -->
+                    <div id="card-gpu-q-container" style="width: 280px;">
+                        <div class="stage-card" id="card-gpu-q" style="border: 1px solid var(--panel-border); padding: 12px; width: 100%;">
+                            <div class="stage-header">
+                                <span class="stage-name">3. GPU Texture Queue</span>
+                                <span class="stage-badge badge-queue">Max 16</span>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <div class="gpu-grid-flow" id="gpu-queue-flow"></div>
+                            </div>
+                            <div class="status-panel" style="margin-top: 8px; padding: 6px 10px;">
+                                <span>VRAM保持数:</span>
+                                <span class="status-val" id="status-gpu-count">0枚</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- コネクタ -->
+                    <div class="arrow-connector" id="arrow-gpu-shader">➔</div>
+
+                    <!-- 4. Compute Shader -->
             <div class="stage-card" id="card-shader">
                 <div class="stage-header">
-                    <span class="stage-name">4. Compute Shader</span>
+                    <span class="stage-name">4. Compute Shader (Detailed 256x256)</span>
                     <span class="stage-badge badge-consumer">29.97 Hz</span>
                 </div>
-                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
-                    <div class="canvas-container" style="padding: 5px; flex: 1;">
-                        <canvas class="pixel-canvas" id="canvas-f2" width="32" height="32" style="width: 80px; height: 80px;"></canvas>
-                        <span class="canvas-label" style="font-size: 0.6rem;">F2 (Bot Field用)</span>
+                <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px; align-items: center; justify-content: center;">
+                    <!-- Input -->
+                    <div style="display: flex; flex-direction: column; gap: 10px; justify-content: center;">
+                        <div class="canvas-container" style="padding: 5px;">
+                            <canvas class="pixel-canvas" id="canvas-f2" width="32" height="32"></canvas>
+                            <span class="canvas-label">Input F2 (Bot)</span>
+                        </div>
+                        <div class="canvas-container" style="padding: 5px;">
+                            <canvas class="pixel-canvas" id="canvas-f1" width="32" height="32"></canvas>
+                            <span class="canvas-label">Input F1 (Top)</span>
+                        </div>
                     </div>
-                    <div class="canvas-container" style="padding: 5px; flex: 1;">
-                        <canvas class="pixel-canvas" id="canvas-f1" width="32" height="32" style="width: 80px; height: 80px;"></canvas>
-                        <span class="canvas-label" style="font-size: 0.6rem;">F1 (Top Field用)</span>
+                    
+                    <div style="color: var(--text-muted); font-size: 2rem;">➔</div>
+                    
+                    <!-- Weave -->
+                    <div class="canvas-container" style="padding: 5px;">
+                        <canvas class="pixel-canvas" id="canvas-shader-weave" width="32" height="32"></canvas>
+                        <span class="canvas-label">Step 1: Weave / Sampling</span>
+                    </div>
+
+                    <div style="color: var(--text-muted); font-size: 2rem;">➔</div>
+
+                    <!-- LPF -->
+                    <div class="canvas-container" style="padding: 5px;">
+                        <canvas class="pixel-canvas" id="canvas-shader-lpf" width="32" height="32"></canvas>
+                        <span class="canvas-label">Step 2: Vertical LPF</span>
+                    </div>
+
+                    <div style="color: var(--text-muted); font-size: 2rem;">➔</div>
+
+                    <!-- Unmult -->
+                    <div class="canvas-container" style="padding: 5px;">
+                        <canvas class="pixel-canvas" id="canvas-shader-out" width="32" height="32"></canvas>
+                        <span class="canvas-label">Step 3: Unmult (Final)</span>
                     </div>
                 </div>
-                <div class="canvas-container" style="margin-top: 10px;">
-                    <canvas class="pixel-canvas" id="canvas-shader-out" width="32" height="32" style="height: 120px; width: 120px;"></canvas>
-                    <span class="canvas-label">合成結果 (Weave + LPF + Unmult)</span>
-                </div>
-                <div class="status-panel">
+                <div class="status-panel" style="margin-top: 10px;">
                     <span>演算モード:</span>
                     <span class="status-val" id="status-shader-mode">INTERLACE</span>
+                </div>
+            </div>
+
                 </div>
             </div>
 
             <!-- コネクタ -->
             <div class="arrow-connector" id="arrow-shader-staging">➔</div>
 
-            <!-- 5. Staging Buffer -->
-            <div class="stage-card" id="card-staging">
-                <div class="stage-header">
-                    <span class="stage-name">5. Staging Buffer</span>
-                    <span class="stage-badge badge-queue">2F Delay</span>
-                </div>
-                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
-                    <div class="canvas-container" style="padding: 5px; flex: 1;">
-                        <canvas class="pixel-canvas" id="canvas-stage0" width="32" height="32" style="width: 80px; height: 80px;"></canvas>
-                        <span class="canvas-label" style="font-size: 0.6rem;">Staging[0] (N-1)</span>
+            <!-- Domain: CPU / Main Memory (DeckLink Thread) -->
+            <div class="hw-domain" style="border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.05);">
+                <div class="domain-label" style="color: #fbbf24;">CPU / メインメモリ (DeckLink Thread)</div>
+                <div class="domain-content">
+                    <!-- 5. Staging Buffer -->
+                    <div class="stage-card" id="card-staging">
+                        <div class="stage-header">
+                            <span class="stage-name">5. Staging Buffer</span>
+                            <span class="stage-badge badge-queue">2F Delay</span>
+                        </div>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                            <div class="canvas-container" style="padding: 5px; flex: 1;">
+                                <canvas class="pixel-canvas" id="canvas-stage0" width="32" height="32"></canvas>
+                                <span class="canvas-label" style="font-size: 0.6rem;">Staging[0] (N-1)</span>
+                            </div>
+                            <div class="canvas-container" style="padding: 5px; flex: 1;">
+                                <canvas class="pixel-canvas" id="canvas-stage1" width="32" height="32"></canvas>
+                                <span class="canvas-label" style="font-size: 0.6rem;">Staging[1] (N-2)</span>
+                            </div>
+                        </div>
+                        <div class="status-panel">
+                            <span>転送待機:</span>
+                            <span class="status-val">非同期 Map</span>
+                        </div>
                     </div>
-                    <div class="canvas-container" style="padding: 5px; flex: 1;">
-                        <canvas class="pixel-canvas" id="canvas-stage1" width="32" height="32" style="width: 80px; height: 80px;"></canvas>
-                        <span class="canvas-label" style="font-size: 0.6rem;">Staging[1] (N-2)</span>
+
+                    <!-- コネクタ -->
+                    <div class="arrow-connector" id="arrow-staging-hw">➔</div>
+
+                    <!-- 6. DeckLink HW -->
+                    <div class="stage-card" id="card-hw">
+                        <div class="stage-header">
+                            <span class="stage-name">6. DeckLink API (送信バッファ)</span>
+                            <span class="stage-badge badge-consumer">29.97p</span>
+                        </div>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                            <div class="canvas-container" style="padding: 5px; flex: 1;">
+                                <canvas class="pixel-canvas" id="canvas-hw-fill" width="32" height="32"></canvas>
+                                <span class="canvas-label" style="font-size: 0.6rem;">Fill (Weaved 29.97p)</span>
+                            </div>
+                            <div class="canvas-container" style="padding: 5px; flex: 1;">
+                                <canvas class="pixel-canvas" id="canvas-hw-key" width="32" height="32"></canvas>
+                                <span class="canvas-label" style="font-size: 0.6rem;">Key (Weaved 29.97p)</span>
+                            </div>
+                        </div>
+                        <div class="status-panel">
+                            <span>API転送形式:</span>
+                            <span class="status-val" style="color: var(--success);" id="status-hw-signal">1080p29.97</span>
+                        </div>
                     </div>
-                </div>
-                <div class="status-panel">
-                    <span>転送待機:</span>
-                    <span class="status-val">非同期 Map</span>
                 </div>
             </div>
 
             <!-- コネクタ -->
-            <div class="arrow-connector" id="arrow-staging-hw">➔</div>
+            <div class="arrow-connector" id="arrow-hw-wire">➔</div>
 
-            <!-- 6. DeckLink HW -->
-            <div class="stage-card" id="card-hw">
+            <!-- Domain: UltraStudio Hardware -->
+            <div class="hw-domain" style="border-color: #10b981; background-color: rgba(16, 185, 129, 0.05);">
+                <div class="domain-label" style="color: #34d399;">UltraStudio ハードウェア (外部機器)</div>
+                <div class="domain-content">
+                    <!-- 7. SDI Hardware Output (Wire) -->
+            <div class="stage-card" id="card-wire" style="border: 2px solid var(--accent-cyan);">
                 <div class="stage-header">
-                    <span class="stage-name">6. DeckLink HW Output</span>
-                    <span class="stage-badge badge-consumer">59.94i</span>
+                    <span class="stage-name">7. SDI Hardware Output (Wire)</span>
+                    <span class="stage-badge badge-consumer" id="badge-wire-field">Field 1</span>
                 </div>
                 <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
                     <div class="canvas-container" style="padding: 5px; flex: 1;">
-                        <canvas class="pixel-canvas" id="canvas-hw-fill" width="32" height="32" style="width: 90px; height: 90px;"></canvas>
-                        <span class="canvas-label" style="font-size: 0.6rem;">Fill (映像出力)</span>
+                        <canvas class="pixel-canvas" id="canvas-wire-fill" width="32" height="32"></canvas>
+                        <span class="canvas-label" style="font-size: 0.6rem;">Fill (Wire 59.94i)</span>
                     </div>
                     <div class="canvas-container" style="padding: 5px; flex: 1;">
-                        <canvas class="pixel-canvas" id="canvas-hw-key" width="32" height="32" style="width: 90px; height: 90px;"></canvas>
-                        <span class="canvas-label" style="font-size: 0.6rem;">Key (Alpha出力)</span>
+                        <canvas class="pixel-canvas" id="canvas-wire-key" width="32" height="32"></canvas>
+                        <span class="canvas-label" style="font-size: 0.6rem;">Key (Wire 59.94i)</span>
                     </div>
                 </div>
                 <div class="status-panel">
-                    <span>出力信号:</span>
-                    <span class="status-val" style="color: var(--success);" id="status-hw-signal">1080i59.94</span>
+                    <span>Active:</span>
+                    <span class="status-val" style="color: var(--success);" id="status-wire-active">Field 1 Transmitting</span>
+                </div>
+            </div>
+
+            <!-- コネクタ -->
+            <div class="arrow-connector" id="arrow-wire-sdi">➔</div>
+
+                    <!-- 8. UltraStudio SDI Out (Monitor) -->
+                    <div class="stage-card" id="card-sdi" style="border: 2px solid var(--success);">
+                        <div class="stage-header">
+                            <span class="stage-name">8. SDI Physical Monitor</span>
+                            <span class="stage-badge badge-consumer" id="badge-sdi-field">Field 1</span>
+                        </div>
+                        <div style="display: flex; justify-content: center; margin-top: 10px;">
+                            <div class="canvas-container" style="padding: 5px;" id="container-sdi-monitor">
+                                <canvas class="pixel-canvas" id="canvas-sdi-monitor" width="32" height="32"></canvas>
+                                <span class="canvas-label" style="font-size: 0.7rem;">物理モニター (外部キーヤー合成後)</span>
+                            </div>
+                        </div>
+                        <div class="status-panel">
+                            <span>Active:</span>
+                            <span class="status-val" style="color: var(--success);" id="status-sdi-active">Field 1 Transmitting</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -901,23 +1043,58 @@
                 <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
                     出力画像の任意のピクセルをマウスホバーすると、該当座標 of F1 / F2 / 出力ピクセルの RGBA値の変化を追跡できます。
                 </div>
-                <div class="zoom-row">
+                <div class="zoom-row" style="flex-wrap: wrap;">
                     <div class="zoom-box">
-                        <div class="zoom-title">F2 (Bottom Field)</div>
+                        <div class="zoom-title">F2 (Bottom)</div>
                         <div class="pixel-inspect-grid" id="inspect-f2">
                             <div class="inspect-overlay" id="overlay-f2"></div>
                         </div>
                     </div>
                     <div class="zoom-box">
-                        <div class="zoom-title">F1 (Top Field)</div>
+                        <div class="zoom-title">F1 (Top)</div>
                         <div class="pixel-inspect-grid" id="inspect-f1">
                             <div class="inspect-overlay" id="overlay-f1"></div>
                         </div>
                     </div>
+                    <div style="align-self: center; color: var(--text-muted); font-size: 1.5rem;">➔</div>
+                    <div class="zoom-box" style="border-color: var(--accent-violet);">
+                        <div class="zoom-title">Step 1: Weave</div>
+                        <div class="pixel-inspect-grid" id="inspect-weave">
+                            <div class="inspect-overlay" id="overlay-weave"></div>
+                        </div>
+                    </div>
+                    <div style="align-self: center; color: var(--text-muted); font-size: 1.5rem;">➔</div>
+                    <div class="zoom-box" style="border-color: var(--accent-violet);">
+                        <div class="zoom-title">Step 2: LPF</div>
+                        <div class="pixel-inspect-grid" id="inspect-lpf">
+                            <div class="inspect-overlay" id="overlay-lpf"></div>
+                        </div>
+                    </div>
+                    <div style="align-self: center; color: var(--text-muted); font-size: 1.5rem;">➔</div>
                     <div class="zoom-box" style="border-color: var(--accent-cyan);">
-                        <div class="zoom-title">Compute Shader 出力</div>
+                        <div class="zoom-title">Step 3: Unmult</div>
                         <div class="pixel-inspect-grid" id="inspect-out">
                             <div class="inspect-overlay" id="overlay-out"></div>
+                        </div>
+                    </div>
+                    <div style="align-self: center; color: var(--text-muted); font-size: 1.5rem;">➔</div>
+                    <div class="zoom-box" style="border-color: #ef4444;">
+                        <div class="zoom-title">最終: Fill</div>
+                        <div class="pixel-inspect-grid" id="inspect-fill">
+                            <div class="inspect-overlay" id="overlay-fill"></div>
+                        </div>
+                    </div>
+                    <div class="zoom-box" style="border-color: #ef4444;">
+                        <div class="zoom-title">最終: Key</div>
+                        <div class="pixel-inspect-grid" id="inspect-key">
+                            <div class="inspect-overlay" id="overlay-key"></div>
+                        </div>
+                    </div>
+                    <div style="align-self: center; color: var(--text-muted); font-size: 1.5rem;">➔</div>
+                    <div class="zoom-box" style="border-color: var(--success);">
+                        <div class="zoom-title">物理モニター</div>
+                        <div class="pixel-inspect-grid" id="inspect-sdi-monitor">
+                            <div class="inspect-overlay" id="overlay-sdi-monitor"></div>
                         </div>
                     </div>
                 </div>
@@ -937,16 +1114,32 @@
                         <span class="info-val" id="det-f2-raw">R: 0, G: 0, B: 0, A: 0.00</span>
                     </div>
                     <div class="info-row" style="border-top: 1px solid #1e293b; padding-top: 6px; margin-top: 6px;">
-                        <span class="info-label">偶奇ラインサンプリング:</span>
+                        <span class="info-label">Weave / サンプリング (フィルター前):</span>
+                        <span class="info-val" id="det-weave-val">R: 0, G: 0, B: 0, A: 0.00</span>
+                    </div>
+                    <div class="info-row" style="margin-left: 15px; font-size: 0.8rem;">
+                        <span class="info-label" style="color: var(--text-muted);">↳ 適用ルール:</span>
                         <span class="info-val" id="det-sampling">Top Field サンプリング (偶数ライン)</span>
                     </div>
-                    <div class="info-row">
+                    <div class="info-row" style="border-top: 1px solid #1e293b; padding-top: 6px; margin-top: 6px;">
                         <span class="info-label">垂直 LPF 適用結果:</span>
                         <span class="info-val" id="det-lpf-val">R: 0, G: 0, B: 0, A: 0.00</span>
                     </div>
-                    <div class="info-row">
+                    <div class="info-row" style="border-top: 1px solid #1e293b; padding-top: 6px; margin-top: 6px;">
                         <span class="info-label">Unpremultiply 処理 (RGB /= A):</span>
                         <span class="info-val" id="det-unmult-val">R: 0, G: 0, B: 0, A: 0.00 (閾値以下無処理)</span>
+                    </div>
+                    <div class="info-row" style="border-top: 1px solid #ef4444; padding-top: 6px; margin-top: 6px;">
+                        <span class="info-label">DeckLink Fill (RGB分離):</span>
+                        <span class="info-val" id="det-fill-val" style="color: #ef4444;">R: 0, G: 0, B: 0</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">DeckLink Key (Alpha分離):</span>
+                        <span class="info-val" id="det-key-val" style="color: #ef4444;">Key: 0 (Alpha)</span>
+                    </div>
+                    <div class="info-row" style="border-top: 1px solid var(--success); padding-top: 6px; margin-top: 6px;">
+                        <span class="info-label">SDI Physical Out:</span>
+                        <span class="info-val" id="det-sdi-val" style="color: var(--success);">R: 0, G: 0, B: 0</span>
                     </div>
                 </div>
             </div>
@@ -1031,8 +1224,8 @@ if (pixel.a > alphaThreshold) {
             time: 0.0,
             cefCount: 0,
             dlCount: 0,
-            nextCefTime: 16.68,
-            nextDlTime: 33.36,
+            nextCefTime: 16.666666,
+            nextDlTime: 33.366666,
             
             // C++ 同期変数
             isConsuming: false,
@@ -1042,6 +1235,7 @@ if (pixel.a > alphaThreshold) {
             // 各種設定
             viewMode: 0, // 0=Interlace, 1=Diff, 2=Prog F1, 3=Prog F2, 4=Blend
             filterMode: 1, // 0=None, 1=3-tap, 2=5-tap
+            testPattern: 0, // 0=Mix, 1=Circle, 2=Bar, 3=Stripes, 4=Checker
             alphaThreshold: 0.05,
             playSpeed: 1.0,
             cefActive: true,
@@ -1056,6 +1250,8 @@ if (pixel.a > alphaThreshold) {
             frame2: null, // Bottom field source
             
             // Compute Shader 出力バッファ
+            shaderWeave: null,
+            shaderLpf: null,
             shaderOutput: null, 
             
             // Stagingバッファ
@@ -1065,6 +1261,11 @@ if (pixel.a > alphaThreshold) {
             // 最終出力
             hwFill: null,
             hwKey: null,
+
+            // 物理SDI出力(59.94Hz)
+            sdiF1: null,
+            sdiF2: null,
+            sdiMonitor: null, // 物理モニター残像バッファ
             
             // 前回の最終出力 (Freeze用のホールドデータ)
             lastHwFill: null,
@@ -1120,28 +1321,78 @@ if (pixel.a > alphaThreshold) {
                 const angle = cefCount * 0.08;
                 const xPos = (cefCount * 0.4) % (WIDTH + 16);
 
-                // 1. 動く半透明の円 (カラー: 鮮やかな赤 RGBA = 255, 0, 0, 0.5)
-                // Premultiplied では画素値は (127.5, 0, 0, 0.5) になるはず
-                ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-                ctx.beginPath();
-                ctx.arc(xPos - 8, 16, 7, 0, Math.PI * 2);
-                ctx.fill();
+                if (state.testPattern === 0 || state.testPattern === 1) {
+                    // 1. 動く半透明の円 (カラー: 鮮やかな赤 RGBA = 255, 0, 0, 0.5)
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                    ctx.beginPath();
+                    ctx.arc(xPos - 8, 16, 7, 0, Math.PI * 2);
+                    ctx.fill();
+                }
 
-                // 2. 回転する斜めバー (カラー: 緑 RGBA = 0, 255, 0, 0.8)
-                ctx.save();
-                ctx.translate(16, 16);
-                ctx.rotate(angle);
-                ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
-                ctx.fillRect(-2, -12, 4, 24);
-                ctx.restore();
+                if (state.testPattern === 0 || state.testPattern === 2) {
+                    // 2. 回転する斜めバー (カラー: 緑 RGBA = 0, 255, 0, 0.8)
+                    ctx.save();
+                    ctx.translate(16, 16);
+                    ctx.rotate(angle);
+                    ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+                    ctx.fillRect(-2, -12, 4, 24);
+                    ctx.restore();
+                }
 
-                // 3. 静的なグラデーションの四角 (カラー: 青 RGBA = 0, 0, 255, A)
-                ctx.fillStyle = 'rgba(0, 0, 255, 0.3)';
-                ctx.fillRect(2, 2, 8, 8);
+                if (state.testPattern === 0) {
+                    // 3. 静的なグラデーションの四角 (カラー: 青 RGBA = 0, 0, 255, 0.3)
+                    ctx.fillStyle = 'rgba(0, 0, 255, 0.3)';
+                    ctx.fillRect(2, 2, 8, 8);
 
-                // 4. アルファ閾値のデモ用：極端に薄いアルファの領域 (カラー: マゼンタ RGBA = 255, 0, 255, 0.02)
-                ctx.fillStyle = 'rgba(255, 0, 255, 0.02)';
-                ctx.fillRect(24, 2, 6, 6);
+                    // 4. アルファ閾値のデモ用：極端に薄いアルファの領域
+                    ctx.fillStyle = 'rgba(255, 0, 255, 0.02)';
+                    ctx.fillRect(24, 2, 6, 6);
+                }
+
+                if (state.testPattern === 0 || state.testPattern === 3) {
+                    // 5. 垂直LPFの効果を強烈に視覚化するための水平の縞模様
+                    ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
+                    for (let i = 22; i < 30; i += 2) {
+                        ctx.fillRect(2, i, 12, 1);
+                    }
+                }
+                
+                if (state.testPattern === 4) {
+                    // 6. 点滅市松模様 (Diffチェッカー)
+                    const isEvenFrame = cefCount % 2 === 0;
+                    ctx.fillStyle = isEvenFrame ? 'rgba(255, 255, 0, 1.0)' : 'rgba(0, 255, 255, 1.0)';
+                    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+                    ctx.fillStyle = isEvenFrame ? 'rgba(0, 255, 255, 1.0)' : 'rgba(255, 255, 0, 1.0)';
+                    for (let y = 0; y < HEIGHT; y += 4) {
+                        for (let x = 0; x < WIDTH; x += 4) {
+                            if ((x/4 + y/4) % 2 === 0) {
+                                ctx.fillRect(x, y, 4, 4);
+                            }
+                        }
+                    }
+                }
+
+                if (state.testPattern === 5) {
+                    // 7. 横にスクロールする文字 (Weave/ティアリング確認用)
+                    // キャンバスが32x32と小さいため、大きめの文字を1文字だけ流します
+                    const textX = 32 - ((cefCount * 0.8) % 64);
+                    ctx.fillStyle = 'rgba(255, 165, 0, 1.0)'; // オレンジ
+                    ctx.font = 'bold 24px sans-serif';
+                    ctx.fillText('あ', textX, 26);
+                }
+
+                if (state.testPattern === 6) {
+                    // 8. 回転する文字 (斜め線のLPFやジャギー確認用)
+                    ctx.save();
+                    ctx.translate(16, 16);
+                    ctx.rotate(-angle * 0.5);
+                    ctx.fillStyle = 'rgba(0, 200, 255, 1.0)'; // 水色
+                    ctx.font = 'bold 26px serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('W', 0, 0); // Wは斜め線が多いためテストに最適
+                    ctx.restore();
+                }
 
                 // ImageDataの取得
                 const imgData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
@@ -1184,6 +1435,7 @@ if (pixel.a > alphaThreshold) {
                 framesSinceLastDrop: s.framesSinceLastDrop,
                 viewMode: s.viewMode,
                 filterMode: s.filterMode,
+                testPattern: s.testPattern,
                 alphaThreshold: s.alphaThreshold,
                 playSpeed: s.playSpeed,
                 cefActive: s.cefActive,
@@ -1195,6 +1447,8 @@ if (pixel.a > alphaThreshold) {
                 frame1: s.frame1 ? { id: s.frame1.id, timestamp: s.frame1.timestamp, data: new Uint8ClampedArray(s.frame1.data) } : null,
                 frame2: s.frame2 ? { id: s.frame2.id, timestamp: s.frame2.timestamp, data: new Uint8ClampedArray(s.frame2.data) } : null,
                 
+                shaderWeave: s.shaderWeave ? { id: s.shaderWeave.id, data: new Uint8ClampedArray(s.shaderWeave.data) } : null,
+                shaderLpf: s.shaderLpf ? { id: s.shaderLpf.id, data: new Uint8ClampedArray(s.shaderLpf.data) } : null,
                 shaderOutput: s.shaderOutput ? { id: s.shaderOutput.id, data: new Uint8ClampedArray(s.shaderOutput.data) } : null,
                 
                 staging0: s.staging0 ? { data: new Uint8ClampedArray(s.staging0.data) } : null,
@@ -1202,6 +1456,10 @@ if (pixel.a > alphaThreshold) {
                 
                 hwFill: s.hwFill ? new Uint8ClampedArray(s.hwFill) : null,
                 hwKey: s.hwKey ? new Uint8ClampedArray(s.hwKey) : null,
+
+                sdiF1: s.sdiF1 ? new Uint8ClampedArray(s.sdiF1) : null,
+                sdiF2: s.sdiF2 ? new Uint8ClampedArray(s.sdiF2) : null,
+                sdiMonitor: s.sdiMonitor ? new Uint8ClampedArray(s.sdiMonitor) : null,
                 
                 lastHwFill: s.lastHwFill ? new Uint8ClampedArray(s.lastHwFill) : null,
                 lastHwKey: s.lastHwKey ? new Uint8ClampedArray(s.lastHwKey) : null,
@@ -1286,7 +1544,7 @@ if (pixel.a > alphaThreshold) {
             // 進行開始前に履歴を保存する
             saveHistory();
 
-            const step = 0.5; // 時間を進める分解能（ミリ秒）
+            const step = 0.1; // 時間を進める分解能（ミリ秒）
             const targetTime = state.time + ms;
             
             logMsg(`仮想時間進行: +${ms.toFixed(2)}ms (目標時間: ${targetTime.toFixed(2)}ms)`);
@@ -1298,13 +1556,13 @@ if (pixel.a > alphaThreshold) {
                 // DeckLinkの消費判定 (29.97Hz = 33.36msごと)
                 if (state.time >= state.nextDlTime) {
                     deckLinkTickInternal();
-                    state.nextDlTime += 33.36;
+                    state.nextDlTime += 33.366666;
                 }
 
-                // CEFの生成判定 (60fps = 16.68msごと)
+                // CEFの生成判定 (60fps = 16.66msごと)
                 if (state.time >= state.nextCefTime) {
                     cefTickInternal();
-                    state.nextCefTime += 16.68;
+                    state.nextCefTime += 16.666666;
                 }
             }
             
@@ -1393,6 +1651,8 @@ if (pixel.a > alphaThreshold) {
         function executeComputeShader() {
             const f1Data = state.frame1.data;
             const f2Data = state.frame2.data;
+            const weaveBuffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            const lpfBuffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
             const outBuffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
             
             const threshold = state.alphaThreshold;
@@ -1400,7 +1660,7 @@ if (pixel.a > alphaThreshold) {
             const filterMode = state.filterMode;
             
             // 縦フィルタ関数の定義 (YUVConvert.hlslの SampleFiltered に相当)
-            function getFilteredPixel(frameData, x, y, isFrame1) {
+            function getFilteredPixel(frameData, x, y, isFrame1, forceNoFilter = false) {
                 const getPixelRGBA = (fx, fy) => {
                     const idx = (fy * WIDTH + fx) * 4;
                     return [
@@ -1412,7 +1672,7 @@ if (pixel.a > alphaThreshold) {
                 };
 
                 const center = getPixelRGBA(x, y);
-                if (filterMode === 0) return center; // フィルターなし
+                if (filterMode === 0 || forceNoFilter) return center; // フィルターなし
 
                 const yM1 = Math.max(y - 1, 0);
                 const yP1 = Math.min(y + 1, HEIGHT - 1);
@@ -1447,65 +1707,64 @@ if (pixel.a > alphaThreshold) {
             for (let y = 0; y < HEIGHT; y++) {
                 for (let x = 0; x < WIDTH; x++) {
                     const idx = (y * WIDTH + x) * 4;
-                    let pixel = [0, 0, 0, 0]; // R, G, B, A (0.0 ~ 1.0)
                     
                     // --- モード別のサンプリング処理 ---
-                    if (viewMode === 1) {
-                        // Mode 1: Diff 差分モード (F1とF2の差分を求める)
-                        const p1 = getFilteredPixel(f1Data, x, y, true);
-                        const p2 = getFilteredPixel(f2Data, x, y, false);
-                        pixel = [
-                            Math.abs(p1[0] - p2[0]),
-                            Math.abs(p1[1] - p2[1]),
-                            Math.abs(p1[2] - p2[2]),
-                            1.0 // 差分可視化のためアルファは1.0固定
-                        ];
-                    } 
-                    else if (viewMode === 2) {
-                        // Mode 2: Progressive Frame 1
-                        pixel = getFilteredPixel(f1Data, x, y, true);
-                    } 
-                    else if (viewMode === 3) {
-                        // Mode 3: Progressive Frame 2
-                        pixel = getFilteredPixel(f2Data, x, y, false);
-                    } 
-                    else if (viewMode === 4) {
-                        // Mode 4: 30p Blend
-                        const p1 = getFilteredPixel(f1Data, x, y, true);
-                        const p2 = getFilteredPixel(f2Data, x, y, false);
-                        pixel = [
-                            p1[0] * 0.5 + p2[0] * 0.5,
-                            p1[1] * 0.5 + p2[1] * 0.5,
-                            p1[2] * 0.5 + p2[2] * 0.5,
-                            p1[3] * 0.5 + p2[3] * 0.5
-                        ];
-                    } 
-                    else {
-                        // Mode 0: Interlaced Normal
-                        if (y % 2 === 0) {
-                            // 偶数行 = Frame 1 (Top Field)
-                            pixel = getFilteredPixel(f1Data, x, y, true);
-                        } else {
-                            // 奇数行 = Frame 2 (Bottom Field)
-                            pixel = getFilteredPixel(f2Data, x, y, false);
+                    const sampleMode = (forceNoFilter) => {
+                        let pixel = [0, 0, 0, 0]; // R, G, B, A (0.0 ~ 1.0)
+                        if (viewMode === 1) {
+                            const p1 = getFilteredPixel(f1Data, x, y, true, forceNoFilter);
+                            const p2 = getFilteredPixel(f2Data, x, y, false, forceNoFilter);
+                            pixel = [Math.abs(p1[0] - p2[0]), Math.abs(p1[1] - p2[1]), Math.abs(p1[2] - p2[2]), 1.0];
+                        } 
+                        else if (viewMode === 2) {
+                            pixel = getFilteredPixel(f1Data, x, y, true, forceNoFilter);
+                        } 
+                        else if (viewMode === 3) {
+                            pixel = getFilteredPixel(f2Data, x, y, false, forceNoFilter);
+                        } 
+                        else if (viewMode === 4) {
+                            const p1 = getFilteredPixel(f1Data, x, y, true, forceNoFilter);
+                            const p2 = getFilteredPixel(f2Data, x, y, false, forceNoFilter);
+                            pixel = [p1[0] * 0.5 + p2[0] * 0.5, p1[1] * 0.5 + p2[1] * 0.5, p1[2] * 0.5 + p2[2] * 0.5, p1[3] * 0.5 + p2[3] * 0.5];
+                        } 
+                        else {
+                            if (y % 2 === 0) pixel = getFilteredPixel(f1Data, x, y, true, forceNoFilter);
+                            else pixel = getFilteredPixel(f2Data, x, y, false, forceNoFilter);
                         }
-                    }
+                        return pixel;
+                    };
 
-                    // --- Unpremultiply: RGB /= Alpha ---
-                    let originalAlpha = pixel[3];
-                    if (pixel[3] > threshold) {
-                        pixel[0] /= pixel[3];
-                        pixel[1] /= pixel[3];
-                        pixel[2] /= pixel[3];
+                    // Step 1: Weave (フィルターなし)
+                    let weavePixel = sampleMode(true);
+                    weaveBuffer[idx] = Math.min(Math.max(Math.round(weavePixel[0] * 255.0), 0), 255);
+                    weaveBuffer[idx+1] = Math.min(Math.max(Math.round(weavePixel[1] * 255.0), 0), 255);
+                    weaveBuffer[idx+2] = Math.min(Math.max(Math.round(weavePixel[2] * 255.0), 0), 255);
+                    weaveBuffer[idx+3] = Math.min(Math.max(Math.round(weavePixel[3] * 255.0), 0), 255);
+
+                    // Step 2: LPF
+                    let lpfPixel = sampleMode(false);
+                    lpfBuffer[idx] = Math.min(Math.max(Math.round(lpfPixel[0] * 255.0), 0), 255);
+                    lpfBuffer[idx+1] = Math.min(Math.max(Math.round(lpfPixel[1] * 255.0), 0), 255);
+                    lpfBuffer[idx+2] = Math.min(Math.max(Math.round(lpfPixel[2] * 255.0), 0), 255);
+                    lpfBuffer[idx+3] = Math.min(Math.max(Math.round(lpfPixel[3] * 255.0), 0), 255);
+
+                    // Step 3: Unmult
+                    let originalAlpha = lpfPixel[3];
+                    if (originalAlpha > threshold) {
+                        lpfPixel[0] /= originalAlpha;
+                        lpfPixel[1] /= originalAlpha;
+                        lpfPixel[2] /= originalAlpha;
                     }
-                    // 計算結果を飽和(Saturate)させて0~255のバイト配列へ戻す
-                    outBuffer[idx]   = Math.min(Math.max(Math.round(pixel[0] * 255.0), 0), 255);
-                    outBuffer[idx+1] = Math.min(Math.max(Math.round(pixel[1] * 255.0), 0), 255);
-                    outBuffer[idx+2] = Math.min(Math.max(Math.round(pixel[2] * 255.0), 0), 255);
+                    
+                    outBuffer[idx]   = Math.min(Math.max(Math.round(lpfPixel[0] * 255.0), 0), 255);
+                    outBuffer[idx+1] = Math.min(Math.max(Math.round(lpfPixel[1] * 255.0), 0), 255);
+                    outBuffer[idx+2] = Math.min(Math.max(Math.round(lpfPixel[2] * 255.0), 0), 255);
                     outBuffer[idx+3] = Math.min(Math.max(Math.round(originalAlpha * 255.0), 0), 255);
                 }
             }
 
+            state.shaderWeave = { data: weaveBuffer, id: Math.max(state.frame1.id, state.frame2.id) };
+            state.shaderLpf = { data: lpfBuffer, id: Math.max(state.frame1.id, state.frame2.id) };
             state.shaderOutput = {
                 data: outBuffer,
                 id: Math.max(state.frame1.id, state.frame2.id)
@@ -1547,6 +1806,39 @@ if (pixel.a > alphaThreshold) {
             state.hwFill = fillBuffer;
             state.hwKey = keyBuffer;
 
+            // 物理SDI出力用のバッファ作成 (外部キーヤーでの合成後をシミュレート)
+            // 背景にはアルファがわかりやすいように市松模様(チェッカーボード)を使用
+            const sdiF1Buffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            const sdiF2Buffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            for (let y = 0; y < HEIGHT; y++) {
+                for (let x = 0; x < WIDTH; x++) {
+                    const i = (y * WIDTH + x) * 4;
+                    
+                    // 背景チェッカーボード (4x4ピクセル単位)
+                    const bg = (Math.floor(x / 4) % 2 === Math.floor(y / 4) % 2) ? 60 : 100;
+                    
+                    // Unshaped Key (Straight Alpha) を用いた合成式: Output = (Fill * Key) + BG * (1 - Key)
+                    const keyVal = keyBuffer[i] / 255.0;
+                    const r = Math.min(255, fillBuffer[i] * keyVal + bg * (1.0 - keyVal));
+                    const g = Math.min(255, fillBuffer[i+1] * keyVal + bg * (1.0 - keyVal));
+                    const b = Math.min(255, fillBuffer[i+2] * keyVal + bg * (1.0 - keyVal));
+
+                    if (y % 2 === 0) {
+                        sdiF1Buffer[i]   = r;
+                        sdiF1Buffer[i+1] = g;
+                        sdiF1Buffer[i+2] = b;
+                        sdiF1Buffer[i+3] = 255;
+                    } else {
+                        sdiF2Buffer[i]   = r;
+                        sdiF2Buffer[i+1] = g;
+                        sdiF2Buffer[i+2] = b;
+                        sdiF2Buffer[i+3] = 255;
+                    }
+                }
+            }
+            state.sdiF1 = sdiF1Buffer;
+            state.sdiF2 = sdiF2Buffer;
+
             // キューのシフト（2サイクル遅延パイプ）
             state.staging1 = { data: state.staging0.data.slice() };
             state.staging0 = { data: state.shaderOutput.data.slice() };
@@ -1559,8 +1851,8 @@ if (pixel.a > alphaThreshold) {
             state.time = 0.0;
             state.cefCount = 0;
             state.dlCount = 0;
-            state.nextCefTime = 16.68; // 最初のCEF描画は16.68msで発生（1ステップ目で1枚になるようにする）
-            state.nextDlTime = 33.36; // 最初のDeckLinkサイクルは33.36msで動作
+            state.nextCefTime = 16.666666; // 最初のCEF描画は16.66msで発生
+            state.nextDlTime = 33.366666; // 最初のDeckLinkサイクルは33.36msで動作
             state.isConsuming = false;
             state.prerollDelay = 3;
             state.framesSinceLastDrop = 0;
@@ -1572,6 +1864,8 @@ if (pixel.a > alphaThreshold) {
             const emptyFrame = { id: 0, timestamp: 0, data: blackData.slice() };
             state.frame1 = emptyFrame;
             state.frame2 = emptyFrame;
+            state.shaderWeave = emptyFrame;
+            state.shaderLpf = emptyFrame;
             state.shaderOutput = emptyFrame;
             state.staging0 = emptyFrame;
             state.staging1 = emptyFrame;
@@ -1579,6 +1873,7 @@ if (pixel.a > alphaThreshold) {
             state.hwKey = blackData.slice();
             state.lastHwFill = blackData.slice();
             state.lastHwKey = blackData.slice();
+            state.sdiMonitor = blackData.slice();
 
             // 履歴もリセット
             historyStack = [];
@@ -1672,8 +1967,8 @@ if (pixel.a > alphaThreshold) {
             const isEven = (y % 2 === 0);
             if (state.viewMode === 0) {
                 document.getElementById('det-sampling').innerText = isEven 
-                    ? `偶数ラインのため [Frame 1 (Top Field)] を選択サンプリング` 
-                    : `奇数ラインのため [Frame 2 (Bottom Field)] を選択サンプリング`;
+                    ? `偶数ラインのため [Frame 1 (Top)] をサンプリング` 
+                    : `奇数ラインのため [Frame 2 (Bottom)] をサンプリング`;
                 document.getElementById('det-sampling').style.color = isEven ? 'var(--accent-cyan)' : 'var(--accent-violet)';
             } else if (state.viewMode === 1) {
                 document.getElementById('det-sampling').innerText = `差分モード: abs(F1 - F2) をサンプリング`;
@@ -1682,6 +1977,12 @@ if (pixel.a > alphaThreshold) {
                 document.getElementById('det-sampling').innerText = `プログレッシブ/ブレンドサンプリング中`;
                 document.getElementById('det-sampling').style.color = 'var(--success)';
             }
+
+            // Weave結果の表示
+            const weaveIdx = (y * WIDTH + x) * 4;
+            const wVal = state.shaderWeave.data;
+            const wA = (wVal[weaveIdx+3] / 255.0).toFixed(2);
+            document.getElementById('det-weave-val').innerText = `R: ${wVal[weaveIdx]}, G: ${wVal[weaveIdx+1]}, B: ${wVal[weaveIdx+2]}, A: ${wA}`;
 
             // フィルター計算の中間状態の表示
             const getLPFPixelVal = (buffer, px, py) => {
@@ -1739,6 +2040,36 @@ if (pixel.a > alphaThreshold) {
                 document.getElementById('det-unmult-val').style.color = 'var(--text-muted)';
             }
 
+            // Fill と Key の値を表示
+            if (state.hwFill && state.hwKey) {
+                const hwIdx = (y * WIDTH + x) * 4;
+                const fillR = state.hwFill[hwIdx];
+                const fillG = state.hwFill[hwIdx+1];
+                const fillB = state.hwFill[hwIdx+2];
+                const keyVal = state.hwKey[hwIdx];
+                
+                document.getElementById('det-fill-val').innerText = `R: ${fillR}, G: ${fillG}, B: ${fillB}`;
+                document.getElementById('det-key-val').innerText = `Key: ${keyVal} (${(keyVal/255.0).toFixed(2)})`;
+            } else {
+                document.getElementById('det-fill-val').innerText = `R: -, G: -, B: -`;
+                document.getElementById('det-key-val').innerText = `Key: -`;
+            }
+
+            // SDIの詳細表示
+            if (state.sdiMonitor) {
+                const sdiIdx = (y * WIDTH + x) * 4;
+                const r = state.sdiMonitor[sdiIdx];
+                const g = state.sdiMonitor[sdiIdx+1];
+                const b = state.sdiMonitor[sdiIdx+2];
+                if (y % 2 === 0) {
+                    document.getElementById('det-sdi-val').innerText = `R: ${r}, G: ${g}, B: ${b} (Field 1: 偶数行)`;
+                } else {
+                    document.getElementById('det-sdi-val').innerText = `R: ${r}, G: ${g}, B: ${b} (Field 2: 奇数行)`;
+                }
+            } else {
+                document.getElementById('det-sdi-val').innerText = `R: -, G: -, B: -`;
+            }
+
             const redrawInspectCanvas = (containerId, buffer) => {
                 const container = document.getElementById(containerId);
                 if (!container) return;
@@ -1764,7 +2095,12 @@ if (pixel.a > alphaThreshold) {
 
             redrawInspectCanvas('inspect-f1', state.frame1.data);
             redrawInspectCanvas('inspect-f2', state.frame2.data);
+            redrawInspectCanvas('inspect-weave', state.shaderWeave.data);
+            redrawInspectCanvas('inspect-lpf', state.shaderLpf.data);
             redrawInspectCanvas('inspect-out', state.shaderOutput.data);
+            if (state.hwFill) redrawInspectCanvas('inspect-fill', state.hwFill);
+            if (state.hwKey) redrawInspectCanvas('inspect-key', state.hwKey);
+            if (state.sdiMonitor) redrawInspectCanvas('inspect-sdi-monitor', state.sdiMonitor);
         }
 
         // 全体UIの同期
@@ -1825,6 +2161,8 @@ if (pixel.a > alphaThreshold) {
 
             if (state.frame1) drawToCanvas('canvas-f1', state.frame1.data);
             if (state.frame2) drawToCanvas('canvas-f2', state.frame2.data);
+            if (state.shaderWeave) drawToCanvas('canvas-shader-weave', state.shaderWeave.data);
+            if (state.shaderLpf) drawToCanvas('canvas-shader-lpf', state.shaderLpf.data);
             if (state.shaderOutput) drawToCanvas('canvas-shader-out', state.shaderOutput.data);
 
             if (state.staging0) drawToCanvas('canvas-stage0', state.staging0.data);
@@ -1832,6 +2170,70 @@ if (pixel.a > alphaThreshold) {
 
             if (state.hwFill) drawToCanvas('canvas-hw-fill', state.hwFill);
             if (state.hwKey) drawToCanvas('canvas-hw-key', state.hwKey);
+
+            // SDI出力状態の更新
+            // 16.68msごとにF1とF2が切り替わる (59.94Hz)
+            const activeField = Math.floor(state.time / 16.6833) % 2 === 0 ? 1 : 2;
+            const badgeSdiField = document.getElementById('badge-sdi-field');
+            if (badgeSdiField) {
+                badgeSdiField.innerText = `Field ${activeField}`;
+                document.getElementById('status-sdi-active').innerText = `Field ${activeField} Transmitting...`;
+                
+                const badgeWireField = document.getElementById('badge-wire-field');
+                if (badgeWireField) {
+                    badgeWireField.innerText = `Field ${activeField}`;
+                    document.getElementById('status-wire-active').innerText = `Field ${activeField} Transmitting...`;
+                }
+
+                // 7. SDI Hardware Output (Wire) 用の表示: アクティブなフィールドの走査線のみを描画
+                if (state.hwFill && state.hwKey) {
+                    const wireFillBuf = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+                    const wireKeyBuf = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+                    for (let y = 0; y < HEIGHT; y++) {
+                        // 該当フィールドのラインだけコピー、他は真っ黒(無信号)
+                        if ((activeField === 1 && y % 2 === 0) || (activeField === 2 && y % 2 !== 0)) {
+                            for (let x = 0; x < WIDTH; x++) {
+                                const i = (y * WIDTH + x) * 4;
+                                wireFillBuf[i]   = state.hwFill[i];
+                                wireFillBuf[i+1] = state.hwFill[i+1];
+                                wireFillBuf[i+2] = state.hwFill[i+2];
+                                wireFillBuf[i+3] = 255;
+                                
+                                wireKeyBuf[i]   = state.hwKey[i];
+                                wireKeyBuf[i+1] = state.hwKey[i+1];
+                                wireKeyBuf[i+2] = state.hwKey[i+2];
+                                wireKeyBuf[i+3] = 255;
+                            }
+                        }
+                    }
+                    drawToCanvas('canvas-wire-fill', wireFillBuf);
+                    drawToCanvas('canvas-wire-key', wireKeyBuf);
+                }
+
+                // 8. モニターバッファへのフィールド上書き（CRT/Phosphorのシミュレーション）
+                if (state.sdiMonitor && state.sdiF1 && state.sdiF2) {
+                    for (let y = 0; y < HEIGHT; y++) {
+                        if (activeField === 1 && y % 2 === 0) {
+                            for (let x = 0; x < WIDTH; x++) {
+                                const i = (y * WIDTH + x) * 4;
+                                state.sdiMonitor[i]   = state.sdiF1[i];
+                                state.sdiMonitor[i+1] = state.sdiF1[i+1];
+                                state.sdiMonitor[i+2] = state.sdiF1[i+2];
+                                state.sdiMonitor[i+3] = 255;
+                            }
+                        } else if (activeField === 2 && y % 2 !== 0) {
+                            for (let x = 0; x < WIDTH; x++) {
+                                const i = (y * WIDTH + x) * 4;
+                                state.sdiMonitor[i]   = state.sdiF2[i];
+                                state.sdiMonitor[i+1] = state.sdiF2[i+1];
+                                state.sdiMonitor[i+2] = state.sdiF2[i+2];
+                                state.sdiMonitor[i+3] = 255;
+                            }
+                        }
+                    }
+                }
+            }
+            if (state.sdiMonitor) drawToCanvas('canvas-sdi-monitor', state.sdiMonitor);
 
             updateInspectGrids();
             updateUndoButtonState();
@@ -1921,6 +2323,11 @@ if (pixel.a > alphaThreshold) {
             }
         });
 
+        document.getElementById('select-pattern').addEventListener('change', (e) => {
+            state.testPattern = parseInt(e.target.value);
+            logMsg(`設定変更: CEF描画絵を ${e.target.options[e.target.selectedIndex].text} に切り替えました。`);
+        });
+
         document.getElementById('range-threshold').addEventListener('input', (e) => {
             state.alphaThreshold = parseFloat(e.target.value);
             document.getElementById('val-threshold').innerText = state.alphaThreshold.toFixed(2);
@@ -1965,7 +2372,12 @@ if (pixel.a > alphaThreshold) {
 
         setupInspectEvents('inspect-f1');
         setupInspectEvents('inspect-f2');
+        setupInspectEvents('inspect-weave');
+        setupInspectEvents('inspect-lpf');
         setupInspectEvents('inspect-out');
+        setupInspectEvents('inspect-fill');
+        setupInspectEvents('inspect-key');
+        setupInspectEvents('inspect-sdi-monitor');
 
         // アプリ起動時の初期処理
         resetState();
