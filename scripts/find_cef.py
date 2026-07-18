@@ -1,25 +1,30 @@
 import json
 import sys
 
+platform = 'windows64'
+file_type = 'minimal'
+
+if len(sys.argv) > 1:
+    platform = sys.argv[1]
+if len(sys.argv) > 2:
+    file_type = sys.argv[2]
+
 try:
-    print("Loading JSON...")
     with open('cef_index.json', 'r') as f:
         data = json.load(f)
     
-    print("JSON Loaded. Searching for windows64...")
-    if 'windows64' not in data:
-        print("Error: windows64 key not found")
+    if platform not in data:
+        print(f"Error: {platform} key not found", file=sys.stderr)
         sys.exit(1)
         
-    versions = data['windows64']['versions']
-    print(f"Found {len(versions)} versions for windows64")
+    versions = data[platform]['versions']
     
     target_url = None
     
     # helper to find file in version
     def find_file(v):
         for f in v['files']:
-            if f['type'] == 'standard':
+            if f['type'] == file_type:
                 return f['name']
         return None
 
@@ -29,27 +34,24 @@ try:
             name = find_file(v)
             if name:
                 target_url = name
-                print(f"Found stable version: {v['cef_version']}")
                 break
                 
     # Second pass: Beta (if no stable)
     if not target_url:
-        print("No stable build found. Checking beta...")
         for v in versions:
             if v.get('channel') == 'beta':
                 name = find_file(v)
                 if name:
                     target_url = name
-                    print(f"Found beta version: {v['cef_version']}")
                     break
     
     if target_url:
-        # URL encode + if needed, but usually spotify cdn handles it or it's +
-        # The index.html has a replaceAll(url, '+', '%2B');
         final_url = f"https://cef-builds.spotifycdn.com/{target_url.replace('+', '%2B')}"
-        print(f"DOWNLOAD_URL={final_url}")
+        print(final_url)
     else:
-        print("Error: No suitable build found")
+        print(f"Error: No suitable build found for platform={platform}, type={file_type}", file=sys.stderr)
+        sys.exit(1)
 
 except Exception as e:
-    print(f"Error: {e}")
+    print(f"Error: {e}", file=sys.stderr)
+    sys.exit(1)
