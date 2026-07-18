@@ -1,6 +1,8 @@
 #include "CrashHandler.h"
-#include <DbgHelp.h>
 #include <iostream>
+
+#ifdef _WIN32
+#include <DbgHelp.h>
 #include <sstream>
 #include <iomanip>
 #include <chrono>
@@ -164,3 +166,17 @@ std::wstring CrashHandler::GenerateDumpFileName() {
     
     return oss.str();
 }
+#else
+void CrashHandler::Initialize() {
+    std::cout << "[CrashHandler] Crash handler is not supported on this platform." << std::endl;
+}
+
+CrashHandler& CrashHandler::GetInstance() {
+    static CrashHandler instance;
+    return instance;
+}
+
+void CrashHandler::ForceCrashDump() {
+    std::cout << "[CrashHandler] Force crash dump is not supported on this platform." << std::endl;
+}
+#endif

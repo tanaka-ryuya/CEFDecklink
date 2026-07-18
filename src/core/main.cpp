@@ -465,14 +465,13 @@ static std::string g_validationStatusText;
 static std::mutex g_validationMutex;
 static std::atomic<bool> g_isValidating(false);
 
-#ifdef _WIN32
-
 struct UrlCheckResult {
     bool success = false;
     int statusCode = 0;
     std::string statusText;
 };
 
+#ifdef _WIN32
 static bool CheckFileExists(const std::string& path) {
     DWORD dwAttrib = GetFileAttributesA(path.c_str());
     return (dwAttrib != INVALID_FILE_ATTRIBUTES && 
@@ -598,6 +597,72 @@ static bool SaveConfig(const std::string& url, float alpha, const std::string& f
     }
     return true;
 }
+#else
+#include <sys/stat.h>
+static bool CheckFileExists(const std::string& path) {
+    struct stat buffer;
+    return (stat(path.c_str(), &buffer) == 0 && S_ISREG(buffer.st_mode));
+}
+
+static UrlCheckResult CheckUrlAlive(const std::string& url) {
+    UrlCheckResult result;
+    if (url.rfind("file://", 0) == 0) {
+        std::string path = url.substr(7);
+        while (!path.empty() && path[0] == '/') {
+            path = path.substr(1);
+        }
+        if (CheckFileExists("/" + path)) {
+            result.success = true;
+            result.statusCode = 200;
+            result.statusText = "Accepted (Local File)";
+        } else {
+            result.success = false;
+            result.statusCode = 404;
+            result.statusText = "404 File Not Found";
+        }
+        return result;
+    }
+
+    // Stub connection checker for macOS/Linux
+    result.success = true;
+    result.statusCode = 200;
+    result.statusText = "Accepted (Bypassed)";
+    return result;
+}
+
+static bool SaveConfig(const std::string& url, float alpha, const std::string& format, int filterMode) {
+    std::string exeDir = GetExecutableDir();
+    
+    // 1. Save to executable directory
+    std::string configPath = exeDir + "/config.json";
+    {
+        std::ofstream file(configPath, std::ios::out | std::ios::trunc);
+        if (file.is_open()) {
+            file << "{\n";
+            file << "    \"url\": \"" << url << "\",\n";
+            file << "    \"unmult_thresh\": " << std::fixed << std::setprecision(4) << alpha << ",\n";
+            file << "    \"format\": \"" << format << "\",\n";
+            file << "    \"il_filter_mode\": " << filterMode << "\n";
+            file << "}\n";
+        }
+    }
+
+    // 2. Save to project root directory
+    std::string rootConfigPath = exeDir + "/../../config.json";
+    {
+        std::ofstream file(rootConfigPath, std::ios::out | std::ios::trunc);
+        if (file.is_open()) {
+            file << "{\n";
+            file << "    \"url\": \"" << url << "\",\n";
+            file << "    \"unmult_thresh\": " << std::fixed << std::setprecision(4) << alpha << ",\n";
+            file << "    \"format\": \"" << format << "\",\n";
+            file << "    \"il_filter_mode\": " << filterMode << "\n";
+            file << "}\n";
+        }
+    }
+    return true;
+}
+#endif
 
 static void StartUrlValidation(const std::string& url) {
     if (g_isValidating.load()) return;
@@ -634,7 +699,6 @@ static void StartUrlValidation(const std::string& url) {
         g_tuiChanged = true;
     }).detach();
 }
-#endif
 
 // TUI Dashboard Console Output Helper
 void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval, float alphaThreshold, uint64_t totalCefFrames, int pendingCount) {

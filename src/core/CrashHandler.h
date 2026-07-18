@@ -1,7 +1,10 @@
 #pragma once
 
-#include <Windows.h>
 #include <string>
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 
 class CrashHandler {
 public:
@@ -22,6 +25,7 @@ private:
     CrashHandler(const CrashHandler&) = delete;
     CrashHandler& operator=(const CrashHandler&) = delete;
     
+#ifdef _WIN32
     // Exception filter callback
     static LONG WINAPI UnhandledExceptionHandler(_EXCEPTION_POINTERS* exceptionInfo);
     
@@ -30,4 +34,5 @@ private:
     
     // Generate dump file name with timestamp
     static std::wstring GenerateDumpFileName();
+#endif
 };
