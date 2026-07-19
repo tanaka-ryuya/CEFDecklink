@@ -111,6 +111,11 @@ file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h" "src/*.rc" "src/*.mm")
 # Exclude macOS helper implementation from the main binary sources
 list(FILTER SOURCES EXCLUDE REGEX "process_helper_mac\\.cpp$")
 
+# Exclude macOS Objective-C++ sources when not building for Apple platforms
+if(NOT APPLE)
+    list(FILTER SOURCES EXCLUDE REGEX "\\.mm$")
+endif()
+
 # Create executable
 if(APPLE)
     add_executable(${PROJECT_NAME} MACOSX_BUNDLE

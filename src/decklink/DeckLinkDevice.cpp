@@ -118,7 +118,11 @@ bool DeckLinkDevice::Initialize(const std::string& format)
     if (m_deckLink->GetDisplayName(&deviceNameBstr) == S_OK)
     {
         std::wstring wname(deviceNameBstr);
-        std::string name(wname.begin(), wname.end());
+        std::string name;
+        name.reserve(wname.size());
+        for (wchar_t wc : wname) {
+            name.push_back(static_cast<char>(wc));
+        }
         std::cout << "[DeckLink] Found device: " << name << std::endl;
         SysFreeString(deviceNameBstr);
     }

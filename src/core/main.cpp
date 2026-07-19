@@ -1409,7 +1409,11 @@ int main(int argc, char** argv)
         std::wstring exeDir = exePath;
         size_t lastSlash = exeDir.find_last_of(L"\\/");
         if (lastSlash != std::wstring::npos) exeDir = exeDir.substr(0, lastSlash);
-        std::string logDir(exeDir.begin(), exeDir.end());
+        std::string logDir;
+        logDir.reserve(exeDir.size());
+        for (wchar_t wc : exeDir) {
+            logDir.push_back(static_cast<char>(wc));
+        }
         logDir += "\\logs";
 #else
         std::string logDir = GetExeDir() + "/logs";
