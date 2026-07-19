@@ -36,8 +36,15 @@ mkdir -p "${FOUND_PATH}/Contents/MacOS/logs"
 
 BUNDLE_DIR="$(dirname "${FOUND_PATH}")"
 echo "[Config] ${BUNDLE_DIR}/config.json"
-echo "Starting ${BINARY}..."
+echo "Starting ${BINARY} in a new Terminal window..."
 echo ""
 
-# Run binary directly (foreground) so TUI works in terminal
-exec "${BINARY}"
+# Launch in a new Terminal window on macOS so the TUI dashboard functions correctly
+if [ "$(uname)" = "Darwin" ]; then
+    ABS_BINARY="$(pwd)/${BINARY}"
+    osascript -e "tell application \"Terminal\" to do script \"cd '$(pwd)' && exec '${ABS_BINARY}'\"" > /dev/null
+    osascript -e "tell application \"Terminal\" to activate" > /dev/null
+else
+    # Fallback for other POSIX environments
+    exec "${BINARY}"
+fi

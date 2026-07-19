@@ -106,7 +106,7 @@ if(APPLE)
 endif()
 
 # --- Sources ---
-file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h" "src/*.rc")
+file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h" "src/*.rc" "src/*.mm")
 
 # Exclude macOS helper implementation from the main binary sources
 list(FILTER SOURCES EXCLUDE REGEX "process_helper_mac\\.cpp$")
@@ -218,12 +218,17 @@ elseif(APPLE)
     # Link CEF wrapper and framework
     target_link_libraries(${PROJECT_NAME} PRIVATE libcef_dll_wrapper ${CEF_STANDARD_LIBS})
     SET_EXECUTABLE_TARGET_PROPERTIES(${PROJECT_NAME})
+    set_source_files_properties("src/core/MacWindow.mm" PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 
     # Link Mac system frameworks (needed for CEF / DeckLink / License validation)
     find_library(COREFOUNDATION_FRAMEWORK CoreFoundation REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${COREFOUNDATION_FRAMEWORK})
     find_library(SECURITY_FRAMEWORK Security REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${SECURITY_FRAMEWORK})
+    find_library(COREGRAPHICS_FRAMEWORK CoreGraphics REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${COREGRAPHICS_FRAMEWORK})
+    find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${APPKIT_FRAMEWORK})
     
     # Configure bundle plists
     set_target_properties(${PROJECT_NAME} PROPERTIES

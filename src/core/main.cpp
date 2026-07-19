@@ -21,7 +21,11 @@
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <termios.h>
+#include <fcntl.h>
+#include <cstdio>
 #include "include/wrapper/cef_library_loader.h"
+#include "MacWindow.h"
 using HWND = void*;
 #endif
 
@@ -41,6 +45,40 @@ using HWND = void*;
 #include "CefManager.h"
 #include "CefRenderHandler.h"
 #include "ShaderManager.h"
+
+#ifndef _WIN32
+#include <cstdlib> // For atexit
+
+static struct termios g_originalTermios;
+static bool g_termiosSaved = false;
+
+static void RestoreTerminal() {
+    if (g_termiosSaved) {
+        tcsetattr(STDIN_FILENO, TCSANOW, &g_originalTermios);
+    }
+    // Show cursor and switch back to main screen buffer
+    std::cout << "\x1b[?1049l\x1b[?25h" << std::flush;
+}
+
+static void InitTerminalRawMode() {
+    if (tcgetattr(STDIN_FILENO, &g_originalTermios) == 0) {
+        g_termiosSaved = true;
+        atexit(RestoreTerminal);
+        
+        struct termios raw = g_originalTermios;
+        raw.c_lflag &= ~(ICANON | ECHO);
+        tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+    }
+}
+
+static int _getch_nonblock() {
+    int oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+    int ch = getchar();
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
+    return ch;
+}
+#endif
 
 #ifdef _WIN32
 #include "CrashHandler.h"
@@ -164,6 +202,10 @@ static std::string g_licenseKey = "";
 static bool g_isLicensed = false;
 std::atomic<int> g_filterMode(0); // 0=None, 1=3-tap, 2=5-tap vertical LPF
 static float g_alphaThreshold = 0.000f;
+
+#ifndef _WIN32
+static MacWindowHandle g_macWindow = nullptr;
+#endif
 
 // Forward declarations of helper functions
 #ifdef _WIN32
@@ -623,15 +665,55 @@ static UrlCheckResult CheckUrlAlive(const std::string& url) {
         return result;
     }
 
-    // Stub connection checker for macOS/Linux
-    result.success = true;
-    result.statusCode = 200;
-    result.statusText = "Accepted (Bypassed)";
+    // Actual connection checker for macOS/Linux using curl
+    std::string safeUrl;
+    for (char c : url) {
+        if (std::isalnum(c) || c == ':' || c == '/' || c == '.' || c == '-' || c == '_' || c == '?' || c == '=' || c == '&' || c == '%') {
+            safeUrl.push_back(c);
+        }
+    }
+    
+    std::string cmd = "curl -o /dev/null -s -w \"%{http_code}\" --max-time 3 \"" + safeUrl + "\"";
+    FILE* pipe = popen(cmd.c_str(), "r");
+    if (!pipe) {
+        result.success = false;
+        result.statusCode = 0;
+        result.statusText = "Failed to run curl";
+        return result;
+    }
+    
+    char buffer[128];
+    std::string output = "";
+    while (!feof(pipe)) {
+        if (fgets(buffer, 128, pipe) != NULL)
+            output += buffer;
+    }
+    pclose(pipe);
+    
+    int code = 0;
+    try {
+        code = std::stoi(output);
+    } catch (...) {
+        code = 0;
+    }
+    
+    result.statusCode = code;
+    if (code >= 200 && code < 400) {
+        result.success = true;
+        result.statusText = "Accepted";
+    } else {
+        result.success = false;
+        if (code == 0) {
+            result.statusText = "Connection failed / Timeout";
+        } else {
+            result.statusText = "HTTP Error " + std::to_string(code);
+        }
+    }
     return result;
 }
 
 static bool SaveConfig(const std::string& url, float alpha, const std::string& format, int filterMode) {
-    std::string exeDir = GetExecutableDir();
+    std::string exeDir = GetExeDir();
     
     // 1. Save to executable directory
     std::string configPath = exeDir + "/config.json";
@@ -810,8 +892,13 @@ void LogStatus(bool locked, double deckLinkFps, int cefFps, int uniqueInInterval
     }
  
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
+#ifdef _WIN32
     oss << "  \x1b[90mControls: Ctrl+O(output-mode) | Ctrl+F(int-filter-mode) | Ctrl+K(keyer-mode)\x1b[K\x1b[0m\n";
     oss << "            \x1b[90mCtrl+A/Z(unmult-th:0.001) | Ctrl+Up/Down(unmult-th:0.1) | Ctrl+R(reload) | Ctrl+C(exit)\x1b[K\x1b[0m\n";
+#else
+    oss << "  \x1b[90mControls: Ctrl+P(output-mode) | Ctrl+F(int-filter-mode) | Ctrl+K(keyer-mode)\x1b[K\x1b[0m\n";
+    oss << "            \x1b[90m</>(unmult-th:0.001) | Ctrl+[/](unmult-th:0.1) | Ctrl+R(reload) | Ctrl+C(exit)\x1b[K\x1b[0m\n";
+#endif
     oss << "\x1b[36m===============================================================================\x1b[K\x1b[0m\n";
  
     std::string valStatus;
@@ -1056,6 +1143,89 @@ void RenderFrame(HWND hWnd) {
             }
         }
     }
+#else
+    while (true) {
+        int ch = _getch_nonblock();
+        if (ch == EOF) break;
+        if (ch == 27) { // ESC or Ctrl+[
+            int ch2 = _getch_nonblock();
+            if (ch2 == '[') {
+                int seq[8];
+                int seq_len = 0;
+                while (seq_len < 8) {
+                    int next_ch = _getch_nonblock();
+                    if (next_ch == EOF) break;
+                    seq[seq_len++] = next_ch;
+                }
+                // xterm / terminal.app sequences:
+                // Ctrl+Up is usually ESC [ 1 ; 5 A
+                // Ctrl+Down is usually ESC [ 1 ; 5 B
+                if (seq_len >= 4 && seq[0] == '1' && seq[1] == ';' && seq[2] == '5') {
+                    if (seq[3] == 'A') { // Ctrl+Up (Unmult 0.1)
+                        g_alphaThreshold += 0.1f;
+                        if (g_alphaThreshold > 1.0f) g_alphaThreshold = 1.0f;
+                        changed = true;
+                        g_tuiChanged = true;
+                    } else if (seq[3] == 'B') { // Ctrl+Down (Unmult 0.1)
+                        g_alphaThreshold -= 0.1f;
+                        if (g_alphaThreshold < 0.0f) g_alphaThreshold = 0.0f;
+                        changed = true;
+                        g_tuiChanged = true;
+                    }
+                }
+            } else if (ch2 == EOF) {
+                // Ctrl+[ (increase by 0.1)
+                g_alphaThreshold += 0.1f;
+                if (g_alphaThreshold > 1.0f) g_alphaThreshold = 1.0f;
+                changed = true;
+                g_tuiChanged = true;
+            }
+            continue;
+        }
+
+        // macOS standard control codes:
+        // Ctrl+Enter is typically CR (13) or LF (10). Ctrl+O is 15.
+        // Backspace is typically DEL (127) or BS (8).
+        if (ch == 10 || ch == 13) {
+            StartUrlValidation(g_inputUrl);
+        } else if (ch == 127 || ch == 8) {
+            if (!g_inputUrl.empty()) {
+                g_inputUrl.pop_back();
+                g_tuiChanged = true;
+            }
+        } else if (ch == '<') { // '<' (Shift + ,) - Unmult 0.001 increase
+            g_alphaThreshold += 0.001f;
+            if (g_alphaThreshold > 1.0f) g_alphaThreshold = 1.0f;
+            changed = true;
+        } else if (ch == '>') { // '>' (Shift + .) - Unmult 0.001 decrease
+            g_alphaThreshold -= 0.001f;
+            if (g_alphaThreshold < 0.0f) g_alphaThreshold = 0.0f;
+            changed = true;
+        } else if (ch >= 32 && ch <= 126) {
+            g_inputUrl.push_back((char)ch);
+            g_tuiChanged = true;
+        } else if (ch == 16) { // Ctrl+P (behaves like Ctrl+O)
+            int vm = g_viewMode.load();
+            g_viewMode.store((vm + 1) % 4);
+            g_tuiChanged = true;
+        } else if (ch == 29) { // Ctrl+] (behaves like Ctrl+Down, decrease by 0.1)
+            g_alphaThreshold -= 0.1f;
+            if (g_alphaThreshold < 0.0f) g_alphaThreshold = 0.0f;
+            changed = true;
+            g_tuiChanged = true;
+        } else if (ch == 6) { // Ctrl+F
+            int fm = g_filterMode.load();
+            g_filterMode.store((fm + 1) % 3);
+            changed = true;
+        } else if (ch == 18) { // Ctrl+R
+            g_cefManager.ReloadIgnoreCache();
+        } else if (ch == 11) { // Ctrl+K
+            bool current = g_deckLink.GetKeyerMode();
+            g_deckLink.SetKeyerMode(!current);
+            g_logger.Log("App", std::string("Keyer mode switched to: ") + (!current ? "Internal" : "External"));
+            changed = true;
+        }
+    }
 #endif
     
     if (changed) {
@@ -1166,6 +1336,11 @@ void RenderFrame(HWND hWnd) {
             g_cefManager.SetLicensed(g_isLicensed);
         }
     }
+#ifndef _WIN32
+    if (g_macWindow) {
+        ProcessMacWindowEvents();
+    }
+#endif
 }
 
 // Main code
@@ -1359,6 +1534,10 @@ int main(int argc, char** argv)
                           }
                      }
                  }
+#else
+                 if (g_deckLink.IsSimulated() && buffer && g_macWindow) {
+                     BlitToMacWindow(g_macWindow, buffer, 1920, 1080);
+                 }
 #endif
             };
             
@@ -1421,6 +1600,11 @@ int main(int argc, char** argv)
         } else {
             ::ShowWindow(hwnd, SW_HIDE);
         }
+#else
+        if (g_deckLink.IsSimulated()) {
+            g_macWindow = CreateMacWindow("Native DeckLink + CEF [SIMULATOR MODE] - Press F11 to toggle Fullscreen", 1280, 800);
+            ShowMacWindow(g_macWindow, true);
+        }
 #endif
     }
     else
@@ -1457,6 +1641,7 @@ int main(int argc, char** argv)
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
 #else
+        InitTerminalRawMode();
         while (!g_appDone)
         {
             RenderFrame(hwnd);
@@ -1485,6 +1670,11 @@ int main(int argc, char** argv)
     ::DestroyWindow(hwnd);
     ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
     timeEndPeriod(1);
+#else
+    if (g_macWindow) {
+        DestroyMacWindow(g_macWindow);
+        g_macWindow = nullptr;
+    }
 #endif
     
     std::cout << "\x1b[?1049l\x1b[?25h\nExiting." << std::endl;
