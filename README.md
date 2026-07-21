@@ -201,12 +201,11 @@ CEFDecklink/
 本プロジェクトの内部仕様や検証に役立つシミュレータ、日本語・英語の各種ドキュメントです。
 
 ### データ処理フロー仕様書 (Data Processing Flow Specification)
-*   **[日本語版: data_processing_flow.md](file:///c:/Users/ryuya/workspace/CEFDecklink/docs/data_processing_flow.md)**
-*   **[英語版: data_processing_flow_en.md](file:///c:/Users/ryuya/workspace/CEFDecklink/docs/data_processing_flow_en.md)**
+*   **[日本語版: data_processing_flow.md](docs/data_processing_flow.md)**
+*   **[英語版: data_processing_flow_en.md](docs/data_processing_flow_en.md)**
     *   CEFからDeckLinkへのスレッド間同期、タイムスタンプベースのバッファリング、Compute Shaderによるインターレース Weave 合成や Unpremultiply 処理などの詳細仕様。
 
 ### パイプラインシミュレータ (Pipeline Simulator)
-*   **[日本語版: pipeline_simulator.html](file:///c:/Users/ryuya/workspace/CEFDecklink/docs/pipeline_simulator.html)**
-*   **[英語版: pipeline_simulator_en.html](file:///c:/Users/ryuya/workspace/CEFDecklink/docs/pipeline_simulator_en.html)**
+*   **[日本語版: pipeline_simulator.html](docs/pipeline_simulator.html)**
+*   **[英語版: pipeline_simulator_en.html](docs/pipeline_simulator_en.html)**
     *   CEFのフリーラン(60fps)からDeckLink(59.94i)へのフレーム蓄積・消費・ドロップ判定、Compute Shaderや垂直LPFの挙動、1画素単位の色計算（Unpremultiply）をWeb上で視覚的に検証・解析できるインタラクティブシミュレータ。
-
