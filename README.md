@@ -1,75 +1,78 @@
 # CEFDecklink
 
-CEFDecklinkは、**組み込みのブラウザ（CEF）で描いたWEBページを、1080i59.94もしくは1080i50の出力レートで、SDIで「ストレートアルファのFillとKey」に分離出力ができる、軽量単機能な安定性に優れた放送品質のソフトウェア**です。
+[日本語版 (Japanese Version) はこちら](README_ja.md)
 
-（内部では Chromium Embedded Framework を使用してHTML/CSS/JSコンテンツをオフスクリーンでレンダリングし、Blackmagic DeckLinkデバイス経由でスイッチャー向けに正確なUnmultiplied信号を生成します）
+CEFDecklink is a lightweight, single-purpose, highly stable, and broadcast-quality software. It captures web pages rendered with an embedded browser (CEF) and outputs them via SDI as separate **"straight alpha Fill and Key"** signals at an output rate of 1080i59.94 or 1080i50.
 
-特に以下の設定に合わせて構成されています：
-- **デバイス**: **UltraStudio HD Mini** (および同様のDeckLinkデバイス) と互換性があります。
-- **フォーマット**: **1080i59.94** (NTSC)。
-- **出力**:
-  - **SDI A**: Fill信号
-  - **SDI B**: Key信号
+(Internally, it uses the Chromium Embedded Framework to render HTML/CSS/JS contents off-screen, and generates precise Unmultiplied signals for hardware switchers via Blackmagic DeckLink devices.)
 
-## 特徴
-- **Unmultiplied Keying**: アルファチャンネルを含めた正しい合成のためのFill/Key信号生成。放送用スイッチャー向けの適切な信号を出力します。
-- **CEF統合**: 最新のWebコンテンツ(HTML5/WebGL/JS)をレンダリングします。
-- **DirectX 11**: 効率的なGPUベースのテクスチャ共有と色空間変換を行います。
-- **60fps Free-Run CEF**: CEFの自律タイマー（60fps）で描画を回し、非同期・ロックフリーなキューを用いて29.97fps(59.94i)のハードウェア出力と完全な同期を実現。HTMLアニメーションのスタッター（カクつき）や停止時の振動（ジッター）を防ぎます。
-- **外部キーイング**: ハードウェア外部キーイングモードをサポートします。
-- **シミュレーターモード**: DeckLinkデバイスが見つからない場合、ウィンドウプレビューにフォールバックします。
+It is configured specifically for the following setup:
+- **Devices**: Compatible with **UltraStudio HD Mini** (and similar DeckLink devices).
+- **Format**: **1080i59.94** (NTSC) / **1080i50** (PAL).
+- **Output**:
+  - **SDI A**: Fill Signal
+  - **SDI B**: Key Signal
+
+## Features
+- **Unmultiplied Keying**: Generates proper Fill/Key signals with straight alpha channels for correct composting on broadcast switchers.
+- **CEF Integration**: Renders the latest Web contents (HTML5, WebGL, CSS, JS).
+- **DirectX 11**: Implements efficient GPU-based texture sharing and color space conversions.
+- **60fps Free-Run CEF**: Renders via CEF's autonomous timer (60fps/50fps) and synchronizes with 29.97fps/25fps hardware outputs using an asynchronous, lock-free queue. This prevents HTML animation stuttering and juddering when static.
+- **External Keying**: Supports hardware external keying mode.
+- **Simulator Mode**: Automatically falls back to a desktop preview window if no DeckLink device is found.
 
 ---
 
-## 開発環境の構築（要件）
+## Development Prerequisites (Requirements)
 
-本プロジェクトをビルドし、環境を再構築するために必要な要件です。
+Requirements for building the project and reconstructing the environment:
 
-1. **Windows 10 または 11 (x64)**
-2. **Visual Studio 2022** (標準的なMSVC C++ツールチェーン)
-   - インストール時のワークロードで `C++ によるデスクトップ開発` を含めてください。
-   - 「個別のコンポーネント」で `C++ CMake ツール (Windows)` および `Windows 11 SDK` (または10) がインストールされていることを確認してください。
-3. **Blackmagic Desktop Video ドライバ**
-   - 実行・テストする対象のPCにインストールされている必要があります。
+1. **Windows 10 or 11 (x64)**
+2. **Visual Studio 2022** (Standard MSVC C++ toolchain)
+   - Ensure the `Desktop development with C++` workload is selected during installation.
+   - Verify that `C++ CMake tools for Windows` and `Windows 11 SDK` (or 10) are installed via "Individual components".
+3. **Blackmagic Desktop Video Driver**
+   - Must be installed on the PC where execution/testing is carried out.
+
 ---
 
-## クローンと依存関係のセットアップ
+## Cloning and Dependency Setup
 
-プロジェクトのビルドを成功させるには、依存関係（CEFとDeckLink SDK）を正しいフォルダ名で配置することが**最も重要**です。
+To compile the project successfully, it is **absolutely critical** that dependencies (CEF and DeckLink SDK) are placed in the `vender` directory with the exact folder names specified below.
 
-### 1. リポジトリのクローン
+### 1. Clone the Repository
 ```powershell
 git clone <repository-url>
 cd CEFDecklink
 ```
 
-### 2. 外部ライブラリ (`vender` フォルダ) の手動配置
+### 2. Manual Placement of External Libraries (under `vender/`)
 
-プロジェクトルートの `vender` ディレクトリに以下の2つを配置します。ファイルが見つからない、またはフォルダ名が違うとCMakeの構成に失敗します。
+Place the following two components in the `vender` directory at the project root. The CMake configuration will fail if the files are missing or folders are named incorrectly.
 
 **A. Chromium Embedded Framework (CEF)**
-1. [CEF Builds](https://cef-builds.spotifycdn.com/index.html) から **Windows 64-bit** 用の **Standard Distribution** (例: `CEF 132.0.26+gea273c5+chromium-132.0.6834.83`) (tar.bz2形式) をダウンロードします。
-2. アーカイブを解凍します。（Windows標準で解凍できない場合は 7-Zip 等を使用してください）
-3. 解凍してできたフォルダ（`cef_binary_...` 等）の名前を必ず `cef` に変更します。
-4. `vender/cef` となるように配置します。
+1. Download the **Windows 64-bit** **Standard Distribution** (e.g., `CEF 132.0.26+gea273c5+chromium-132.0.6834.83`) (tar.bz2 format) from [CEF Builds](https://cef-builds.spotifycdn.com/index.html).
+2. Extract the archive. (Use tools like 7-Zip if standard Windows extract fails).
+3. Rename the extracted folder (e.g. `cef_binary_...`) to exactly `cef`.
+4. Place it so the path becomes `vender/cef`.
 
 **B. Blackmagic DeckLink SDK**
-1. [Blackmagic Design Developer Website](https://www.blackmagicdesign.com/developer/) から **Desktop Video SDK 15.3** (または 14.0+) をダウンロードします。
-2. アーカイブを解凍します。
-3. SDKフォルダをそのまま `vender` ディレクトリに配置します。
+1. Download **Desktop Video SDK 15.3** (or 14.0+) from the [Blackmagic Design Developer Website](https://www.blackmagicdesign.com/developer/).
+2. Extract the archive.
+3. Place the SDK folder directly into the `vender` directory.
 
-#### 最終的な必須ディレクトリ構成
-以下のようになっていることを確認してください。
+#### Required Directory Structure
+Verify that your directory tree looks like this:
 ```text
 CEFDecklink/
  ├─ vender/
- │   ├─ Blackmagic DeckLink SDK 15.3/   <-- この名前（バージョン部分含む）
+ │   ├─ Blackmagic DeckLink SDK 15.3/   <-- Matches this exact name (including version)
  │   │   └─ Win/
  │   │       └─ include/
- │   │           └─ DeckLinkAPI.idl     <-- CMakeがこれを探します
- │   └─ cef/                            <-- cef_binary_... からリネーム
+ │   │           └─ DeckLinkAPI.idl     <-- Looked up by CMake
+ │   └─ cef/                            <-- Renamed from cef_binary_...
  │       ├─ cmake/
- │       └─ CMakeLists.txt              <-- CMakeがこれを探します
+ │       └─ CMakeLists.txt              <-- Looked up by CMake
  ├─ src/
  ├─ CMakeLists.txt
  ├─ build.bat
@@ -78,134 +81,134 @@ CEFDecklink/
 
 ---
 
-## プロジェクトのビルド手順
+## Project Build Instructions
 
-環境構築とフォルダ準備が完了したら、付属のバッチスクリプトを実行するだけでビルドが完了します。
+Once requirements are met and folders are prepared, you can build the project by simply running the included batch script.
 
-コマンドプロンプトまたはPowerShellで以下を実行します：
+Run the following in Command Prompt or PowerShell:
 ```powershell
 .\build.bat
 ```
 
-**`build.bat` が自動で行うこと:**
-1. Visual Studio 2022の `MSBuild.exe` および `cmake.exe` のパスを自動特定します。
-2. `cmake -S . -B build` でCMakeプロジェクトを生成します。
-3. `cmake --build build --config Release` でReleaseモードのビルドを実行します。
-4. 必要なリソース（CEFバイナリ、シェーダー、`config.json`）を `build\Release` ディレクトリに自動コピーします。
+**What `build.bat` does automatically:**
+1. Detects paths for Visual Studio 2022 `MSBuild.exe` and `cmake.exe`.
+2. Generates the CMake project in `cmake -S . -B build`.
+3. Builds the Release configuration using `cmake --build build --config Release`.
+4. Copies necessary resources (CEF binaries, shaders, and `config.json`) to the `build\Release` directory.
 
 ---
 
-## 実行とインストール
+## Execution and Deployment
 
-### セキュリティ警告について
-- **SmartScreenの警告:** 個人開発のため、実行ファイルに対するデジタル署名（コードサイニング証明書）を取得していません。初回実行時に Windows Defender SmartScreen による青い警告画面が表示される場合があります。その場合は、画面内の **「詳細情報」** をクリックし、**「実行」** を押すことで起動できます。
-- **ファイアウォールの警告:** 内部ブラウザ（CEF）が開発者ツール（DevTools）接続用のポートを開くため、Windows ファイアウォールの警告が表示されることがあります。開発者ツールを使用しない場合は、通信を **「キャンセル（許可しない）」** としても本ソフトウェアの送出機能は問題なく動作します。
+### About Security Warnings
+- **SmartScreen Alert:** Since this is a privately developed software, the executable is not digitally signed with a code signing certificate. On the first run, Windows Defender SmartScreen might block it with a blue warning screen. Click **"More info"** and then select **"Run anyway"** to launch.
+- **Firewall Alert:** Since the internal browser (CEF) opens a port for Developer Tools (DevTools) access, a Windows Firewall alert may pop up. If you do not plan to use DevTools, you can select **"Cancel (Do not allow)"**; the SDI transmission will function normally.
 
-### ポータブル（ZIP）での配布・実行（推奨）
-本アプリケーションはインストーラーを使用しないポータブル配布形式となっています。
-他のPCへ持ち運びやデプロイを行う際は、ビルド出力である `build/Release` フォルダ全体をZIPにアーカイブしてコピーし、任意の場所（書き込み権限のあるユーザーフォルダ推奨）に展開して実行してください。
+### Portable (ZIP) Deployment (Recommended)
+This application is distributed as a portable folder and does not use an installer.
+To deploy to other PCs, simply compress the built `build/Release` folder into a ZIP archive, copy it, and extract it to any directory (user directories with write permissions are recommended) on the target PC.
 
-### ビルドフォルダから直接実行する場合
-バッチスクリプトでビルド成功後、以下のパスから直接実行できます。
+### Direct Execution from Build Folder
+After a successful build using the script, you can run the executable directly from:
 ```powershell
 .\build\Release\DeckLinkDX11.exe
 ```
-※実行ファイルの隣に `libcef.dll` や `shaders` フォルダ、`config.json` が正しく配置されている必要があります（`build.bat` の完了時に自動でコピーされます）。
+*Note: Make sure `libcef.dll`, the `shaders` folder, and `config.json` are present alongside the executable (copied automatically by `build.bat`).*
 
 ---
 
-## アプリケーションの設定
+## Application Configuration
 
-起動時のURLやアルファ閾値は以下の優先順位で決定されます：
-1. **コマンドライン引数**
-2. **`config.json`** (実行ファイルと同じディレクトリ)
-3. **デフォルト値**
+The startup URL and alpha threshold are resolved in the following priority:
+1. **Command Line Arguments**
+2. **`config.json`** (in the executable directory)
+3. **Default Values**
 
-### 1. コマンドライン引数
+### 1. Command Line Arguments
 ```powershell
 .\DeckLinkDX11.exe --url "http://localhost:3000/cg" --unmult_thresh 0.5 --il_filter_mode 1
 ```
-- `--url`: 読み込む初期URLを指定します。
-- `--unmult_thresh`: 初期のUnmultiply用アルファ閾値を設定します (0.0 - 1.0)。
-- `--il_filter_mode`: 垂直ローパスフィルタのモードを設定します (0: なし, 1: 3-tap, 2: 5-tap)。
+- `--url`: Specifies the initial URL to load.
+- `--unmult_thresh`: Sets the initial Unmultiply alpha threshold (0.0 - 1.0).
+- `--il_filter_mode`: Sets the vertical low-pass filter mode (0: None, 1: 3-tap, 2: 5-tap).
 
 ### 2. config.json
-`DeckLinkDX11.exe` の隣（ビルドディレクトリ、またはインストール先）の `config.json` で設定を固定化できます：
+Specify persistent settings in `config.json` next to `DeckLinkDX11.exe` (or in the deployed folder):
 ```json
 {
-    "url": "https://google.com",
+    "url": "https://example.com",
     "unmult_thresh": 0.0,
     "format": "5994i",
     "il_filter_mode": 1
 }
 ```
-- `url`: The web page to render (default: "https://example.com")
-- `unmult_thresh`: The threshold for unmultiplied processing (default: 0.0, perfectly straight alpha)
-- `format`: SDI output format. Only two values are supported: "5994i" or "50i" (default: "5994i")
-- `il_filter_mode`: Interlace vertical filter mode (0=None, 1=3-tap, 2=5-tap) (default: 1)
+- `url`: The web page to render (default: "https://example.com").
+- `unmult_thresh`: The threshold for unmultiplied processing (default: 0.0, perfectly straight alpha).
+- `format`: SDI output format. Supported values: "5994i" or "50i" (default: "5994i").
+- `il_filter_mode`: Interlace vertical filter mode (0=None, 1=3-tap, 2=5-tap) (default: 1).
 
 ### 3. licensekey.json
-`DeckLinkDX11.exe` の隣に `licensekey.json` を配置して有期ライセンスキーを設定できます：
+Place `licensekey.json` next to `DeckLinkDX11.exe` to configure a time-limited license key:
 ```json
 {
     "license_key": "20261231-5662"
 }
 ```
-- `license_key`: Time-limited license key generated by `scripts/generate_license.ps1`. If missing or expired, a red watermark will be applied to the bottom right of the output.
+- `license_key`: Time-limited license key generated using `scripts/generate_license.ps1`. If missing or expired, a red watermark will be applied to the bottom right of the output.
 
 ---
 
-## 操作と機能 (コンソール TUI ショートカット)
+## Operations and Controls (Console TUI Shortcuts)
 
-本アプリケーションは、**コマンドプロンプト等のコンソールウィンドウ** にて TUI (Text User Interface) によるステータス表示を行います。
-コンソールウィンドウにフォーカスがある状態で、以下のショートカットキーが使用できます：
+This application displays live status updates using a console-based TUI (Text User Interface).
+With focus on the console window, you can use the following shortcuts:
 
-### Windows版ショートカット
-- **`Ctrl + O`** : **ビューモードの切り替え** (0: Interlace 標準 / 1: Diff 差分可視化 / 2: Progressive / 3: 30p Blend)
-- **`Ctrl + F`** : **垂直LPF（低域通過フィルタ）モードの切り替え** (なし / 3-tap LPF / 5-tap LPF)
-- **`Ctrl + K`** : **Keyerモードの切り替え** (Internal 内蔵 / External 外部)
-- **`Ctrl + A` / `Ctrl + Z`** : Unmultアルファ閾値の微調整 (+0.001 / -0.001)
-- **`Ctrl + Up` / `Ctrl + Down`** : Unmultアルファ閾値の粗調整 (+0.1 / -0.1)
-- **`Ctrl + R`** : ページの強制リロード (キャッシュ無視)
-- **`Ctrl + C`** : アプリケーションの安全な終了
+### Windows Shortcuts
+- **`Ctrl + O`** : **Cycle View Mode** (0: Interlace Standard / 1: Diff difference visualization / 2: Progressive / 3: 30p Blend)
+- **`Ctrl + F`** : **Cycle Vertical LPF (Low Pass Filter) Mode** (None / 3-tap LPF / 5-tap LPF)
+- **`Ctrl + K`** : **Toggle Keyer Mode** (Internal / External)
+- **`Ctrl + A` / `Ctrl + Z`** : Fine-tune Unmult Alpha Threshold (+0.001 / -0.001)
+- **`Ctrl + Up` / `Ctrl + Down`** : Coarse-tune Unmult Alpha Threshold (+0.1 / -0.1)
+- **`Ctrl + R`** : Force reload page (ignoring cache)
+- **`Ctrl + C`** : Safe exit
 
-### macOS版ショートカット
-- **`Ctrl + P`** : **ビューモードの切り替え** (0: Interlace 標準 / 1: Diff 差分可視化 / 2: Progressive / 3: 30p Blend)
-- **`Ctrl + F`** : **垂直LPF（低域通過フィルタ）モードの切り替え** (なし / 3-tap LPF / 5-tap LPF)
-- **`Ctrl + K`** : **Keyerモードの切り替え** (Internal 内蔵 / External 外部)
-- **`<` / `>`** (Shift+`,`/`.`): Unmultアルファ閾値の微調整 (+0.001 / -0.001)
-- **`Ctrl + [` / `Ctrl + ]`** (または `Ctrl + Up` / `Ctrl + Down`): Unmultアルファ閾値の粗調整 (+0.1 / -0.1)
-- **`Ctrl + R`** : ページの強制リロード (キャッシュ無視)
-- **`Ctrl + C`** : アプリケーションの安全な終了
-
----
-※GUIプレビューウィンドウがアクティブな状態で **`F11`** を押すと、プレビューの全画面表示の切り替えが可能です。
-
-## トラブルシューティング
-
-- **ビルド時のエラー: "CMake Error at ... include(cef_variables)"**
-  → CEFフォルダの名前が `vender/cef_binary_...` になっていませんか？ フォルダ名を `cef` に変更してください。
-- **ビルド時のエラー: "DeckLink SDK not found"**
-  → `vender/Blackmagic DeckLink SDK 15.3` のパスが存在するか、`DeckLinkAPI.idl` が正しい位置にあるかツリー構成を確認してください。
-- **起動時のエラー: "Shader Compile Failed"**
-  → 実行ファイルの隣に `shaders` フォルダがコピーされているか確認してください。コピー漏れがある場合は `src/render/shaders` を手動でコピーしてください。
-- **起動時のメッセージ: "Decklink not found"**
-  → DeckLinkドライバがインストールされていないか、対象デバイスが見つかりません。アプリは自動的に**シミュレーターモード**で起動し、プレビューを続行します。
-- **起動時のクラッシュ: "Invalid file descriptor to ICU data"**
-  → `libcef.dll` 等のCEFライブラリが実行ディレクトに不足しています。ビルドスクリプトが最後まで正常に完了したか確認してください。
+### macOS Shortcuts
+- **`Ctrl + P`** : **Cycle View Mode** (0: Interlace Standard / 1: Diff difference visualization / 2: Progressive / 3: 30p Blend)
+- **`Ctrl + F`** : **Cycle Vertical LPF Mode** (None / 3-tap LPF / 5-tap LPF)
+- **`Ctrl + K`** : **Toggle Keyer Mode** (Internal / External)
+- **`<` / `>`** (Shift+`,`/`.`): Fine-tune Unmult Alpha Threshold (+0.001 / -0.001)
+- **`Ctrl + [` / `Ctrl + ]`** (or `Ctrl + Up` / `Ctrl + Down`): Coarse-tune Unmult Alpha Threshold (+0.1 / -0.1)
+- **`Ctrl + R`** : Force reload page (ignoring cache)
+- **`Ctrl + C`** : Safe exit
 
 ---
+*Note: Press **`F11`** while the preview window is focused to toggle fullscreen.*
 
-## 関連ドキュメント / Documentation & References
+## Troubleshooting
 
-本プロジェクトの内部仕様や検証に役立つシミュレータ、日本語・英語の各種ドキュメントです。
+- **Build Error: "CMake Error at ... include(cef_variables)"**
+  → Check if the CEF directory is renamed to exactly `cef` under `vender/`.
+- **Build Error: "DeckLink SDK not found"**
+  → Verify the path to `vender/Blackmagic DeckLink SDK 15.3` and check if `DeckLinkAPI.idl` is located in the proper subdirectory.
+- **Startup Error: "Shader Compile Failed"**
+  → Verify that the `shaders` folder is copied alongside the executable. If missing, manually copy `src/render/shaders`.
+- **Startup Message: "Decklink not found"**
+  → The DeckLink driver is not installed or no compatible card was found. The application will automatically boot in **Simulator Mode** (desktop window preview).
+- **Startup Crash: "Invalid file descriptor to ICU data"**
+  → CEF library files (like `libcef.dll`) are missing from the executable directory. Make sure the build script completed without errors.
 
-### データ処理フロー仕様書 (Data Processing Flow Specification)
-*   **[日本語版: data_processing_flow.md](docs/data_processing_flow.md)**
-*   **[英語版: data_processing_flow_en.md](docs/data_processing_flow_en.md)**
-    *   CEFからDeckLinkへのスレッド間同期、タイムスタンプベースのバッファリング、Compute Shaderによるインターレース Weave 合成や Unpremultiply 処理などの詳細仕様。
+---
 
-### パイプラインシミュレータ (Pipeline Simulator)
-*   **[日本語版: pipeline_simulator.html](docs/pipeline_simulator.html)**
-*   **[英語版: pipeline_simulator_en.html](docs/pipeline_simulator_en.html)**
-    *   CEFのフリーラン(60fps)からDeckLink(59.94i)へのフレーム蓄積・消費・ドロップ判定、Compute Shaderや垂直LPFの挙動、1画素単位の色計算（Unpremultiply）をWeb上で視覚的に検証・解析できるインタラクティブシミュレータ。
+## Documentation & References
+
+Reference manuals, simulators, and Japanese/English internal specifications for the project:
+
+### Detailed Data Processing Flow Specification
+*   **[Japanese: data_processing_flow.md](docs/data_processing_flow.md)**
+*   **[English: data_processing_flow_en.md](docs/data_processing_flow_en.md)**
+    *   Covers internal details on CEF-to-DeckLink inter-thread synchronization, timestamp-based buffering, Compute Shader interlace weaving, LPFs, and Unpremultiply processing.
+
+### Pipeline Simulator
+*   **[Japanese: pipeline_simulator.html](docs/pipeline_simulator.html)**
+*   **[English: pipeline_simulator_en.html](docs/pipeline_simulator_en.html)**
+    *   Interactive simulator demonstrating CEF free-run (60fps) to DeckLink (59.94i) frame buffering, drop/duplicate behavior, Compute Shader blending, LPFs, and Unpremultiply math down to the pixel level.
