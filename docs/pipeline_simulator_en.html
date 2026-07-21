@@ -1,0 +1,2727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEF-DeckLink Pipeline Simulator</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: #141b2d;
+            --panel-border: #1f2a45;
+            --accent-cyan: #00f0ff;
+            --accent-violet: #8a2be2;
+            --accent-amber: #ffaa00;
+            --text-color: #e2e8f0;
+            --text-muted: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .top-fixed-section {
+            flex: 0 0 auto;
+            padding: 20px 20px 0 20px;
+            background-color: var(--bg-color);
+            z-index: 1000;
+            border-bottom: 1px solid var(--panel-border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+
+        .scrollable-content {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--panel-border);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-violet));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1::before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-cyan);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Control Panel */
+        .control-bar {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .main-controls-sticky {
+            padding-bottom: 15px;
+        }
+
+        .btn {
+            background-color: #1e293b;
+            color: var(--text-color);
+            border: 1px solid #334155;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background-color: #334155;
+            border-color: #475569;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background-color: #0f172a;
+            border-color: #1e293b;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+            border: none;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+        }
+
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+        }
+
+        .btn-danger:hover {
+            background-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        select, input[type="range"], input[type="number"] {
+            background-color: #0f172a;
+            border: 1px solid var(--panel-border);
+            color: var(--text-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            outline: none;
+            font-size: 0.85rem;
+        }
+
+        select:focus, input[type="number"]:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        /* Pipeline Visual Flow */
+        .pipeline-container {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            overflow-x: auto;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border-left: 3px solid var(--accent-cyan);
+            padding-left: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .flow-line {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+            padding-bottom: 10px;
+            width: max-content;
+        }
+
+        /* Thread boundary */
+        .thread-group {
+            border: 2px solid;
+            border-radius: 16px;
+            padding: 10px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            justify-content: flex-start;
+            align-items: flex-start;
+            position: relative;
+            width: max-content;
+        }
+
+        .thread-domains {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .thread-title {
+            width: 100%;
+            margin-bottom: 5px;
+            padding: 5px 10px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .thread-sync-point {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin: 0 5px;
+            text-align: center;
+            user-select: none;
+        }
+
+        /* Hardware Domain Boundary */
+        .hw-domain {
+            border: 2px dashed;
+            border-radius: 12px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .domain-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .domain-content {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Stage Cards */
+        .stage-card {
+            background-color: #0f172a;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 10px;
+            position: relative;
+            transition: border-color 0.3s;
+        }
+
+        #card-cef, #card-queues, #card-shader, #card-staging, #card-hw, #card-wire, #card-sdi { 
+            flex: 1 1 auto; 
+            max-width: 100%; 
+        }
+
+        .stage-card.active {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+        }
+
+        .stage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 6px;
+        }
+
+        .stage-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+
+        .stage-badge {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .badge-producer {
+            background-color: rgba(0, 240, 255, 0.15);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+        }
+
+        .badge-queue {
+            background-color: rgba(255, 170, 0, 0.15);
+            color: var(--accent-amber);
+            border: 1px solid rgba(255, 170, 0, 0.3);
+        }
+
+        .badge-consumer {
+            background-color: rgba(138, 43, 226, 0.15);
+            color: #a855f7;
+            border: 1px solid rgba(138, 43, 226, 0.3);
+        }
+
+        /* Arrow Connector */
+        .arrow-connector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 5px;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            font-weight: bold;
+            user-select: none;
+        }
+
+        .arrow-connector.active {
+            color: var(--accent-cyan);
+            text-shadow: 0 0 8px var(--accent-cyan);
+            animation: pulse-arrow 1.5s infinite;
+        }
+
+        @keyframes pulse-arrow {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; transform: translateX(3px); }
+            100% { opacity: 0.4; }
+        }
+
+        /* Preroll status panel */
+        .status-panel {
+            background-color: #0f172a;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-val {
+            font-family: monospace;
+            font-weight: bold;
+            color: var(--accent-cyan);
+        }
+
+        /* Canvas Display */
+        .canvas-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            background-color: #020617;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #1e293b;
+        }
+
+        .pixel-canvas {
+            width: 256px;
+            height: 256px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background-color: #000;
+            border: 1px solid #334155;
+            display: block;
+        }
+
+        .canvas-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+
+        /* CPU queue grid */
+        .cpu-grid-flow {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 6px;
+            background-color: #020617;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #1e293b;
+            width: 100%;
+        }
+
+        /* GPU queue grid */
+        .gpu-grid-flow {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 6px;
+            background-color: #020617;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #1e293b;
+            width: 100%;
+        }
+
+        /* Empty Slot design */
+        .queue-slot-empty {
+            width: 24px;
+            height: 24px;
+            box-sizing: border-box;
+            border: 1px dashed #1f2a45;
+            background-color: #0b0f19;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.55rem;
+            color: #3b82f6;
+            opacity: 0.3;
+            font-family: monospace;
+            user-select: none;
+        }
+
+        /* Grid Items */
+        .queue-item-grid {
+            width: 24px;
+            height: 24px;
+            box-sizing: border-box;
+            border: 1px solid #475569;
+            border-radius: 4px;
+            position: relative;
+            background-color: #000;
+            cursor: pointer;
+            transition: transform 0.1s;
+            overflow: hidden;
+        }
+
+        .queue-item-grid:hover {
+            transform: scale(1.05);
+            border-color: var(--accent-cyan);
+            z-index: 10;
+        }
+
+        .queue-item-grid canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        .queue-item-badge {
+            position: absolute;
+            bottom: 0px;
+            right: 0px;
+            background-color: var(--accent-amber);
+            color: black;
+            font-family: monospace;
+            font-size: 0.55rem;
+            font-weight: bold;
+            padding: 0px 3px;
+            border-radius: 2px;
+            border-top: 1px solid #000;
+            border-left: 1px solid #000;
+        }
+
+        /* Details Visual Grid */
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 20px;
+        }
+
+        .details-panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Zoomed Pixel Grid */
+        .zoom-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .zoom-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .zoom-box {
+            background-color: #0f172a;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 12px;
+            flex: 1;
+            min-width: 250px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .zoom-title {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        /* Interactive Pixel Inspector Grid */
+        .pixel-inspect-grid {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(32, 1fr);
+            grid-template-rows: repeat(32, 1fr);
+            width: 256px;
+            height: 256px;
+            background-color: #000;
+            border: 1px solid #334155;
+            cursor: crosshair;
+        }
+
+        .inspect-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .pixel-info-card {
+            background-color: #020617;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px;
+            width: 100%;
+            margin-top: 10px;
+            font-size: 0.75rem;
+            font-family: monospace;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .info-label {
+            color: var(--text-muted);
+        }
+
+        .info-val {
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+
+        /* Debug Console / Log */
+        .log-panel {
+            background-color: #020617;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 10px;
+            height: 230px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.75rem;
+            line-height: 1.4;
+            color: #a7f3d0;
+        }
+
+        .log-line {
+            margin-bottom: 4px;
+            border-left: 2px solid var(--accent-cyan);
+            padding-left: 6px;
+        }
+
+        .log-time {
+            color: var(--text-muted);
+            margin-right: 6px;
+        }
+
+        .log-system {
+            color: #f472b6;
+            font-weight: bold;
+        }
+
+        .log-warning {
+            color: var(--accent-amber);
+            border-left-color: var(--accent-amber);
+        }
+
+        /* Formula Card */
+        .formula-card {
+            background-color: #0f172a;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+
+        .formula-card h3 {
+            font-size: 0.85rem;
+            color: var(--accent-cyan);
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 6px;
+        }
+
+        code {
+            background-color: #020617;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #fb7185;
+        }
+
+        .formula-box {
+            background-color: #020617;
+            border: 1px solid #1e293b;
+            border-radius: 6px;
+            padding: 8px;
+            font-family: monospace;
+            margin: 8px 0;
+            overflow-x: auto;
+            color: var(--success);
+        }
+
+        /* Timeline Ticks Info Display */
+        .timeline-ticks {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .tick-box {
+            background-color: #0f172a;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .tick-title {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .tick-val {
+            font-size: 1.1rem;
+            font-family: monospace;
+            font-weight: bold;
+            color: var(--accent-cyan);
+        }
+
+        /* Custom range styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 120px;
+            height: 6px;
+            background: #1e293b;
+            border: none;
+            outline: none;
+            padding: 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            box-shadow: 0 0 5px var(--accent-cyan);
+        }
+
+        .legend {
+            display: flex;
+            gap: 15px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="top-fixed-section">
+    <header>
+        <div>
+            <h1>CEF-DeckLink Pipeline Simulator</h1>
+            <div class="subtitle">Synchronization and Shader Behavior from Free-Run CEF Rendering (60fps) to DeckLink Broadcast Output (59.94i)</div>
+        </div>
+        <div style="text-align: right;">
+            <div class="subtitle">State Monitor Console</div>
+            <div style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: bold;" id="sys-status">System Active - STANDBY</div>
+        </div>
+    </header>
+
+    <!-- Controls Panel -->
+    <div class="main-controls-sticky" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+        <div class="control-bar" style="margin-bottom: 0;">
+            <button class="btn btn-primary" id="btn-play-pause">▶ Play</button>
+            <button class="btn" id="btn-undo" disabled>⇠ Undo</button>
+            <button class="btn" id="btn-cef-tick">⚙ Advance +16.7ms</button>
+            <button class="btn" id="btn-dl-tick">⚙ Advance +33.3ms</button>
+            <div class="control-group">
+                <input type="number" id="input-advance-ms" value="100" min="1" max="1000" style="width: 80px; background-color: #0f172a; border: 1px solid var(--panel-border); color: var(--text-color); padding: 6px; border-radius: 6px; outline: none; font-size: 0.85rem;">
+                <button class="btn" id="btn-advance-ms">⚙ Advance ms</button>
+            </div>
+            <button class="btn btn-danger" id="btn-reset">↺ Reset</button>
+
+            <div style="display: flex; gap: 15px; font-size: 0.85rem; color: #facc15; align-items: center; margin-left: 10px;">
+                <strong>🛑 Auto Stop (Break):</strong>
+                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input type="checkbox" id="chk-break-planned"> Planned Drop
+                </label>
+                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input type="checkbox" id="chk-break-overflow"> Buffer Overflow
+                </label>
+                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input type="checkbox" id="chk-break-starve"> Underflow (Starve)
+                </label>
+            </div>
+
+            <div style="border-left: 1px solid var(--panel-border); height: 25px; margin: 0 5px;"></div>
+
+            <div class="control-group">
+                <label for="select-mode">View Mode:</label>
+                <select id="select-mode">
+                    <option value="0">0: Interlace (Standard)</option>
+                    <option value="1">1: Diff (Diff Vis)</option>
+                    <option value="2">2: Progressive F1</option>
+                    <option value="3">3: Progressive F2</option>
+                    <option value="4">4: 30p Blend</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="select-lpf">Vertical LPF:</label>
+                <select id="select-lpf">
+                    <option value="0">0: No Filter</option>
+                    <option value="1" selected>1: 3-Tap LPF</option>
+                    <option value="2">2: 5-Tap LPF</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="range-threshold">Alpha Threshold:</label>
+                <input type="range" id="range-threshold" min="0" max="1.0" step="0.01" value="0.05">
+                <span style="font-family: monospace; font-size: 0.8rem; min-width: 30px;" id="val-threshold">0.05</span>
+            </div>
+
+            <div class="control-group">
+                <label for="range-speed">Playback Speed:</label>
+                <input type="range" id="range-speed" min="1" max="50" step="1" value="5">
+                <span style="font-family: monospace; font-size: 0.8rem;" id="val-speed">1.0x</span>
+            </div>
+
+            <div class="control-group">
+                <label for="select-pattern">CEF Test Pattern:</label>
+                <select id="select-pattern">
+                    <option value="0">0: Mix All Elements</option>
+                    <option value="1">1: Moving Circle (Tearing Check)</option>
+                    <option value="2">2: Rotating Bar (Jaggy Check)</option>
+                    <option value="3">3: Horizontal Stripes (LPF Check)</option>
+                    <option value="4">4: Blinking Checkerboard (Diff/60p Check)</option>
+                    <option value="5">5: Scrolling Text (Weave Check)</option>
+                    <option value="6">6: Rotating Text (LPF/Jaggy Check)</option>
+                    <option value="7">7: Compound Anim Text (Scroll+Rotate+Scale)</option>
+                    <option value="8">8: Bouncing Text (Bouncing CG Sim)</option>
+                    <option value="9">9: Draw Nothing (Fully Transparent)</option>
+                </select>
+            </div>
+
+            <div class="control-group" style="margin-left: auto;">
+                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="checkbox" id="chk-cef-active" checked> Enable CEF Rendering
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Jitter / Load control bar -->
+    <div class="control-bar" style="background-color: #1e1b4b; border-color: #3730a3; margin-bottom: 0;">
+        <div style="font-weight: bold; color: #a5b4fc; width: 100%; margin-bottom: -5px;">⚡ Data Science Jitter & Noise Generator (CEF Send Fluctuation)</div>
+        
+        <div class="control-group">
+            <label for="range-jitter">Jitter Strength (σ):</label>
+            <input type="range" id="range-jitter" min="0" max="10" step="0.1" value="0">
+            <span style="font-family: monospace; font-size: 0.8rem; min-width: 40px;" id="val-jitter">0.0 ms</span>
+        </div>
+
+        <div class="control-group">
+            <label for="range-burst-prob">CPU Spike Rate:</label>
+            <input type="range" id="range-burst-prob" min="0" max="2" step="0.05" value="0">
+            <span style="font-family: monospace; font-size: 0.8rem; min-width: 40px;" id="val-burst-prob">0.0 %</span>
+        </div>
+
+        <div class="control-group">
+            <label for="range-burst-delay">CPU Spike Delay:</label>
+            <input type="range" id="range-burst-delay" min="10" max="100" step="1" value="30">
+            <span style="font-family: monospace; font-size: 0.8rem; min-width: 40px;" id="val-burst-delay">30 ms</span>
+        </div>
+
+        <div class="control-group">
+            <label for="range-drift">Clock Drift:</label>
+            <input type="range" id="range-drift" min="-100" max="100" step="1" value="0">
+            <span style="font-family: monospace; font-size: 0.8rem; min-width: 55px;" id="val-drift">0 ppm</span>
+        </div>
+
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); width: 100%; margin: 5px 0;"></div>
+        
+        <div class="control-group">
+            <label for="range-gpu-stall-prob">GPU Stall Rate:</label>
+            <input type="range" id="range-gpu-stall-prob" min="0" max="2" step="0.05" value="0">
+            <span style="font-family: monospace; font-size: 0.8rem; min-width: 40px;" id="val-gpu-stall-prob">0.0 %</span>
+        </div>
+
+        <div class="control-group">
+            <label for="range-gpu-stall-ms">GPU Stall Delay:</label>
+            <input type="range" id="range-gpu-stall-ms" min="10" max="100" step="1" value="30">
+            <span style="font-family: monospace; font-size: 0.8rem; min-width: 40px;" id="val-gpu-stall-ms">30 ms</span>
+        </div>
+    </div> <!-- /main-controls-sticky -->
+    </div> <!-- /top-fixed-section -->
+
+    <div class="scrollable-content">
+    <!-- Timeline / Tick Counters -->
+    <div class="timeline-ticks">
+        <div class="tick-box">
+            <div class="tick-title">Virtual Time (Epoch)</div>
+            <div class="tick-val" id="val-time">0.0 ms</div>
+        </div>
+        <div class="tick-box">
+            <div class="tick-title">CEF Generated Frames</div>
+            <div class="tick-val" id="val-cef-count">0</div>
+        </div>
+        <div class="tick-box">
+            <div class="tick-title">DeckLink Cycles</div>
+            <div class="tick-val" id="val-dl-count">0</div>
+        </div>
+        <div class="tick-box">
+            <div class="tick-title">Preroll Status</div>
+            <div class="tick-val" id="val-preroll">Waiting (0/3)</div>
+        </div>
+        <div class="tick-box" style="border-left: 2px solid var(--accent-amber);">
+            <div class="tick-title">CPU Queue Load</div>
+            <div class="tick-val" id="val-cpu-q-load">0 / 32</div>
+        </div>
+        <div class="tick-box" style="border-left: 2px solid var(--accent-violet);">
+            <div class="tick-title">GPU Queue Load</div>
+            <div class="tick-val" id="val-gpu-q-load">0 / 32</div>
+        </div>
+        <div class="tick-box" style="border-left: 2px solid #3b82f6;">
+            <div class="tick-title">Planned Drops (>12)</div>
+            <div class="tick-val" id="val-drops-planned" style="color: #3b82f6;">0</div>
+        </div>
+        <div class="tick-box" style="border-left: 2px solid #f97316;">
+            <div class="tick-title">Buffer Overflows (>32)</div>
+            <div class="tick-val" id="val-drops-overflow" style="color: #f97316;">0</div>
+        </div>
+        <div class="tick-box" style="border-left: 2px solid var(--danger);">
+            <div class="tick-title">Underflows (Reuse)</div>
+            <div class="tick-val" id="val-starvation" style="color: var(--danger);">0</div>
+        </div>
+        <div class="tick-box" style="border-left: 2px solid #ec4899;">
+            <div class="tick-title">Estimated Latency</div>
+            <div class="tick-val" id="val-latency" style="color: #ec4899;">0 ms</div>
+        </div>
+    </div>
+
+    <!-- Pipeline Mapping Section -->
+    <div class="pipeline-container">
+        <div class="section-title">
+            <span>Video Data Stream Pipeline</span>
+            <span class="subtitle">* Images at each stage (32x32) are magnified to 256x256 full size</span>
+        </div>
+
+        <div class="flow-line">
+            
+            <!-- THREAD 1: Producer -->
+            <div class="thread-group" style="border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.02);">
+                <div class="thread-title" style="color: #60a5fa;">🧵 Thread A: CEF Render Thread (Producer, Driven at 60Hz)</div>
+                <div class="thread-domains">
+                <!-- Domain: CPU / Main Memory (Producer) -->
+                <div class="hw-domain" style="border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.05);">
+                <div class="domain-label" style="color: #60a5fa;">CPU / Main Memory (CEF Thread)</div>
+                <div class="domain-content">
+                    <!-- 1. CEF WebCore -->
+                    <div class="stage-card active" id="card-cef">
+                        <div class="stage-header">
+                            <span class="stage-name">1. CEF WebCore</span>
+                            <span class="stage-badge badge-producer">60 fps</span>
+                        </div>
+                        <div class="canvas-container">
+                            <canvas class="pixel-canvas" id="canvas-cef" width="32" height="32"></canvas>
+                            <span class="canvas-label">Generated Frame (Premultiplied)</span>
+                        </div>
+                        <div class="status-panel">
+                            <span>Draw:</span>
+                            <span class="status-val" id="status-cef-draw">ACTIVE</span>
+                        </div>
+                    </div>
+
+                    <!-- Connector -->
+                    <div class="arrow-connector" id="arrow-cef-cpu">➔</div>
+
+                    <!-- 2. CPU Queue -->
+                    <div id="card-queues">
+                        <div class="stage-card" id="card-cpu-q" style="border: 1px solid var(--panel-border);">
+                            <div class="stage-header">
+                                <span class="stage-name">2. CPU Frame Queue</span>
+                                <span class="stage-badge badge-queue">Max 32</span>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <div class="cpu-grid-flow" id="cpu-queue-flow"></div>
+                            </div>
+                            <div class="status-panel" style="margin-top: 8px; padding: 6px 10px;">
+                                <span>Not Uploaded:</span>
+                                <span class="status-val" id="status-cpu-count">0 frames</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+            </div> <!-- End Thread 1 -->
+
+            <!-- Thread Sync Barrier -->
+            <div class="thread-sync-point" style="color: var(--accent-amber);">
+                <div style="font-size: 1.8rem;">➔</div>
+                <div>Mutex<br>Sync</div>
+            </div>
+
+            <!-- THREAD 2: Consumer -->
+            <div class="thread-group" style="border-color: #a78bfa; background-color: rgba(167, 139, 250, 0.02);">
+                <div class="thread-title" style="color: #c4b5fd;">🧵 Thread B: DeckLink Callback Thread (Consumer, Driven at 29.97Hz)</div>
+                <div class="thread-domains">
+                <!-- Domain: GPU / VRAM -->
+                <div class="hw-domain" style="border-color: #8b5cf6; background-color: rgba(139, 92, 246, 0.05);">
+                <div class="domain-label" style="color: #a78bfa;">GPU / Video Memory (DirectX 11)</div>
+                <div class="domain-content">
+                    <!-- 3. GPU Queue -->
+                    <div id="card-gpu-q-container">
+                        <div class="stage-card" id="card-gpu-q" style="border: 1px solid var(--panel-border);">
+                            <div class="stage-header">
+                                <span class="stage-name">3. GPU Texture Queue</span>
+                                <span class="stage-badge badge-queue">Max 32</span>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <div class="gpu-grid-flow" id="gpu-queue-flow"></div>
+                            </div>
+                            <div class="status-panel" style="margin-top: 8px; padding: 6px 10px;">
+                                <span>VRAM Stored:</span>
+                                <span class="status-val" id="status-gpu-count">0 frames</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Connector -->
+                    <div class="arrow-connector" id="arrow-gpu-shader">➔</div>
+
+                    <!-- 4. Compute Shader -->
+                    <div class="stage-card" id="card-shader">
+                        <div class="stage-header">
+                            <span class="stage-name">4. Compute Shader (Detailed 256x256)</span>
+                            <span class="stage-badge badge-consumer">29.97 Hz</span>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px; align-items: center; justify-content: center;">
+                            <!-- Input -->
+                            <div style="display: flex; flex-direction: column; gap: 10px; justify-content: center;">
+                                <div class="canvas-container" style="padding: 5px;">
+                                    <canvas class="pixel-canvas" id="canvas-f2" width="32" height="32"></canvas>
+                                    <span class="canvas-label">Input F2 (Bot)</span>
+                                </div>
+                                <div class="canvas-container" style="padding: 5px;">
+                                    <canvas class="pixel-canvas" id="canvas-f1" width="32" height="32"></canvas>
+                                    <span class="canvas-label">Input F1 (Top)</span>
+                                </div>
+                            </div>
+                            
+                            <div style="color: var(--text-muted); font-size: 2rem;">➔</div>
+                            
+                            <!-- Weave -->
+                            <div class="canvas-container" style="padding: 5px;">
+                                <canvas class="pixel-canvas" id="canvas-shader-weave" width="32" height="32"></canvas>
+                                <span class="canvas-label">Step 1: Weave / Sampling</span>
+                            </div>
+
+                            <div style="color: var(--text-muted); font-size: 2rem;">➔</div>
+
+                            <!-- LPF -->
+                            <div class="canvas-container" style="padding: 5px;">
+                                <canvas class="pixel-canvas" id="canvas-shader-lpf" width="32" height="32"></canvas>
+                                <span class="canvas-label">Step 2: Vertical LPF</span>
+                            </div>
+
+                            <div style="color: var(--text-muted); font-size: 2rem;">➔</div>
+
+                            <!-- Unmult -->
+                            <div class="canvas-container" style="padding: 5px;">
+                                <canvas class="pixel-canvas" id="canvas-shader-out" width="32" height="32"></canvas>
+                                <span class="canvas-label">Step 3: Unmult (Final)</span>
+                            </div>
+                        </div>
+                        <div class="status-panel" style="margin-top: 10px;">
+                            <span>Compute Mode:</span>
+                            <span class="status-val" id="status-shader-mode">INTERLACE</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connector -->
+            <div class="arrow-connector" id="arrow-shader-staging">➔</div>
+
+            <!-- Domain: CPU / Main Memory (DeckLink Thread) -->
+            <div class="hw-domain" style="border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.05);">
+                <div class="domain-label" style="color: #fbbf24;">CPU / Main Memory (DeckLink Thread)</div>
+                <div class="domain-content">
+                    <!-- 5. Staging Buffer -->
+                    <div class="stage-card" id="card-staging">
+                        <div class="stage-header">
+                            <span class="stage-name">5. Staging Buffer</span>
+                            <span class="stage-badge badge-queue">2F Delay</span>
+                        </div>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                            <div class="canvas-container" style="padding: 5px; flex: 1;">
+                                <canvas class="pixel-canvas" id="canvas-stage0" width="32" height="32"></canvas>
+                                <span class="canvas-label" style="font-size: 0.6rem;">Staging[0] (N-1)</span>
+                            </div>
+                            <div class="canvas-container" style="padding: 5px; flex: 1;">
+                                <canvas class="pixel-canvas" id="canvas-stage1" width="32" height="32"></canvas>
+                                <span class="canvas-label" style="font-size: 0.6rem;">Staging[1] (N-2)</span>
+                            </div>
+                        </div>
+                        <div class="status-panel">
+                            <span>Transfer Wait:</span>
+                            <span class="status-val">Async Map</span>
+                        </div>
+                    </div>
+
+                    <!-- Connector -->
+                    <div class="arrow-connector" id="arrow-staging-hw">➔</div>
+
+                    <!-- 6. DeckLink HW -->
+                    <div class="stage-card" id="card-hw">
+                        <div class="stage-header">
+                            <span class="stage-name">6. DeckLink API (Transmit Buffer)</span>
+                            <span class="stage-badge badge-consumer">29.97p</span>
+                        </div>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                            <div class="canvas-container" style="padding: 5px; flex: 1;">
+                                <canvas class="pixel-canvas" id="canvas-hw-fill" width="32" height="32"></canvas>
+                                <span class="canvas-label" style="font-size: 0.6rem;">Fill (Weaved 29.97p)</span>
+                            </div>
+                            <div class="canvas-container" style="padding: 5px; flex: 1;">
+                                <canvas class="pixel-canvas" id="canvas-hw-key" width="32" height="32"></canvas>
+                                <span class="canvas-label" style="font-size: 0.6rem;">Key (Weaved 29.97p)</span>
+                            </div>
+                        </div>
+                        <div class="status-panel">
+                            <span>API Signal Format:</span>
+                            <span class="status-val" style="color: var(--success);" id="status-hw-signal">1080p29.97</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+            </div> <!-- End Thread 2 -->
+
+            <!-- HW Boundary -->
+            <div class="thread-sync-point" style="color: var(--accent-cyan);">
+                <div style="font-size: 1.8rem; margin-bottom: 5px;">▼</div>
+                <div>Thunderbolt Transfer<br>(PCIe)</div>
+            </div>
+
+            <!-- THREAD 3: External Hardware -->
+            <div class="thread-group" style="border-color: #10b981; background-color: rgba(16, 185, 129, 0.02);">
+                <div class="thread-title" style="color: #34d399;">⏱ External Clock: UltraStudio Hardware (59.94i)</div>
+                <div class="thread-domains">
+                <!-- Domain: UltraStudio Hardware -->
+                <div class="hw-domain" style="border-color: #10b981; background-color: rgba(16, 185, 129, 0.05);">
+                <div class="domain-label" style="color: #34d399;">UltraStudio Hardware (External Device)</div>
+                <div class="domain-content">
+                    <!-- 7. UltraStudio SDI Output (BNC Wire) -->
+                    <div class="stage-card" id="card-wire" style="border: 2px solid var(--accent-cyan);">
+                        <div class="stage-header">
+                            <span class="stage-name">7. UltraStudio SDI Output (BNC Wire)</span>
+                            <span class="stage-badge badge-consumer" id="badge-wire-field">Field 1</span>
+                        </div>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                            <div class="canvas-container" style="padding: 5px; flex: 1;">
+                                <canvas class="pixel-canvas" id="canvas-wire-fill" width="32" height="32"></canvas>
+                                <span class="canvas-label" style="font-size: 0.6rem;">Fill (Wire 59.94i)</span>
+                            </div>
+                            <div class="canvas-container" style="padding: 5px; flex: 1;">
+                                <canvas class="pixel-canvas" id="canvas-wire-key" width="32" height="32"></canvas>
+                                <span class="canvas-label" style="font-size: 0.6rem;">Key (Wire 59.94i)</span>
+                            </div>
+                        </div>
+                        <div class="status-panel">
+                            <span>Active:</span>
+                            <span class="status-val" style="color: var(--success);" id="status-wire-active">Field 1 Transmitting</span>
+                        </div>
+                    </div>
+
+                    <!-- Connector -->
+                    <div class="arrow-connector" id="arrow-wire-sdi">➔</div>
+
+                    <!-- 8. Physical Monitor -->
+                    <div class="stage-card" id="card-sdi" style="border: 2px solid var(--success);">
+                        <div class="stage-header">
+                            <span class="stage-name">8. SDI Physical Monitor</span>
+                            <span class="stage-badge badge-consumer" id="badge-sdi-field">Field 1</span>
+                        </div>
+                        <div style="display: flex; justify-content: center; margin-top: 10px;">
+                            <div class="canvas-container" style="padding: 5px;" id="container-sdi-monitor">
+                                <canvas class="pixel-canvas" id="canvas-sdi-monitor" width="32" height="32"></canvas>
+                                <span class="canvas-label" style="font-size: 0.7rem;">Physical Monitor (After External Keyer Compositing)</span>
+                            </div>
+                        </div>
+                        <div class="status-panel">
+                            <span>Active:</span>
+                            <span class="status-val" style="color: var(--success);" id="status-sdi-active">Field 1 Transmitting</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+            </div> <!-- End Thread 3 -->
+
+        </div>
+        <div class="legend">
+            <div class="legend-item"><div class="legend-color" style="background-color: var(--accent-cyan);"></div> CEF Production Domain</div>
+            <div class="legend-item"><div class="legend-color" style="background-color: var(--accent-amber);"></div> Queue Buffer Domain</div>
+            <div class="legend-item"><div class="legend-color" style="background-color: var(--accent-violet);"></div> GPU / Compute Shader Domain</div>
+            <div class="legend-item"><div class="legend-color" style="background-color: var(--success);"></div> Final Broadcast Domain</div>
+        </div>
+    </div>
+
+    <!-- Details Grid -->
+    <div class="details-grid">
+        <!-- Pixel Inspector Panel -->
+        <div class="details-panel">
+            <div class="section-title">Pixel-Level Detailed Analyzer (Trace calculation of 1 pixel)</div>
+            <div class="zoom-section">
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
+                    Hover your mouse over any pixel of the output image to trace the changes in RGBA values at that coordinate in F1, F2, and the final output.
+                </div>
+                <div class="zoom-row" style="flex-wrap: wrap;">
+                    <div class="zoom-box">
+                        <div class="zoom-title">F2 (Bottom)</div>
+                        <div class="pixel-inspect-grid" id="inspect-f2">
+                            <div class="inspect-overlay" id="overlay-f2"></div>
+                        </div>
+                    </div>
+                    <div class="zoom-box">
+                        <div class="zoom-title">F1 (Top)</div>
+                        <div class="pixel-inspect-grid" id="inspect-f1">
+                            <div class="inspect-overlay" id="overlay-f1"></div>
+                        </div>
+                    </div>
+                    <div style="align-self: center; color: var(--text-muted); font-size: 1.5rem;">➔</div>
+                    <div class="zoom-box" style="border-color: var(--accent-violet);">
+                        <div class="zoom-title">Step 1: Weave</div>
+                        <div class="pixel-inspect-grid" id="inspect-weave">
+                            <div class="inspect-overlay" id="overlay-weave"></div>
+                        </div>
+                    </div>
+                    <div style="align-self: center; color: var(--text-muted); font-size: 1.5rem;">➔</div>
+                    <div class="zoom-box" style="border-color: var(--accent-violet);">
+                        <div class="zoom-title">Step 2: LPF</div>
+                        <div class="pixel-inspect-grid" id="inspect-lpf">
+                            <div class="inspect-overlay" id="overlay-lpf"></div>
+                        </div>
+                    </div>
+                    <div style="align-self: center; color: var(--text-muted); font-size: 1.5rem;">➔</div>
+                    <div class="zoom-box" style="border-color: var(--accent-cyan);">
+                        <div class="zoom-title">Step 3: Unmult</div>
+                        <div class="pixel-inspect-grid" id="inspect-out">
+                            <div class="inspect-overlay" id="overlay-out"></div>
+                        </div>
+                    </div>
+                    <div style="align-self: center; color: var(--text-muted); font-size: 1.5rem;">➔</div>
+                    <div class="zoom-box" style="border-color: #ef4444;">
+                        <div class="zoom-title">Final: Fill</div>
+                        <div class="pixel-inspect-grid" id="inspect-fill">
+                            <div class="inspect-overlay" id="overlay-fill"></div>
+                        </div>
+                    </div>
+                    <div class="zoom-box" style="border-color: #ef4444;">
+                        <div class="zoom-title">Final: Key</div>
+                        <div class="pixel-inspect-grid" id="inspect-key">
+                            <div class="inspect-overlay" id="overlay-key"></div>
+                        </div>
+                    </div>
+                    <div style="align-self: center; color: var(--text-muted); font-size: 1.5rem;">➔</div>
+                    <div class="zoom-box" style="border-color: var(--success);">
+                        <div class="zoom-title">Physical Monitor</div>
+                        <div class="pixel-inspect-grid" id="inspect-sdi-monitor">
+                            <div class="inspect-overlay" id="overlay-sdi-monitor"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hovered Pixel Details -->
+                <div class="pixel-info-card" id="pixel-details">
+                    <div class="info-row">
+                        <span class="info-label">Selected Coordinates:</span>
+                        <span class="info-val" id="det-coord">X: 0, Y: 0</span>
+                    </div>
+                    <div class="info-row" style="border-top: 1px solid #1e293b; padding-top: 6px; margin-top: 6px;">
+                        <span class="info-label">Frame 1 (Top) Raw RGBA:</span>
+                        <span class="info-val" id="det-f1-raw">R: 0, G: 0, B: 0, A: 0.00</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Frame 2 (Bottom) Raw RGBA:</span>
+                        <span class="info-val" id="det-f2-raw">R: 0, G: 0, B: 0, A: 0.00</span>
+                    </div>
+                    <div class="info-row" style="border-top: 1px solid #1e293b; padding-top: 6px; margin-top: 6px;">
+                        <span class="info-label">Weave / Sampling (Pre-filter):</span>
+                        <span class="info-val" id="det-weave-val">R: 0, G: 0, B: 0, A: 0.00</span>
+                    </div>
+                    <div class="info-row" style="margin-left: 15px; font-size: 0.8rem;">
+                        <span class="info-label" style="color: var(--text-muted);">↳ Applied Rule:</span>
+                        <span class="info-val" id="det-sampling">Top Field Sampling (Even Lines)</span>
+                    </div>
+                    <div class="info-row" style="border-top: 1px solid #1e293b; padding-top: 6px; margin-top: 6px;">
+                        <span class="info-label">Vertical LPF Result:</span>
+                        <span class="info-val" id="det-lpf-val">R: 0, G: 0, B: 0, A: 0.00</span>
+                    </div>
+                    <div class="info-row" style="border-top: 1px solid #1e293b; padding-top: 6px; margin-top: 6px;">
+                        <span class="info-label">Unpremultiply Process (RGB /= A):</span>
+                        <span class="info-val" id="det-unmult-val">R: 0, G: 0, B: 0, A: 0.00 (No process below threshold)</span>
+                    </div>
+                    <div class="info-row" style="border-top: 1px solid #ef4444; padding-top: 6px; margin-top: 6px;">
+                        <span class="info-label">DeckLink Fill (RGB Splitted):</span>
+                        <span class="info-val" id="det-fill-val" style="color: #ef4444;">R: 0, G: 0, B: 0</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">DeckLink Key (Alpha Splitted):</span>
+                        <span class="info-val" id="det-key-val" style="color: #ef4444;">Key: 0 (Alpha)</span>
+                    </div>
+                    <div class="info-row" style="border-top: 1px solid var(--success); padding-top: 6px; margin-top: 6px;">
+                        <span class="info-label">SDI Physical Out:</span>
+                        <span class="info-val" id="det-sdi-val" style="color: var(--success);">R: 0, G: 0, B: 0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Algorithm Explanation Panel -->
+        <div class="details-panel" style="display: flex; flex-direction: column; gap: 15px;">
+            <div class="section-title">Pipeline Logic Explanation</div>
+
+            <!-- Preroll Queue -->
+            <div class="formula-card">
+                <h3>A. Preroll Synchronization Queue (Time Control)</h3>
+                <div>
+                    CEF pushes frame data in a free-run loop, while DeckLink polls and pulls textures.
+                </div>
+                <ul>
+                    <li><strong>Preroll Wait</strong>: When the queue size grows from 0, consumption is paused for 3 cycles (approx. 100ms) to "bank" frames and absorb timing jitter.</li>
+                    <li><strong>Freeze on Underflow</strong>: When the queue runs empty, the last output frame is duplicated and the state machine resets to Preroll Wait.</li>
+                </ul>
+            </div>
+
+            <!-- Weave Interlace -->
+            <div class="formula-card">
+                <h3>B. Weave Interlace Compositing</h3>
+                <div class="formula-box">
+if (y % 2 == 0) {
+    pixel = SampleFiltered1(x, y); // Frame 1
+} else {
+    pixel = SampleFiltered2(x, y); // Frame 2
+}
+                </div>
+                <div>
+                    Even rows of vertical line coordinate <code>y</code> are mapped from the previous frame (F1), and odd rows from the latest frame (F2). In areas with motion, the mixing of consecutive frames within a single image causes interlacing artifacts ("comb-like tearing").
+                </div>
+            </div>
+
+            <!-- Vertical LPF -->
+            <div class="formula-card">
+                <h3>C. Vertical LPF (Anti-Flicker)</h3>
+                <div>
+                    To suppress "line flicker" caused by extreme differences in colors between adjacent scan lines during interlaced output, a low-pass filter (vertical blur) is applied.
+                </div>
+                <div class="formula-box">
+// 3-Tap Kernel: [0.25, 0.50, 0.25]
+pixel[y] = above*0.25 + center*0.50 + below*0.25;
+
+// 5-Tap Kernel: [0.0625, 0.25, 0.375, 0.25, 0.0625]
+pixel[y] = above2*0.0625 + above*0.25 + center*0.375 + ...
+                </div>
+            </div>
+
+            <!-- Unpremultiply -->
+            <div class="formula-card">
+                <h3>D. Unpremultiply (Alpha Restoration)</h3>
+                <div>
+                    The CEF render buffer is in a Premultiplied Alpha state, where RGB values are pre-multiplied by alpha. To separate the transparency mask (Key) and the color signal (Fill) cleanly for DeckLink, we divide the RGB values by alpha to restore the original colors.
+                </div>
+                <div class="formula-box">
+if (pixel.a > alphaThreshold) {
+    pixel.rgb /= pixel.a;
+}
+                </div>
+                <div>
+                    * If division is performed when the alpha value is too small (near transparent), division-by-zero or numerical instability occurs. Therefore, processing is skipped when it falls below the <code>alphaThreshold</code>.
+                </div>
+            </div>
+
+            <!-- Jitter Model -->
+            <div class="formula-card">
+                <h3>E. Jitter & Noise Model (Jitter Simulation)</h3>
+                <div>
+                    Mathematical modeling of "real-world latency and fluctuations" occurring between the asynchronous processes of CEF (producer) and DeckLink (consumer).
+                </div>
+                <ul>
+                    <li style="margin-bottom: 8px;"><strong>Gaussian Noise (σ):</strong> <code>interval = base + Normal(0, σ)</code><br>
+                    Microscopic fluctuations caused by OS thread schedulers and timer resolution limits. Typically, Windows timer resolution is around 1-2 ms, but under high load, fluctuations (σ) of 5-15 ms can occur.</li>
+                    <li style="margin-bottom: 8px;"><strong>Spike Delay (Burst):</strong> <code>if (random() < Prob) interval += BurstMs</code><br>
+                    Sudden thread suspension due to Garbage Collection (V8 GC) or heavy resource loading. The typical probability is 0.1% to 1%, but when it occurs, the pipeline pauses for 30-100 ms, quickly starving the buffers.</li>
+                    <li style="margin-bottom: 8px;"><strong>Clock Drift (PPM):</strong> <code>interval *= (1.0 + PPM / 1,000,000)</code><br>
+                    Physical frequency deviation between the PC motherboard clock and the DeckLink's internal crystal oscillator. For instance, at +50 PPM, the CEF-side clock runs slightly slower relatively, causing periodic buffer underflows (or overflows) every few tens of minutes or hours.</li>
+                </ul>
+            </div>
+
+            <!-- Buffer Monitor Graph -->
+            <div class="section-title" style="margin-top: 10px;">Real-time Buffer Status (Jitter Analyzer)</div>
+            <canvas id="canvas-buffer-graph" width="800" height="150" style="width: 100%; height: 150px; background-color: #020617; border: 1px solid var(--panel-border); border-radius: 6px;"></canvas>
+
+            <!-- Simulator Activity Log -->
+            <div class="section-title" style="margin-top: 15px;">Simulator Activity Log</div>
+            <div class="log-panel" id="log-console">
+                <div class="log-line"><span class="log-time">[00:00:00]</span><span class="log-system">SYSTEM:</span> Pipeline simulator initialized.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Global Constants & Initial State ---
+        const WIDTH = 32;
+        const HEIGHT = 32;
+        
+        let state = {
+            time: 0.0,
+            cefCount: 0,
+            dlCount: 0,
+            nextCefTime: 16.666666,
+            nextDlTime: 33.366666,
+            
+            // C++ Sync Variables
+            isConsuming: false,
+            prerollDelay: 3,
+            framesSinceLastDrop: 0,
+            
+            // Settings
+            viewMode: 0, // 0=Interlace, 1=Diff, 2=Prog F1, 3=Prog F2, 4=Blend
+            filterMode: 1, // 0=None, 1=3-tap, 2=5-tap
+            testPattern: 0, // 0=Mix, 1=Circle, 2=Bar, 3=Stripes, 4=Checker, 5=ScrollText, 6=RotateText, 7=CompoundText, 8=BounceText, 9=None
+            alphaThreshold: 0.05,
+            playSpeed: 1.0,
+            cefActive: true,
+            isPlaying: false,
+
+            // Jitter & Metrics
+            jitterStdDev: 0.0,
+            burstDelayProb: 0.0, // 0.0 ~ 10.0 (%)
+            burstDelayMs: 30.0,
+            clockDriftPpm: 0.0,
+            gpuStallProb: 0.0,
+            gpuStallMs: 30.0,
+            logicalCefTime: 16.666666,
+            logicalDlTime: 33.366666,
+            starvationCount: 0,
+            plannedDropCount: 0,
+            overflowDropCount: 0,
+            breakOnPlanned: false,
+            breakOnOverflow: false,
+            breakOnStarve: false,
+            breakpointHit: false,
+            bufferHistory: [],
+
+            // Queues
+            cpuQueue: [], 
+            gpuQueue: [], 
+            
+            // Processing frames
+            frame1: null, // Top field source
+            frame2: null, // Bottom field source
+            
+            // Compute Shader Output buffers
+            shaderWeave: null,
+            shaderLpf: null,
+            shaderOutput: null, 
+            
+            // Staging buffers
+            staging0: null,
+            staging1: null,
+            
+            // Final outputs
+            hwFill: null,
+            hwKey: null,
+
+            // Physical SDI Output
+            sdiF1: null,
+            sdiF2: null,
+            sdiMonitor: null, 
+            
+            // Last outputs for Freeze hold
+            lastHwFill: null,
+            lastHwKey: null,
+            
+            // Inspector selected coordinate
+            inspectX: 16,
+            inspectY: 16
+        };
+
+        // Undo History Stack
+        let historyStack = [];
+        const MAX_HISTORY = 100;
+
+        // Logging helper
+        function logMsg(msg, isWarning = false) {
+            const consoleEl = document.getElementById('log-console');
+            if (!consoleEl) return;
+            const timeStr = new Date().toLocaleTimeString();
+            const logLine = document.createElement('div');
+            logLine.className = 'log-line' + (isWarning ? ' log-warning' : '');
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'log-time';
+            timeSpan.innerText = `[${timeStr}]`;
+            
+            const systemSpan = document.createElement('span');
+            systemSpan.className = 'log-system';
+            systemSpan.innerText = isWarning ? 'WARNING:' : 'SYSTEM:';
+            
+            logLine.appendChild(timeSpan);
+            logLine.appendChild(systemSpan);
+            logLine.appendChild(document.createTextNode(' ' + msg));
+            
+            consoleEl.appendChild(logLine);
+            
+            while (consoleEl.children.length > 200) {
+                consoleEl.removeChild(consoleEl.firstChild);
+            }
+            
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        // --- 2. Test Pattern Generator (CEF Simulation) ---
+        class FrameGenerator {
+            nextFrame(cefCount) {
+                const canvas = document.createElement('canvas');
+                canvas.width = WIDTH;
+                canvas.height = HEIGHT;
+                const ctx = canvas.getContext('2d');
+
+                ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+                const angle = cefCount * 0.08;
+                const xPos = (cefCount * 0.4) % (WIDTH + 16);
+
+                if (state.testPattern === 0 || state.testPattern === 1) {
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                    ctx.beginPath();
+                    ctx.arc(xPos - 8, 16, 7, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                if (state.testPattern === 0 || state.testPattern === 2) {
+                    ctx.save();
+                    ctx.translate(16, 16);
+                    ctx.rotate(angle);
+                    ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+                    ctx.fillRect(-2, -12, 4, 24);
+                    ctx.restore();
+                }
+
+                if (state.testPattern === 0) {
+                    ctx.fillStyle = 'rgba(0, 0, 255, 0.3)';
+                    ctx.fillRect(4, 4, 8, 8);
+                }
+
+                if (state.testPattern === 3) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 1.0)';
+                    for (let y = 0; y < HEIGHT; y += 2) {
+                        ctx.fillRect(0, y, WIDTH, 1);
+                    }
+                }
+
+                if (state.testPattern === 4) {
+                    const blink = Math.floor(cefCount / 5) % 2 === 0;
+                    ctx.fillStyle = blink ? 'rgba(255, 255, 255, 1.0)' : 'rgba(0, 0, 0, 1.0)';
+                    for (let y = 0; y < HEIGHT; y += 4) {
+                        for (let x = 0; x < WIDTH; x += 4) {
+                            if ((Math.floor(x / 4) % 2 === Math.floor(y / 4) % 2) === blink) {
+                                ctx.fillRect(x, y, 4, 4);
+                            }
+                        }
+                    }
+                }
+
+                if (state.testPattern === 5) {
+                    const textX = 32 - ((cefCount * 0.8) % 64);
+                    ctx.fillStyle = 'rgba(255, 165, 0, 1.0)';
+                    ctx.font = 'bold 24px sans-serif';
+                    ctx.fillText('A', textX, 26);
+                }
+
+                if (state.testPattern === 6) {
+                    ctx.save();
+                    ctx.translate(16, 16);
+                    ctx.rotate(-angle * 0.5);
+                    ctx.fillStyle = 'rgba(0, 200, 255, 1.0)';
+                    ctx.font = 'bold 26px serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('W', 0, 0);
+                    ctx.restore();
+                }
+
+                if (state.testPattern === 7) {
+                    ctx.save();
+                    const textX = 32 - ((cefCount * 0.8) % 64);
+                    ctx.translate(textX + 12, 16);
+                    ctx.rotate(angle);
+                    const scale = 0.8 + Math.sin(cefCount * 0.1) * 0.3;
+                    ctx.scale(scale, scale);
+                    ctx.fillStyle = 'rgba(236, 72, 153, 1.0)';
+                    ctx.font = 'bold 20px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('A', 0, 0);
+                    ctx.restore();
+                }
+
+                if (state.testPattern === 8) {
+                    const bounceX = Math.abs((cefCount * 0.6) % 36 - 18) + 7;
+                    const bounceY = Math.abs((cefCount * 0.4) % 36 - 18) + 7;
+                    ctx.fillStyle = 'rgba(16, 185, 129, 1.0)';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('T', bounceX, bounceY);
+                }
+
+                const imgData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
+                const data = imgData.data;
+
+                const pmBuffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i+1];
+                    const b = data[i+2];
+                    const a = data[i+3] / 255.0;
+
+                    // Premultiply process
+                    pmBuffer[i]   = Math.round(r * a);
+                    pmBuffer[i+1] = Math.round(g * a);
+                    pmBuffer[i+2] = Math.round(b * a);
+                    pmBuffer[i+3] = data[i+3];
+                }
+
+                return {
+                    timestamp: state.time,
+                    data: pmBuffer,
+                    id: cefCount
+                };
+            }
+        }
+
+        const generator = new FrameGenerator();
+
+        // --- 3. Deep Copy State (for Undo) ---
+        function cloneState(s) {
+            return {
+                time: s.time,
+                cefCount: s.cefCount,
+                dlCount: s.dlCount,
+                nextCefTime: s.nextCefTime,
+                nextDlTime: s.nextDlTime,
+                isConsuming: s.isConsuming,
+                prerollDelay: s.prerollDelay,
+                framesSinceLastDrop: s.framesSinceLastDrop,
+                viewMode: s.viewMode,
+                filterMode: s.filterMode,
+                testPattern: s.testPattern,
+                alphaThreshold: s.alphaThreshold,
+                playSpeed: s.playSpeed,
+                cefActive: s.cefActive,
+                isPlaying: s.isPlaying,
+                jitterStdDev: s.jitterStdDev,
+                burstDelayProb: s.burstDelayProb,
+                burstDelayMs: s.burstDelayMs,
+                clockDriftPpm: s.clockDriftPpm,
+                gpuStallProb: s.gpuStallProb,
+                gpuStallMs: s.gpuStallMs,
+                logicalCefTime: s.logicalCefTime,
+                logicalDlTime: s.logicalDlTime,
+                starvationCount: s.starvationCount,
+                plannedDropCount: s.plannedDropCount,
+                overflowDropCount: s.overflowDropCount,
+                bufferHistory: s.bufferHistory ? s.bufferHistory.map(h => ({ cpu: h.cpu, gpu: h.gpu, underrun: h.underrun })) : [],
+                
+                cpuQueue: s.cpuQueue.map(f => ({ id: f.id, timestamp: f.timestamp, data: new Uint8ClampedArray(f.data) })),
+                gpuQueue: s.gpuQueue.map(f => ({ id: f.id, timestamp: f.timestamp, data: new Uint8ClampedArray(f.data) })),
+                
+                frame1: s.frame1 ? { id: s.frame1.id, timestamp: s.frame1.timestamp, data: new Uint8ClampedArray(s.frame1.data) } : null,
+                frame2: s.frame2 ? { id: s.frame2.id, timestamp: s.frame2.timestamp, data: new Uint8ClampedArray(s.frame2.data) } : null,
+                
+                shaderWeave: s.shaderWeave ? { id: s.shaderWeave.id, data: new Uint8ClampedArray(s.shaderWeave.data) } : null,
+                shaderLpf: s.shaderLpf ? { id: s.shaderLpf.id, data: new Uint8ClampedArray(s.shaderLpf.data) } : null,
+                shaderOutput: s.shaderOutput ? { id: s.shaderOutput.id, data: new Uint8ClampedArray(s.shaderOutput.data) } : null,
+                
+                staging0: s.staging0 ? { data: new Uint8ClampedArray(s.staging0.data) } : null,
+                staging1: s.staging1 ? { data: new Uint8ClampedArray(s.staging1.data) } : null,
+                
+                hwFill: s.hwFill ? new Uint8ClampedArray(s.hwFill) : null,
+                hwKey: s.hwKey ? new Uint8ClampedArray(s.hwKey) : null,
+
+                sdiF1: s.sdiF1 ? new Uint8ClampedArray(s.sdiF1) : null,
+                sdiF2: s.sdiF2 ? new Uint8ClampedArray(s.sdiF2) : null,
+                sdiMonitor: s.sdiMonitor ? new Uint8ClampedArray(s.sdiMonitor) : null,
+                
+                lastHwFill: s.lastHwFill ? new Uint8ClampedArray(s.lastHwFill) : null,
+                lastHwKey: s.lastHwKey ? new Uint8ClampedArray(s.lastHwKey) : null,
+                
+                inspectX: s.inspectX,
+                inspectY: s.inspectY
+            };
+        }
+
+        function saveHistory() {
+            if (historyStack.length >= MAX_HISTORY) {
+                historyStack.shift();
+            }
+            historyStack.push(cloneState(state));
+            updateUndoButtonState();
+        }
+
+        function updateUndoButtonState() {
+            const btnUndo = document.getElementById('btn-undo');
+            if (btnUndo) {
+                btnUndo.disabled = (historyStack.length === 0 || state.isPlaying);
+            }
+        }
+
+        // --- 4. Core Pipeline Simulator Logic ---
+        function getNextCefJitter() {
+            let u = 0, v = 0;
+            while(u === 0) u = Math.random();
+            while(v === 0) v = Math.random();
+            let z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+            let jitter = z * state.jitterStdDev;
+            
+            let spike = 0;
+            if (Math.random() < (state.burstDelayProb / 100.0)) {
+                spike = state.burstDelayMs;
+                logMsg(`[CPU SPIKE] Producer process suspended for ${spike.toFixed(1)}ms due to CEF main thread block or V8 GC!`, true);
+            }
+            
+            return jitter + spike;
+        }
+
+        function cefTickInternal() {
+            if (!state.cefActive) return;
+            
+            if (state.cpuQueue.length >= 32) {
+                state.overflowDropCount++;
+                logMsg(`OnPaint: Dropped the latest frame generation because CPU Queue reached the limit (kBufferCount=32 limit)`, true);
+                return;
+            }
+            
+            state.cefCount++;
+            const frame = generator.nextFrame(state.cefCount);
+            state.cpuQueue.push(frame);
+            
+            logMsg(`CEF OnPaint: Generated new frame #${frame.id}. Stored in CPU Queue. (Current: ${state.cpuQueue.length}/32)`);
+        }
+
+        function deckLinkTickInternal() {
+            state.dlCount++;
+            logMsg(`DeckLink: Cycle #${state.dlCount} started. Polling...`);
+            
+            const uploadedCount = state.cpuQueue.length;
+            let syncCount = 0;
+            
+            while(state.cpuQueue.length > 0) {
+                state.gpuQueue.push(state.cpuQueue.shift());
+                syncCount++;
+            }
+            
+            while (state.gpuQueue.length > 32) {
+                const dropped = state.gpuQueue.shift();
+                state.overflowDropCount++;
+                logMsg(`SyncWithGPU: [Buffer Overflow] GPU Texture Queue (32) reached limit. Forcefully discarded old texture #${dropped.id}`, true);
+                if (state.breakOnOverflow) state.breakpointHit = true;
+            }
+            
+            if (uploadedCount > 0) {
+                logMsg(`SyncWithGPU: Uploaded ${syncCount} pending frames to VRAM (GPU Queue). (Current: ${state.gpuQueue.length} frames)`);
+            }
+
+            const isUnderrun = handlePrerollAndConsume();
+            executeComputeShader();
+            executeReadback();
+            
+            state.bufferHistory.push({
+                cpu: state.cpuQueue.length,
+                gpu: state.gpuQueue.length,
+                underrun: isUnderrun
+            });
+            if (state.bufferHistory.length > 100) {
+                state.bufferHistory.shift();
+            }
+        }
+
+        function advanceTime(ms) {
+            if (ms <= 0) return;
+            
+            saveHistory();
+
+            const step = 0.1;
+            const targetTime = state.time + ms;
+            
+            logMsg(`Advance time: +${ms.toFixed(2)}ms (Target: ${targetTime.toFixed(2)}ms)`);
+            
+            state.breakpointHit = false;
+            while (state.time < targetTime) {
+                state.time = Math.min(state.time + step, targetTime);
+                
+                if (state.time >= state.nextDlTime) {
+                    deckLinkTickInternal();
+                    
+                    state.logicalDlTime += 33.366666;
+                    let stall = 0;
+                    if (state.gpuStallProb > 0 && (Math.random() * 100) < state.gpuStallProb) {
+                        stall = state.gpuStallMs;
+                        logMsg(`[GPU STALL] Consumer process suspended for ${state.gpuStallMs.toFixed(1)}ms due to PCIe transfer or Compute Shader delay!`, true);
+                    }
+                    state.nextDlTime = Math.max(state.time, state.logicalDlTime) + stall;
+                }
+
+                if (state.time >= state.nextCefTime) {
+                    cefTickInternal();
+                    
+                    const driftFactor = 1.0 + (state.clockDriftPpm / 1000000.0);
+                    state.logicalCefTime += 16.666666 * driftFactor;
+                    
+                    const jitter = getNextCefJitter();
+                    state.nextCefTime = Math.max(state.time, state.logicalCefTime) + jitter;
+                }
+                
+                if (state.breakpointHit) {
+                    if (state.isPlaying) {
+                        state.isPlaying = false;
+                        const btn = document.getElementById('btn-play-pause');
+                        if (btn) {
+                            btn.innerText = '▶ Play';
+                            btn.classList.remove('btn-danger');
+                            btn.classList.add('btn-primary');
+                        }
+                        logMsg(`[BREAKPOINT] Simulation paused because breakpoint condition was met.`, true);
+                    }
+                    break;
+                }
+            }
+            
+            updateUI();
+        }
+
+        function handlePrerollAndConsume() {
+            const queueSize = state.gpuQueue.length;
+            let underrunOccurred = false;
+            
+            if (!state.isConsuming) {
+                if (queueSize > 0) {
+                    if (state.prerollDelay > 0) {
+                        state.prerollDelay--;
+                        logMsg(`GetSynchronizedTextures: Waiting for preroll... (${state.prerollDelay} cycles remaining)`);
+                    } else {
+                        state.isConsuming = true;
+                        logMsg(`GetSynchronizedTextures: Preroll completed. Starting normal frame consumption.`);
+                    }
+                }
+            }
+            
+            let poppedPair = false;
+            let poppedSingle = false;
+            
+            if (state.isConsuming) {
+                state.framesSinceLastDrop++;
+                
+                if (state.gpuQueue.length > 12 && state.framesSinceLastDrop >= 30) {
+                    const dropped = state.gpuQueue.shift();
+                    state.framesSinceLastDrop = 0;
+                    state.plannedDropCount++;
+                    logMsg(`GetSynchronizedTextures: Too many frames in queue (>12). Performed planned drop (Soft Threshold Drop) (discarded frame #${dropped.id})`, true);
+                    if (state.breakOnPlanned) state.breakpointHit = true;
+                }
+                
+                if (state.gpuQueue.length >= 2) {
+                    state.frame1 = state.gpuQueue.shift(); 
+                    state.frame2 = state.gpuQueue.shift(); 
+                    poppedPair = true;
+                    logMsg(`GetSynchronizedTextures: Pulled F1(#${state.frame1.id}) and F2(#${state.frame2.id}) from GPU Queue for consumption.`);
+                } 
+                else if (state.gpuQueue.length === 1) {
+                    const singleFrame = state.gpuQueue.shift();
+                    state.frame1 = singleFrame;
+                    state.frame2 = { ...singleFrame }; 
+                    poppedSingle = true;
+                    state.starvationCount++;
+                    logMsg(`GetSynchronizedTextures: Insufficient frames (only 1). Duplicated frame #${singleFrame.id} and transitioned to starvation warning state.`, true);
+                    if (state.breakOnStarve) state.breakpointHit = true;
+                } 
+                else {
+                    state.isConsuming = false;
+                    state.prerollDelay = 3;
+                    state.starvationCount++;
+                    underrunOccurred = true;
+                    logMsg(`GetSynchronizedTextures: Queue is completely empty. Stopped consumption and reset to preroll (delay=3).`, true);
+                    if (state.breakOnStarve) state.breakpointHit = true;
+                }
+            }
+            
+            if (!poppedPair && !poppedSingle) {
+                freezeOutput();
+            }
+            
+            return underrunOccurred;
+        }
+
+        function freezeOutput() {
+            if (state.frame1 && state.frame2) {
+                if (state.frame1.id !== state.frame2.id) {
+                    state.frame1 = { ...state.frame2 }; 
+                    logMsg(`GetSynchronizedTextures: No consumption. Interlace blur disabled, freezing with the latest frame (#${state.frame2.id}).`);
+                }
+            } else {
+                const blackData = new Uint8ClampedArray(WIDTH * HEIGHT * 4); 
+                const emptyFrame = { id: 0, timestamp: 0, data: blackData };
+                state.frame1 = emptyFrame;
+                state.frame2 = emptyFrame;
+            }
+        }
+
+        function executeComputeShader() {
+            const f1Data = state.frame1.data;
+            const f2Data = state.frame2.data;
+            const weaveBuffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            const lpfBuffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            const outBuffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            
+            const threshold = state.alphaThreshold;
+            const viewMode = state.viewMode;
+            const filterMode = state.filterMode;
+            
+            function getFilteredPixel(frameData, x, y, isFrame1, forceNoFilter = false) {
+                const getPixelRGBA = (fx, fy) => {
+                    const idx = (fy * WIDTH + fx) * 4;
+                    return [
+                        frameData[idx] / 255.0,
+                        frameData[idx+1] / 255.0,
+                        frameData[idx+2] / 255.0,
+                        frameData[idx+3] / 255.0
+                    ];
+                };
+
+                const center = getPixelRGBA(x, y);
+                if (filterMode === 0 || forceNoFilter) return center; 
+
+                const yM1 = Math.max(y - 1, 0);
+                const yP1 = Math.min(y + 1, HEIGHT - 1);
+                const above1 = getPixelRGBA(x, yM1);
+                const below1 = getPixelRGBA(x, yP1);
+
+                if (filterMode === 1) {
+                    return [
+                        above1[0]*0.25 + center[0]*0.50 + below1[0]*0.25,
+                        above1[1]*0.25 + center[1]*0.50 + below1[1]*0.25,
+                        above1[2]*0.25 + center[2]*0.50 + below1[2]*0.25,
+                        above1[3]*0.25 + center[3]*0.50 + below1[3]*0.25
+                    ];
+                }
+
+                const yM2 = Math.max(y - 2, 0);
+                const yP2 = Math.min(y + 2, HEIGHT - 1);
+                const above2 = getPixelRGBA(x, yM2);
+                const below2 = getPixelRGBA(x, yP2);
+
+                return [
+                    above2[0]*0.0625 + above1[0]*0.25 + center[0]*0.375 + below1[0]*0.25 + below2[0]*0.0625,
+                    above2[1]*0.0625 + above1[1]*0.25 + center[0]*0.375 + below1[1]*0.25 + below2[1]*0.0625,
+                    above2[2]*0.0625 + above1[2]*0.25 + center[0]*0.375 + below1[2]*0.25 + below2[2]*0.0625,
+                    above2[3]*0.0625 + above1[3]*0.25 + center[0]*0.375 + below1[3]*0.25 + below2[3]*0.0625
+                ];
+            }
+
+            for (let y = 0; y < HEIGHT; y++) {
+                for (let x = 0; x < WIDTH; x++) {
+                    const idx = (y * WIDTH + x) * 4;
+                    
+                    const sampleMode = (forceNoFilter) => {
+                        let pixel = [0, 0, 0, 0]; 
+                        if (viewMode === 1) {
+                            const p1 = getFilteredPixel(f1Data, x, y, true, forceNoFilter);
+                            const p2 = getFilteredPixel(f2Data, x, y, false, forceNoFilter);
+                            pixel = [Math.abs(p1[0] - p2[0]), Math.abs(p1[1] - p2[1]), Math.abs(p1[2] - p2[2]), 1.0];
+                        } 
+                        else if (viewMode === 2) {
+                            pixel = getFilteredPixel(f1Data, x, y, true, forceNoFilter);
+                        } 
+                        else if (viewMode === 3) {
+                            pixel = getFilteredPixel(f2Data, x, y, false, forceNoFilter);
+                        } 
+                        else if (viewMode === 4) {
+                            const p1 = getFilteredPixel(f1Data, x, y, true, forceNoFilter);
+                            const p2 = getFilteredPixel(f2Data, x, y, false, forceNoFilter);
+                            pixel = [p1[0] * 0.5 + p2[0] * 0.5, p1[1] * 0.5 + p2[1] * 0.5, p1[2] * 0.5 + p2[2] * 0.5, p1[3] * 0.5 + p2[3] * 0.5];
+                        } 
+                        else {
+                            if (y % 2 === 0) pixel = getFilteredPixel(f1Data, x, y, true, forceNoFilter);
+                            else pixel = getFilteredPixel(f2Data, x, y, false, forceNoFilter);
+                        }
+                        return pixel;
+                    };
+
+                    // Step 1: Weave
+                    let weavePixel = sampleMode(true);
+                    weaveBuffer[idx] = Math.min(Math.max(Math.round(weavePixel[0] * 255.0), 0), 255);
+                    weaveBuffer[idx+1] = Math.min(Math.max(Math.round(weavePixel[1] * 255.0), 0), 255);
+                    weaveBuffer[idx+2] = Math.min(Math.max(Math.round(weavePixel[2] * 255.0), 0), 255);
+                    weaveBuffer[idx+3] = Math.min(Math.max(Math.round(weavePixel[3] * 255.0), 0), 255);
+
+                    // Step 2: LPF
+                    let lpfPixel = sampleMode(false);
+                    lpfBuffer[idx] = Math.min(Math.max(Math.round(lpfPixel[0] * 255.0), 0), 255);
+                    lpfBuffer[idx+1] = Math.min(Math.max(Math.round(lpfPixel[1] * 255.0), 0), 255);
+                    lpfBuffer[idx+2] = Math.min(Math.max(Math.round(lpfPixel[2] * 255.0), 0), 255);
+                    lpfBuffer[idx+3] = Math.min(Math.max(Math.round(lpfPixel[3] * 255.0), 0), 255);
+
+                    // Step 3: Unmult
+                    let originalAlpha = lpfPixel[3];
+                    if (originalAlpha > threshold) {
+                        lpfPixel[0] /= originalAlpha;
+                        lpfPixel[1] /= originalAlpha;
+                        lpfPixel[2] /= originalAlpha;
+                    }
+                    
+                    outBuffer[idx]   = Math.min(Math.max(Math.round(lpfPixel[0] * 255.0), 0), 255);
+                    outBuffer[idx+1] = Math.min(Math.max(Math.round(lpfPixel[1] * 255.0), 0), 255);
+                    outBuffer[idx+2] = Math.min(Math.max(Math.round(lpfPixel[2] * 255.0), 0), 255);
+                    outBuffer[idx+3] = Math.min(Math.max(Math.round(originalAlpha * 255.0), 0), 255);
+                }
+            }
+
+            state.shaderWeave = { data: weaveBuffer, id: Math.max(state.frame1.id, state.frame2.id) };
+            state.shaderLpf = { data: lpfBuffer, id: Math.max(state.frame1.id, state.frame2.id) };
+            state.shaderOutput = {
+                data: outBuffer,
+                id: Math.max(state.frame1.id, state.frame2.id)
+            };
+        }
+
+        function executeReadback() {
+            if (!state.lastHwFill) {
+                const black = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+                state.staging0 = { data: black.slice() };
+                state.staging1 = { data: black.slice() };
+                state.lastHwFill = black.slice();
+                state.lastHwKey = black.slice();
+            }
+
+            const srcData = state.staging1.data;
+            const fillBuffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            const keyBuffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+
+            for (let i = 0; i < srcData.length; i += 4) {
+                fillBuffer[i]   = srcData[i];
+                fillBuffer[i+1] = srcData[i+1];
+                fillBuffer[i+2] = srcData[i+2];
+                fillBuffer[i+3] = 255;
+
+                const aVal = srcData[i+3];
+                keyBuffer[i]   = aVal;
+                keyBuffer[i+1] = aVal;
+                keyBuffer[i+2] = aVal;
+                keyBuffer[i+3] = 255;
+            }
+
+            state.hwFill = fillBuffer;
+            state.hwKey = keyBuffer;
+
+            const sdiF1Buffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            const sdiF2Buffer = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            for (let y = 0; y < HEIGHT; y++) {
+                for (let x = 0; x < WIDTH; x++) {
+                    const i = (y * WIDTH + x) * 4;
+                    
+                    const bg = (Math.floor(x / 4) % 2 === Math.floor(y / 4) % 2) ? 60 : 100;
+                    
+                    const keyVal = keyBuffer[i] / 255.0;
+                    const r = Math.min(255, fillBuffer[i] * keyVal + bg * (1.0 - keyVal));
+                    const g = Math.min(255, fillBuffer[i+1] * keyVal + bg * (1.0 - keyVal));
+                    const b = Math.min(255, fillBuffer[i+2] * keyVal + bg * (1.0 - keyVal));
+
+                    if (y % 2 === 0) {
+                        sdiF1Buffer[i]   = r;
+                        sdiF1Buffer[i+1] = g;
+                        sdiF1Buffer[i+2] = b;
+                        sdiF1Buffer[i+3] = 255;
+                    } else {
+                        sdiF2Buffer[i]   = r;
+                        sdiF2Buffer[i+1] = g;
+                        sdiF2Buffer[i+2] = b;
+                        sdiF2Buffer[i+3] = 255;
+                    }
+                }
+            }
+            state.sdiF1 = sdiF1Buffer;
+            state.sdiF2 = sdiF2Buffer;
+
+            state.staging1 = { data: state.staging0.data.slice() };
+            state.staging0 = { data: state.shaderOutput.data.slice() };
+            
+            logMsg(`Delayed Readback: Mapped Staging[1] (Tick N-2) and output Fill / Key from DeckLink HW.`);
+        }
+
+        function resetState() {
+            state.time = 0.0;
+            state.cefCount = 0;
+            state.dlCount = 0;
+            state.nextCefTime = 16.666666; 
+            state.nextDlTime = 33.366666; 
+            state.logicalCefTime = 16.666666;
+            state.logicalDlTime = 33.366666;
+            state.isConsuming = false;
+            state.prerollDelay = 3;
+            state.framesSinceLastDrop = 0;
+            state.cpuQueue = [];
+            state.gpuQueue = [];
+            state.plannedDropCount = 0;
+            state.overflowDropCount = 0;
+            state.starvationCount = 0;
+            state.bufferHistory = [];
+            
+            const blackData = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            const emptyFrame = { id: 0, timestamp: 0, data: blackData.slice() };
+            state.frame1 = emptyFrame;
+            state.frame2 = emptyFrame;
+            state.shaderWeave = emptyFrame;
+            state.shaderLpf = emptyFrame;
+            state.shaderOutput = emptyFrame;
+            state.staging0 = emptyFrame;
+            state.staging1 = emptyFrame;
+            state.hwFill = blackData.slice();
+            state.hwKey = blackData.slice();
+            state.lastHwFill = blackData.slice();
+            state.lastHwKey = blackData.slice();
+            state.sdiMonitor = blackData.slice();
+
+            historyStack = [];
+            updateUndoButtonState();
+
+            logMsg("Pipeline simulator initialized.");
+            updateUI();
+        }
+
+        // --- 5. Canvas Drawing & UI Updates ---
+        function drawToCanvas(canvasId, pixelBuffer) {
+            if (!pixelBuffer) return;
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const imgData = ctx.createImageData(WIDTH, HEIGHT);
+            
+            imgData.data.set(pixelBuffer);
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        function renderQueueFlow(elementId, queueArray) {
+            const flowEl = document.getElementById(elementId);
+            if (!flowEl) return;
+            flowEl.innerHTML = '';
+            
+            const isCpu = elementId.includes('cpu');
+            const totalSlots = 32;
+            
+            for (let slotIndex = 0; slotIndex < totalSlots; slotIndex++) {
+                const qIndex = totalSlots - 1 - slotIndex;
+                
+                if (qIndex >= 0 && qIndex < queueArray.length) {
+                    const frame = queueArray[qIndex];
+                    const item = document.createElement('div');
+                    item.className = 'queue-item-grid';
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = WIDTH;
+                    canvas.height = HEIGHT;
+                    const ctx = canvas.getContext('2d');
+                    const imgData = ctx.createImageData(WIDTH, HEIGHT);
+                    imgData.data.set(frame.data);
+                    ctx.putImageData(imgData, 0, 0);
+                    
+                    const badge = document.createElement('div');
+                    badge.className = 'queue-item-badge';
+                    badge.innerText = `#${frame.id}`;
+
+                    item.appendChild(canvas);
+                    item.appendChild(badge);
+                    
+                    item.addEventListener('click', () => {
+                        logMsg(`Inspector: Selected frame #${frame.id} in queue.`);
+                        drawToCanvas('canvas-cef', frame.data);
+                    });
+
+                    flowEl.appendChild(item);
+                } else {
+                    const slot = document.createElement('div');
+                    slot.className = 'queue-slot-empty';
+                    slot.innerText = slotIndex;
+                    flowEl.appendChild(slot);
+                }
+            }
+        }
+
+        function updateInspectGrids() {
+            if (!state.frame1 || !state.frame2 || !state.shaderOutput) return;
+
+            const x = state.inspectX;
+            const y = state.inspectY;
+
+            const getRGBString = (buffer, px, py) => {
+                const idx = (py * WIDTH + px) * 4;
+                const r = buffer[idx];
+                const g = buffer[idx+1];
+                const b = buffer[idx+2];
+                const a = (buffer[idx+3] / 255.0).toFixed(2);
+                return `R: ${r}, G: ${g}, B: ${b}, A: ${a}`;
+            };
+
+            document.getElementById('det-coord').innerText = `X: ${x}, Y: ${y}`;
+            document.getElementById('det-f1-raw').innerText = getRGBString(state.frame1.data, x, y) + " (Premultiplied)";
+            document.getElementById('det-f2-raw').innerText = getRGBString(state.frame2.data, x, y) + " (Premultiplied)";
+
+            const isEven = (y % 2 === 0);
+            if (state.viewMode === 0) {
+                document.getElementById('det-sampling').innerText = isEven 
+                    ? `Even line: Sampling from [Frame 1 (Top)]` 
+                    : `Odd line: Sampling from [Frame 2 (Bottom)]`;
+                document.getElementById('det-sampling').style.color = isEven ? 'var(--accent-cyan)' : 'var(--accent-violet)';
+            } else if (state.viewMode === 1) {
+                document.getElementById('det-sampling').innerText = `Diff Mode: Sampling abs(F1 - F2)`;
+                document.getElementById('det-sampling').style.color = 'var(--accent-amber)';
+            } else {
+                document.getElementById('det-sampling').innerText = `Progressive / Blend Sampling Active`;
+                document.getElementById('det-sampling').style.color = 'var(--success)';
+            }
+
+            const weaveIdx = (y * WIDTH + x) * 4;
+            const wVal = state.shaderWeave.data;
+            const wA = (wVal[weaveIdx+3] / 255.0).toFixed(2);
+            document.getElementById('det-weave-val').innerText = `R: ${wVal[weaveIdx]}, G: ${wVal[weaveIdx+1]}, B: ${wVal[weaveIdx+2]}, A: ${wA}`;
+
+            const getLPFPixelVal = (buffer, px, py) => {
+                const getVal = (gx, gy) => {
+                    const idx = (gy * WIDTH + gx) * 4;
+                    return [buffer[idx], buffer[idx+1], buffer[idx+2], buffer[idx+3]];
+                };
+                
+                const center = getVal(px, py);
+                if (state.filterMode === 0) return center;
+                
+                const yM1 = Math.max(py - 1, 0);
+                const yP1 = Math.min(py + 1, HEIGHT - 1);
+                const above1 = getVal(px, yM1);
+                const below1 = getVal(px, yP1);
+                
+                if (state.filterMode === 1) {
+                    return [
+                        above1[0]*0.25 + center[0]*0.5 + below1[0]*0.25,
+                        above1[1]*0.25 + center[1]*0.5 + below1[1]*0.25,
+                        above1[2]*0.25 + center[2]*0.5 + below1[2]*0.25,
+                        above1[3]*0.25 + center[3]*0.5 + below1[3]*0.25
+                    ];
+                }
+                
+                const yM2 = Math.max(py - 2, 0);
+                const yP2 = Math.min(py + 2, HEIGHT - 1);
+                const above2 = getVal(px, yM2);
+                const below2 = getVal(px, yP2);
+                
+                return [
+                    above2[0]*0.0625 + above1[0]*0.25 + center[0]*0.375 + below1[0]*0.25 + below2[0]*0.0625,
+                    above2[1]*0.0625 + above1[1]*0.25 + center[0]*0.375 + below1[1]*0.25 + below2[1]*0.0625,
+                    above2[2]*0.0625 + above1[2]*0.25 + center[0]*0.375 + below1[2]*0.25 + below2[2]*0.0625,
+                    above2[3]*0.0625 + above1[3]*0.25 + center[0]*0.375 + below1[3]*0.25 + below2[3]*0.0625
+                ];
+            };
+
+            const activeSrcBuffer = (isEven || state.viewMode !== 0) ? state.frame1.data : state.frame2.data;
+            const lpfVal = getLPFPixelVal(activeSrcBuffer, x, y);
+            const lpfA = (lpfVal[3] / 255.0).toFixed(2);
+            document.getElementById('det-lpf-val').innerText = `R: ${Math.round(lpfVal[0])}, G: ${Math.round(lpfVal[1])}, B: ${Math.round(lpfVal[2])}, A: ${lpfA}`;
+
+            const finalIdx = (y * WIDTH + x) * 4;
+            const finalVal = state.shaderOutput.data;
+            const outA = (finalVal[finalIdx+3] / 255.0).toFixed(2);
+            const rawA = lpfVal[3] / 255.0;
+            
+            if (rawA > state.alphaThreshold) {
+                document.getElementById('det-unmult-val').innerText = `R: ${finalVal[finalIdx]}, G: ${finalVal[finalIdx+1]}, B: ${finalVal[finalIdx+2]}, A: ${outA} (Restore applied: RGB /= ${rawA.toFixed(2)})`;
+                document.getElementById('det-unmult-val').style.color = 'var(--success)';
+            } else {
+                document.getElementById('det-unmult-val').innerText = `R: ${finalVal[finalIdx]}, G: ${finalVal[finalIdx+1]}, B: ${finalVal[finalIdx+2]}, A: ${outA} (No process below threshold)`;
+                document.getElementById('det-unmult-val').style.color = 'var(--text-muted)';
+            }
+
+            if (state.hwFill && state.hwKey) {
+                const hwIdx = (y * WIDTH + x) * 4;
+                const fillR = state.hwFill[hwIdx];
+                const fillG = state.hwFill[hwIdx+1];
+                const fillB = state.hwFill[hwIdx+2];
+                const keyVal = state.hwKey[hwIdx];
+                
+                document.getElementById('det-fill-val').innerText = `R: ${fillR}, G: ${fillG}, B: ${fillB}`;
+                document.getElementById('det-key-val').innerText = `Key: ${keyVal} (${(keyVal/255.0).toFixed(2)})`;
+            } else {
+                document.getElementById('det-fill-val').innerText = `R: -, G: -, B: -`;
+                document.getElementById('det-key-val').innerText = `Key: -`;
+            }
+
+            if (state.sdiMonitor) {
+                const sdiIdx = (y * WIDTH + x) * 4;
+                const r = state.sdiMonitor[sdiIdx];
+                const g = state.sdiMonitor[sdiIdx+1];
+                const b = state.sdiMonitor[sdiIdx+2];
+                if (y % 2 === 0) {
+                    document.getElementById('det-sdi-val').innerText = `R: ${r}, G: ${g}, B: ${b} (Field 1: Even lines)`;
+                } else {
+                    document.getElementById('det-sdi-val').innerText = `R: ${r}, G: ${g}, B: ${b} (Field 2: Odd lines)`;
+                }
+            } else {
+                document.getElementById('det-sdi-val').innerText = `R: -, G: -, B: -`;
+            }
+
+            const redrawInspectCanvas = (containerId, buffer) => {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                let canvas = container.querySelector('canvas');
+                if (!canvas) {
+                    canvas = document.createElement('canvas');
+                    canvas.width = WIDTH;
+                    canvas.height = HEIGHT;
+                    canvas.className = 'pixel-canvas';
+                    canvas.style.width = '256px';
+                    canvas.style.height = '256px';
+                    container.appendChild(canvas);
+                }
+                const ctx = canvas.getContext('2d');
+                const imgData = ctx.createImageData(WIDTH, HEIGHT);
+                imgData.data.set(buffer);
+                ctx.putImageData(imgData, 0, 0);
+
+                ctx.strokeStyle = 'var(--accent-cyan)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, y, 1, 1);
+            };
+
+            redrawInspectCanvas('inspect-f1', state.frame1.data);
+            redrawInspectCanvas('inspect-f2', state.frame2.data);
+            redrawInspectCanvas('inspect-weave', state.shaderWeave.data);
+            redrawInspectCanvas('inspect-lpf', state.shaderLpf.data);
+            redrawInspectCanvas('inspect-out', state.shaderOutput.data);
+            if (state.hwFill) redrawInspectCanvas('inspect-fill', state.hwFill);
+            if (state.hwKey) redrawInspectCanvas('inspect-key', state.hwKey);
+            if (state.sdiMonitor) redrawInspectCanvas('inspect-sdi-monitor', state.sdiMonitor);
+        }
+
+        function updateUI() {
+            document.getElementById('val-time').innerText = `${state.time.toFixed(2)} ms`;
+            document.getElementById('val-cef-count').innerText = state.cefCount;
+            document.getElementById('val-dl-count').innerText = state.dlCount;
+            
+            const pStateEl = document.getElementById('val-preroll');
+            if (!state.isConsuming) {
+                if (state.prerollDelay === 3 && state.gpuQueue.length === 0) {
+                    pStateEl.innerText = 'Waiting (0/3)';
+                    pStateEl.style.color = 'var(--text-muted)';
+                } else {
+                    pStateEl.innerText = `Prerolling (${3 - state.prerollDelay}/3)`;
+                    pStateEl.style.color = 'var(--accent-amber)';
+                }
+            } else {
+                pStateEl.innerText = 'ACTIVE (Consuming)';
+                pStateEl.style.color = 'var(--success)';
+            }
+
+            document.getElementById('val-cpu-q-load').innerText = `${state.cpuQueue.length} / 32`;
+            document.getElementById('status-cpu-count').innerText = `${state.cpuQueue.length} frames`;
+            
+            document.getElementById('val-gpu-q-load').innerText = `${state.gpuQueue.length} / 32`;
+            document.getElementById('status-gpu-count').innerText = `${state.gpuQueue.length} frames`;
+
+            const toggleArrow = (id, active) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (active) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            };
+            toggleArrow('arrow-cef-cpu', state.cefActive && state.cpuQueue.length < 32);
+            toggleArrow('arrow-cpu-gpu-vert', state.cpuQueue.length > 0);
+            toggleArrow('arrow-gpu-shader', state.isConsuming && state.gpuQueue.length > 0);
+            toggleArrow('arrow-shader-staging', state.shaderOutput !== null);
+            toggleArrow('arrow-staging-hw', state.staging1 !== null);
+
+            const modes = ["INTERLACE (Normal)", "DIFF (Diff Vis)", "PROGRESSIVE F1", "PROGRESSIVE F2", "30p BLEND"];
+            document.getElementById('status-shader-mode').innerText = modes[state.viewMode];
+
+            if (state.cpuQueue.length > 0) {
+                drawToCanvas('canvas-cef', state.cpuQueue[state.cpuQueue.length - 1].data);
+                document.getElementById('status-cef-draw').innerText = 'ACTIVE';
+                document.getElementById('status-cef-draw').style.color = 'var(--success)';
+            } else {
+                document.getElementById('status-cef-draw').innerText = 'STANDBY';
+                document.getElementById('status-cef-draw').style.color = 'var(--text-muted)';
+            }
+
+            renderQueueFlow('cpu-queue-flow', state.cpuQueue);
+            renderQueueFlow('gpu-queue-flow', state.gpuQueue);
+
+            if (state.frame1) drawToCanvas('canvas-f1', state.frame1.data);
+            if (state.frame2) drawToCanvas('canvas-f2', state.frame2.data);
+            if (state.shaderWeave) drawToCanvas('canvas-shader-weave', state.shaderWeave.data);
+            if (state.shaderLpf) drawToCanvas('canvas-shader-lpf', state.shaderLpf.data);
+            if (state.shaderOutput) drawToCanvas('canvas-shader-out', state.shaderOutput.data);
+
+            if (state.staging0) drawToCanvas('canvas-stage0', state.staging0.data);
+            if (state.staging1) drawToCanvas('canvas-stage1', state.staging1.data);
+
+            if (state.hwFill) drawToCanvas('canvas-hw-fill', state.hwFill);
+            if (state.hwKey) drawToCanvas('canvas-hw-key', state.hwKey);
+
+            const activeField = Math.floor(state.time / 16.6833) % 2 === 0 ? 1 : 2;
+            const badgeSdiField = document.getElementById('badge-sdi-field');
+            if (badgeSdiField) {
+                badgeSdiField.innerText = `Field ${activeField}`;
+                document.getElementById('status-sdi-active').innerText = `Field ${activeField} Transmitting...`;
+                
+                const badgeWireField = document.getElementById('badge-wire-field');
+                if (badgeWireField) {
+                    badgeWireField.innerText = `Field ${activeField}`;
+                    document.getElementById('status-wire-active').innerText = `Field ${activeField} Transmitting...`;
+                }
+
+                if (state.hwFill && state.hwKey) {
+                    const wireFillBuf = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+                    const wireKeyBuf = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+                    for (let y = 0; y < HEIGHT; y++) {
+                        if ((activeField === 1 && y % 2 === 0) || (activeField === 2 && y % 2 !== 0)) {
+                            for (let x = 0; x < WIDTH; x++) {
+                                const i = (y * WIDTH + x) * 4;
+                                wireFillBuf[i]   = state.hwFill[i];
+                                wireFillBuf[i+1] = state.hwFill[i+1];
+                                wireFillBuf[i+2] = state.hwFill[i+2];
+                                wireFillBuf[i+3] = 255;
+                                
+                                wireKeyBuf[i]   = state.hwKey[i];
+                                wireKeyBuf[i+1] = state.hwKey[i+1];
+                                wireKeyBuf[i+2] = state.hwKey[i+2];
+                                wireKeyBuf[i+3] = 255;
+                            }
+                        }
+                    }
+                    drawToCanvas('canvas-wire-fill', wireFillBuf);
+                    drawToCanvas('canvas-wire-key', wireKeyBuf);
+                }
+
+                if (state.sdiMonitor && state.sdiF1 && state.sdiF2) {
+                    for (let y = 0; y < HEIGHT; y++) {
+                        if (activeField === 1 && y % 2 === 0) {
+                            for (let x = 0; x < WIDTH; x++) {
+                                const i = (y * WIDTH + x) * 4;
+                                state.sdiMonitor[i]   = state.sdiF1[i];
+                                state.sdiMonitor[i+1] = state.sdiF1[i+1];
+                                state.sdiMonitor[i+2] = state.sdiF1[i+2];
+                                state.sdiMonitor[i+3] = 255;
+                            }
+                        } else if (activeField === 2 && y % 2 !== 0) {
+                            for (let x = 0; x < WIDTH; x++) {
+                                const i = (y * WIDTH + x) * 4;
+                                state.sdiMonitor[i]   = state.sdiF2[i];
+                                state.sdiMonitor[i+1] = state.sdiF2[i+1];
+                                state.sdiMonitor[i+2] = state.sdiF2[i+2];
+                                state.sdiMonitor[i+3] = 255;
+                            }
+                        }
+                    }
+                }
+            }
+            if (state.sdiMonitor) drawToCanvas('canvas-sdi-monitor', state.sdiMonitor);
+
+            if (document.getElementById('val-starvation')) {
+                document.getElementById('val-starvation').innerText = state.starvationCount;
+                document.getElementById('val-drops-planned').innerText = state.plannedDropCount;
+                document.getElementById('val-drops-overflow').innerText = state.overflowDropCount;
+                const estimatedLatency = (state.gpuQueue.length * 33.36) + (2 * 33.36);
+                document.getElementById('val-latency').innerText = estimatedLatency.toFixed(1) + ' ms';
+            }
+
+            drawBufferGraph();
+            updateInspectGrids();
+            updateUndoButtonState();
+        }
+
+        function drawBufferGraph() {
+            const canvas = document.getElementById('canvas-buffer-graph');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
+            ctx.stroke();
+            
+            const history = state.bufferHistory;
+            if (history.length === 0) return;
+            
+            const pointSpacing = w / 100.0;
+            
+            // Draw GPU Queue (Purple, max 32)
+            ctx.beginPath();
+            ctx.strokeStyle = '#8a2be2';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < history.length; i++) {
+                const x = i * pointSpacing;
+                const y = h - (history[i].gpu / 32.0) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Draw CPU Queue (Blue, max 32)
+            ctx.beginPath();
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < history.length; i++) {
+                const x = i * pointSpacing;
+                const y = h - (history[i].cpu / 32.0) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.7)';
+            for (let i = 0; i < history.length; i++) {
+                if (history[i].underrun) {
+                    const x = i * pointSpacing;
+                    ctx.fillRect(x - 2, 0, 4, h);
+                }
+            }
+        }
+
+        // --- 6. Play loop & Event Handlers ---
+        let mainTimer = null;
+
+        function runPlayLoop() {
+            if (!state.isPlaying) return;
+
+            const interval = 16.68 / state.playSpeed;
+            advanceTime(16.68);
+
+            mainTimer = setTimeout(runPlayLoop, interval);
+        }
+
+        document.getElementById('btn-play-pause').addEventListener('click', (e) => {
+            state.isPlaying = !state.isPlaying;
+            if (state.isPlaying) {
+                e.target.innerText = '⏸ Pause';
+                e.target.classList.add('btn-primary');
+                logMsg("Simulation started.");
+                document.getElementById('sys-status').innerText = 'Simulator Active - RUNNING';
+                runPlayLoop();
+            } else {
+                e.target.innerText = '▶ Play';
+                e.target.classList.remove('btn-primary');
+                logMsg("Simulation paused.");
+                document.getElementById('sys-status').innerText = 'Simulator Paused - PAUSED';
+                clearTimeout(mainTimer);
+            }
+            updateUndoButtonState();
+        });
+
+        document.getElementById('btn-undo').addEventListener('click', () => {
+            if (state.isPlaying) return;
+            if (historyStack.length > 0) {
+                state = historyStack.pop();
+                logMsg(`Undo: Reverted to previous step. (Time: ${state.time.toFixed(2)} ms)`);
+                updateUI();
+            }
+        });
+
+        document.getElementById('btn-cef-tick').addEventListener('click', () => {
+            if (state.isPlaying) return;
+            advanceTime(16.68);
+        });
+
+        document.getElementById('btn-dl-tick').addEventListener('click', () => {
+            if (state.isPlaying) return;
+            advanceTime(33.36);
+        });
+
+        document.getElementById('btn-advance-ms').addEventListener('click', () => {
+            if (state.isPlaying) return;
+            const ms = parseFloat(document.getElementById('input-advance-ms').value);
+            if (!isNaN(ms) && ms > 0) {
+                advanceTime(ms);
+            }
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            if (state.isPlaying) {
+                document.getElementById('btn-play-pause').click(); 
+            }
+            resetState();
+        });
+
+        document.getElementById('select-mode').addEventListener('change', (e) => {
+            state.viewMode = parseInt(e.target.value);
+            logMsg(`Settings Changed: Switched view mode to ${e.target.options[e.target.selectedIndex].text}`);
+            if (state.frame1 && state.frame2) {
+                executeComputeShader();
+                updateUI();
+            }
+        });
+
+        document.getElementById('select-lpf').addEventListener('change', (e) => {
+            state.filterMode = parseInt(e.target.value);
+            logMsg(`Settings Changed: Switched LPF mode to ${e.target.options[e.target.selectedIndex].text}`);
+            if (state.frame1 && state.frame2) {
+                executeComputeShader();
+                updateUI();
+            }
+        });
+
+        document.getElementById('select-pattern').addEventListener('change', (e) => {
+            state.testPattern = parseInt(e.target.value);
+            logMsg(`Settings Changed: Switched CEF pattern to ${e.target.options[e.target.selectedIndex].text}`);
+        });
+
+        document.getElementById('range-threshold').addEventListener('input', (e) => {
+            state.alphaThreshold = parseFloat(e.target.value);
+            document.getElementById('val-threshold').innerText = state.alphaThreshold.toFixed(2);
+            if (state.frame1 && state.frame2) {
+                executeComputeShader();
+                updateUI();
+            }
+        });
+
+        document.getElementById('range-speed').addEventListener('input', (e) => {
+            state.playSpeed = parseFloat(e.target.value) / 5.0; 
+            document.getElementById('val-speed').innerText = `${state.playSpeed.toFixed(1)}x`;
+        });
+
+        document.getElementById('chk-cef-active').addEventListener('change', (e) => {
+            state.cefActive = e.target.checked;
+            logMsg(`Settings Changed: CEF frame generation ${state.cefActive ? 'enabled' : 'disabled'}.`);
+        });
+
+        document.getElementById('range-jitter').addEventListener('input', (e) => {
+            state.jitterStdDev = parseFloat(e.target.value);
+            document.getElementById('val-jitter').innerText = state.jitterStdDev.toFixed(1) + ' ms';
+        });
+        document.getElementById('range-burst-prob').addEventListener('input', (e) => {
+            state.burstDelayProb = parseFloat(e.target.value);
+            document.getElementById('val-burst-prob').innerText = state.burstDelayProb.toFixed(2) + ' %';
+        });
+        document.getElementById('range-burst-delay').addEventListener('input', (e) => {
+            state.burstDelayMs = parseFloat(e.target.value);
+            document.getElementById('val-burst-delay').innerText = state.burstDelayMs.toFixed(0) + ' ms';
+        });
+        document.getElementById('range-drift').addEventListener('input', (e) => {
+            state.clockDriftPpm = parseFloat(e.target.value);
+            document.getElementById('val-drift').innerText = state.clockDriftPpm.toFixed(0) + ' ppm';
+        });
+        document.getElementById('range-gpu-stall-prob').addEventListener('input', (e) => {
+            state.gpuStallProb = parseFloat(e.target.value);
+            document.getElementById('val-gpu-stall-prob').innerText = state.gpuStallProb.toFixed(2) + ' %';
+        });
+        document.getElementById('range-gpu-stall-ms').addEventListener('input', (e) => {
+            state.gpuStallMs = parseFloat(e.target.value);
+            document.getElementById('val-gpu-stall-ms').innerText = state.gpuStallMs.toFixed(0) + ' ms';
+        });
+
+        document.getElementById('chk-break-planned').addEventListener('change', (e) => state.breakOnPlanned = e.target.checked);
+        document.getElementById('chk-break-overflow').addEventListener('change', (e) => state.breakOnOverflow = e.target.checked);
+        document.getElementById('chk-break-starve').addEventListener('change', (e) => state.breakOnStarve = e.target.checked);
+
+        function setupInspectEvents(gridId) {
+            const el = document.getElementById(gridId);
+            if (!el) return;
+            
+            const handleMove = (e) => {
+                const rect = el.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                const px = Math.min(Math.max(Math.floor(mouseX / 8), 0), WIDTH - 1);
+                const py = Math.min(Math.max(Math.floor(mouseY / 8), 0), HEIGHT - 1);
+                
+                if (px !== state.inspectX || py !== state.inspectY) {
+                    state.inspectX = px;
+                    state.inspectY = py;
+                    updateInspectGrids();
+                }
+            };
+
+            el.addEventListener('mousemove', handleMove);
+            el.addEventListener('mouseenter', handleMove);
+        }
+
+        setupInspectEvents('inspect-f1');
+        setupInspectEvents('inspect-f2');
+        setupInspectEvents('inspect-weave');
+        setupInspectEvents('inspect-lpf');
+        setupInspectEvents('inspect-out');
+        setupInspectEvents('inspect-fill');
+        setupInspectEvents('inspect-key');
+        setupInspectEvents('inspect-sdi-monitor');
+
+        resetState();
+
+    </script>
+    </div> <!-- /scrollable-content -->
+</div> <!-- /app-container -->
+</body>
+</html>
