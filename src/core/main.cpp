@@ -1311,17 +1311,19 @@ void RenderFrame(HWND hWnd) {
     }
 #ifdef _WIN32
     if (g_deckLink.IsSimulated() && g_pd3dDeviceContext && g_pSwapChain && g_mainRenderTargetView && g_shaderManager) {
-        std::vector<uint8_t> localBuffer;
+        static std::vector<uint8_t> localBuffer(1920 * 1080 * 4, 0);
         bool hasFrame = false;
         bool isNewFrame = false;
         {
             std::lock_guard<std::mutex> lock(g_previewSharedMutex);
             if (g_previewHasNewFrame) {
+                g_previewSharedBuffer.swap(localBuffer); // Lock-free O(1) swap
                 g_previewHasNewFrame = false; // Reset the dirty flag
                 isNewFrame = true;
             }
-            localBuffer = g_previewSharedBuffer;
-            hasFrame = true;
+            if (!localBuffer.empty()) {
+                hasFrame = true;
+            }
         }
         
         if (hasFrame) {
@@ -1505,8 +1507,11 @@ int main(int argc, char** argv)
             auto BlitToWindow = [&](void* buffer) {
 #ifdef _WIN32
                  if (g_deckLink.IsSimulated() && buffer) {
+                     static std::vector<uint8_t> tempWriteBuffer(1920 * 1080 * 4);
+                     memcpy(tempWriteBuffer.data(), buffer, 1920 * 1080 * 4);
+
                      std::lock_guard<std::mutex> lock(g_previewSharedMutex);
-                     memcpy(g_previewSharedBuffer.data(), buffer, 1920 * 1080 * 4);
+                     g_previewSharedBuffer.swap(tempWriteBuffer);
                      g_previewHasNewFrame = true;
                  }
 #else
