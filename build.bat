@@ -75,35 +75,7 @@ if exist "build\DeckLinkDX11.dir\Release\DeckLinkAPI.h" (
     echo [Warning] DeckLinkAPI.h not found in build output. IntelliSense may show errors.
 )
 
-:: --- 5. Build Installer ---
-echo [Installer] Checking for Inno Setup compiler...
-set "ISCC_PATH="
 
-:: Try finding in PATH
-for %%i in (ISCC.exe) do set "ISCC_PATH=%%~$PATH:i"
-
-:: Try typical installation directories if not found in PATH
-if not defined ISCC_PATH (
-    if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" (
-        set "ISCC_PATH=C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-    ) else if exist "C:\Program Files\Inno Setup 6\ISCC.exe" (
-        set "ISCC_PATH=C:\Program Files\Inno Setup 6\ISCC.exe"
-    )
-)
-
-if defined ISCC_PATH (
-    echo [Installer] Found Inno Setup: "!ISCC_PATH!"
-    echo [Installer] Building installer package...
-    "!ISCC_PATH!" installer.iss
-    if errorlevel 1 (
-        echo [Installer] Installer compilation failed!
-        exit /b 1
-    )
-    echo [Installer] Installer created successfully: build\CEFDecklink-Setup.exe
-) else (
-    echo [Installer] Inno Setup ISCC.exe not found. Skipping installer creation.
-    echo             Please install Inno Setup to build the installer: https://jrsoftware.org/isdl.php
-)
 
 endlocal
 

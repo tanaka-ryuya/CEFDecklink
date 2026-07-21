@@ -56,8 +56,6 @@ jobs:
         Compress-Archive -Path build/Release/* -DestinationPath build/CEFDecklink-Release.zip
         Write-Host "ZIP package created."
 
-    - name: Build Installer
-      run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss'
 
     - name: Resolve tag name
       id: resolve_tag
@@ -75,9 +73,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: windows-build
-        path: |
-          build/CEFDecklink-Release.zip
-          build/CEFDecklink-Setup.exe
+        path: build/CEFDecklink-Release.zip
 
   build-mac:
     runs-on: macos-latest
@@ -166,7 +162,6 @@ jobs:
         tag_name: ${{ needs.build-windows.outputs.tag }}
         files: |
           build-windows/CEFDecklink-Release.zip
-          build-windows/CEFDecklink-Setup.exe
           build-mac/DeckLinkDX11_mac.zip
         draft: false
         prerelease: false

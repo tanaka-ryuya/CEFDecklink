@@ -182,26 +182,7 @@ if(WIN32)
         COMMENT "Copying config.json..."
     )
 
-    # Create installer using Inno Setup (if available)
-    find_program(INNO_SETUP_COMPILER ISCC.exe
-        PATHS
-        "C:/Program Files (x86)/Inno Setup 6"
-        "C:/Program Files/Inno Setup 6"
-        "C:/Program Files (x86)/Inno Setup 5"
-        "C:/Program Files/Inno Setup 5"
-        DOC "Inno Setup Compiler"
-    )
 
-    if(INNO_SETUP_COMPILER)
-        message(STATUS "Found Inno Setup: ${INNO_SETUP_COMPILER}")
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${INNO_SETUP_COMPILER} "${CMAKE_SOURCE_DIR}/installer.iss"
-            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-            COMMENT "Creating installer with Inno Setup..."
-        )
-    else()
-        message(WARNING "Inno Setup not found. Installer will not be created. Download from: https://jrsoftware.org/isdl.php")
-    endif()
 
     target_link_directories(${PROJECT_NAME} PRIVATE ${CEF_ROOT}/Release)
     target_link_libraries(${PROJECT_NAME} PRIVATE 
