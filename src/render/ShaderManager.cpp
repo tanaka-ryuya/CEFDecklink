@@ -9,6 +9,37 @@
 #pragma comment(lib, "d3dcompiler.lib")
 #include <windows.h>
 
+const char* g_previewShaderSource = R"(
+struct VS_OUTPUT {
+    float4 Pos : SV_POSITION;
+    float2 Tex : TEXCOORD0;
+};
+VS_OUTPUT VS(uint id : SV_VertexID) {
+    VS_OUTPUT output;
+    output.Tex = float2((id << 1) & 2, id & 2);
+    output.Pos = float4(output.Tex * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f), 0.0f, 1.0f);
+    return output;
+}
+Texture2D shaderTexture : register(t0);
+SamplerState sampleType : register(s0);
+cbuffer ParamBuffer : register(b0) {
+    float fieldMode; // 0.0 = Top (even lines), 1.0 = Bottom (odd lines)
+    float padding[3];
+};
+float4 PS(VS_OUTPUT input) : SV_Target {
+    float2 uv = input.Tex;
+    float targetLine = uv.y * 1080.0f;
+    float sampledLine = 0.0f;
+    if (fieldMode < 0.5f) {
+        sampledLine = floor(targetLine / 2.0f) * 2.0f;
+    } else {
+        sampledLine = floor((targetLine - 1.0f) / 2.0f) * 2.0f + 1.0f;
+    }
+    uv.y = sampledLine / 1080.0f;
+    return shaderTexture.Sample(sampleType, uv);
+}
+)";
+
 ShaderManager::ShaderManager(ID3D11Device* device, ID3D11DeviceContext* context) 
     : m_device(device), m_context(context) {
 }
@@ -81,7 +112,29 @@ bool ShaderManager::LoadShader() {
     }
     
     hr = m_device->CreateComputeShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &m_computeShader);
-    return SUCCEEDED(hr);
+    if (FAILED(hr)) return false;
+
+    // Compile and Create Preview VS
+    ComPtr<ID3DBlob> previewVSBlob;
+    ComPtr<ID3DBlob> vsErrorBlob;
+    hr = D3DCompile(g_previewShaderSource, strlen(g_previewShaderSource), nullptr, nullptr, nullptr, "VS", "vs_4_0", 0, 0, &previewVSBlob, &vsErrorBlob);
+    if (FAILED(hr)) {
+        if (vsErrorBlob) std::cerr << "VS Compile Error: " << static_cast<char*>(vsErrorBlob->GetBufferPointer()) << std::endl;
+        return false;
+    }
+    if (FAILED(m_device->CreateVertexShader(previewVSBlob->GetBufferPointer(), previewVSBlob->GetBufferSize(), nullptr, &m_previewVS))) return false;
+
+    // Compile and Create Preview PS
+    ComPtr<ID3DBlob> previewPSBlob;
+    ComPtr<ID3DBlob> psErrorBlob;
+    hr = D3DCompile(g_previewShaderSource, strlen(g_previewShaderSource), nullptr, nullptr, nullptr, "PS", "ps_4_0", 0, 0, &previewPSBlob, &psErrorBlob);
+    if (FAILED(hr)) {
+        if (psErrorBlob) std::cerr << "PS Compile Error: " << static_cast<char*>(psErrorBlob->GetBufferPointer()) << std::endl;
+        return false;
+    }
+    if (FAILED(m_device->CreatePixelShader(previewPSBlob->GetBufferPointer(), previewPSBlob->GetBufferSize(), nullptr, &m_previewPS))) return false;
+
+    return true;
 }
 
 bool ShaderManager::CreateBuffers(int width, int height) {
@@ -122,6 +175,42 @@ bool ShaderManager::CreateBuffers(int width, int height) {
     cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     
     if (FAILED(m_device->CreateBuffer(&cbDesc, nullptr, &m_constantBuffer))) return false;
+
+    // Create m_previewTexture (Dynamic, 1920x1080)
+    D3D11_TEXTURE2D_DESC previewTexDesc = {};
+    previewTexDesc.Width = 1920;
+    previewTexDesc.Height = 1080;
+    previewTexDesc.MipLevels = 1;
+    previewTexDesc.ArraySize = 1;
+    previewTexDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    previewTexDesc.SampleDesc.Count = 1;
+    previewTexDesc.Usage = D3D11_USAGE_DYNAMIC;
+    previewTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    previewTexDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+    if (FAILED(m_device->CreateTexture2D(&previewTexDesc, nullptr, &m_previewTexture))) return false;
+    if (FAILED(m_device->CreateShaderResourceView(m_previewTexture.Get(), nullptr, &m_previewSRV))) return false;
+
+    // Create Sampler State
+    D3D11_SAMPLER_DESC sampDesc = {};
+    sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    sampDesc.MinLOD = 0;
+    sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+    if (FAILED(m_device->CreateSamplerState(&sampDesc, &m_previewSampler))) return false;
+
+    // Create Preview Constant Buffer
+    D3D11_BUFFER_DESC pcbDesc = {};
+    pcbDesc.ByteWidth = sizeof(float) * 4; // 16 bytes alignment
+    pcbDesc.Usage = D3D11_USAGE_DYNAMIC;
+    pcbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    pcbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+    if (FAILED(m_device->CreateBuffer(&pcbDesc, nullptr, &m_previewConstantBuffer))) return false;
 
     return true;
 }
@@ -322,3 +411,71 @@ void ShaderManager::SetViewMode(int mode) {
 void ShaderManager::SetFilterMode(int mode) {
     m_filterMode = mode;
 }
+
+#ifdef _WIN32
+void ShaderManager::PresentPreview(void* pBuffer, ID3D11RenderTargetView* renderTargetView, int fieldIndex, int winWidth, int winHeight) {
+    if (!pBuffer || !renderTargetView) return;
+
+    // 1. Upload CPU buffer to dynamic preview texture
+    D3D11_MAPPED_SUBRESOURCE mapped;
+    HRESULT hr = m_context->Map(m_previewTexture.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+    if (SUCCEEDED(hr)) {
+        uint8_t* src = (uint8_t*)pBuffer;
+        uint8_t* dst = (uint8_t*)mapped.pData;
+        for (int y = 0; y < 1080; ++y) {
+            memcpy(dst + y * mapped.RowPitch, src + y * 1920 * 4, 1920 * 4);
+        }
+        m_context->Unmap(m_previewTexture.Get(), 0);
+    } else {
+        return;
+    }
+
+    // 2. Update Constant Buffer for Field Selection
+    D3D11_MAPPED_SUBRESOURCE cbMapped;
+    hr = m_context->Map(m_previewConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &cbMapped);
+    if (SUCCEEDED(hr)) {
+        float* data = (float*)cbMapped.pData;
+        data[0] = (float)fieldIndex; // 0.0f = Top field, 1.0f = Bottom field
+        data[1] = 0.0f;
+        data[2] = 0.0f;
+        data[3] = 0.0f;
+        m_context->Unmap(m_previewConstantBuffer.Get(), 0);
+    }
+
+    // 3. Set up Viewport
+    D3D11_VIEWPORT vp;
+    vp.Width = (float)winWidth;
+    vp.Height = (float)winHeight;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    vp.TopLeftX = 0;
+    vp.TopLeftY = 0;
+    m_context->RSSetViewports(1, &vp);
+
+    // 4. Set Render Target
+    m_context->OMSetRenderTargets(1, &renderTargetView, nullptr);
+
+    // 5. Bind Pipeline States
+    m_context->IASetInputLayout(nullptr); // Input-less drawing
+    m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    m_context->VSSetShader(m_previewVS.Get(), nullptr, 0);
+    m_context->PSSetShader(m_previewPS.Get(), nullptr, 0);
+
+    ID3D11ShaderResourceView* srvs[] = { m_previewSRV.Get() };
+    m_context->PSSetShaderResources(0, 1, srvs);
+
+    ID3D11SamplerState* samps[] = { m_previewSampler.Get() };
+    m_context->PSSetSamplers(0, 1, samps);
+
+    ID3D11Buffer* cbs[] = { m_previewConstantBuffer.Get() };
+    m_context->PSSetConstantBuffers(0, 1, cbs);
+
+    // 6. Draw Fullscreen Triangle
+    m_context->Draw(3, 0);
+
+    // 7. Clean up Bindings
+    ID3D11ShaderResourceView* nullSRVs[] = { nullptr };
+    m_context->PSSetShaderResources(0, 1, nullSRVs);
+}
+#endif

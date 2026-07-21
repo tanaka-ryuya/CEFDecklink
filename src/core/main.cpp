@@ -201,6 +201,11 @@ static std::string g_format = "5994i"; // "5994i" or "50i"
 std::atomic<int> g_filterMode(0); // 0=None, 1=3-tap, 2=5-tap vertical LPF
 static float g_alphaThreshold = 0.000f;
 
+// Shared preview buffer for VSync window blitting
+static std::vector<uint8_t> g_previewSharedBuffer(1920 * 1080 * 4, 0);
+static std::mutex           g_previewSharedMutex;
+static bool                 g_previewHasNewFrame = false;
+
 #ifndef _WIN32
 static MacWindowHandle g_macWindow = nullptr;
 #endif
@@ -1304,7 +1309,34 @@ void RenderFrame(HWND hWnd) {
 
 
     }
-#ifndef _WIN32
+#ifdef _WIN32
+    if (g_deckLink.IsSimulated() && g_pd3dDeviceContext && g_pSwapChain && g_mainRenderTargetView && g_shaderManager) {
+        std::vector<uint8_t> localBuffer;
+        bool hasFrame = false;
+        {
+            std::lock_guard<std::mutex> lock(g_previewSharedMutex);
+            if (g_previewHasNewFrame) {
+                localBuffer = g_previewSharedBuffer;
+                hasFrame = true;
+            }
+        }
+        
+        if (hasFrame) {
+            static int s_fieldIndex = 0;
+            RECT rc;
+            GetClientRect(hWnd, &rc);
+            int winW = rc.right - rc.left;
+            int winH = rc.bottom - rc.top;
+
+            std::lock_guard<std::mutex> lock(g_d3dContextMutex);
+            
+            g_shaderManager->PresentPreview(localBuffer.data(), g_mainRenderTargetView, s_fieldIndex, winW, winH);
+            g_pSwapChain->Present(1, 0); // VSync enabled
+            
+            s_fieldIndex = (s_fieldIndex + 1) % 2;
+        }
+    }
+#else
     if (g_macWindow) {
         ProcessMacWindowEvents();
     }
@@ -1467,41 +1499,9 @@ int main(int argc, char** argv)
             auto BlitToWindow = [&](void* buffer) {
 #ifdef _WIN32
                  if (g_deckLink.IsSimulated() && buffer) {
-                     HWND previewHwnd = FindWindowW(L"DeckLinkApp", nullptr);
-                     if (previewHwnd) {
-                          HDC hdc = GetDC(previewHwnd);
-                          if (hdc) {
-                              RECT rcClient;
-                              GetClientRect(previewHwnd, &rcClient);
-                              int winW = rcClient.right - rcClient.left;
-                              int winH = rcClient.bottom - rcClient.top;
-
-                              uint32_t* p32 = static_cast<uint32_t*>(buffer);
-                              for (int i = 0; i < 1920 * 1080; ++i) {
-                                  uint32_t p = p32[i];
-                                  uint32_t b = (p >> 24) & 0xFF;
-                                  uint32_t g = (p >> 16) & 0xFF;
-                                  uint32_t r = (p >> 8)  & 0xFF;
-                                  p32[i] = b | (g << 8) | (r << 16) | 0xFF000000;
-                              }
-
-                              BITMAPINFO bmi = {0};
-                              bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-                              bmi.bmiHeader.biWidth = 1920;
-                              bmi.bmiHeader.biHeight = -1080; 
-                              bmi.bmiHeader.biPlanes = 1;
-                              bmi.bmiHeader.biBitCount = 32;
-                              bmi.bmiHeader.biCompression = BI_RGB;
-                              
-                              SetStretchBltMode(hdc, COLORONCOLOR);
-                              StretchDIBits(hdc, 
-                                  0, 0, winW, winH,          
-                                  0, 0, 1920, 1080,          
-                                  buffer, &bmi, DIB_RGB_COLORS, SRCCOPY);
-                                  
-                              ReleaseDC(previewHwnd, hdc);
-                          }
-                     }
+                     std::lock_guard<std::mutex> lock(g_previewSharedMutex);
+                     memcpy(g_previewSharedBuffer.data(), buffer, 1920 * 1080 * 4);
+                     g_previewHasNewFrame = true;
                  }
 #else
                  if (g_deckLink.IsSimulated() && buffer && g_macWindow) {
@@ -1527,31 +1527,16 @@ int main(int argc, char** argv)
             if (srvTop && !srvBottom) { srvBottom = srvTop; srvBottom->AddRef(); }
             if (!srvTop && srvBottom) { srvTop = srvBottom; srvTop->AddRef(); }
 
-            if (currentMode == 2 && g_deckLink.IsSimulated()) {
-                if (pBuffer && g_shaderManager && srvTop && srvBottom) {
+            if (pBuffer) {
+                if (srvTop && srvBottom && g_shaderManager) {
                     std::lock_guard<std::mutex> lock(g_d3dContextMutex);
-                    g_shaderManager->SetViewMode(2); 
+                    int shaderMode = currentMode;
+                    if (currentMode == 3) shaderMode = 4; // Map TUI Mode 3 to HLSL Mode 4
+                    g_shaderManager->SetViewMode(shaderMode);
                     g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
                     BlitToWindow(pBuffer);
-
-                    std::this_thread::sleep_for(std::chrono::milliseconds(16));
-
-                    g_shaderManager->SetViewMode(3);
-                    g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
-                    BlitToWindow(pBuffer);
-                }
-            } else {
-                if (pBuffer) {
-                    if (srvTop && srvBottom && g_shaderManager) {
-                        std::lock_guard<std::mutex> lock(g_d3dContextMutex);
-                        int shaderMode = currentMode;
-                        if (currentMode == 3) shaderMode = 4; // Map TUI Mode 3 to HLSL Mode 4
-                        g_shaderManager->SetViewMode(shaderMode);
-                        g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
-                        BlitToWindow(pBuffer);
-                    } else if (g_shaderManager) {
-                        memset(pBuffer, 0, 1920 * 1080 * 4);
-                    }
+                } else if (g_shaderManager) {
+                    memset(pBuffer, 0, 1920 * 1080 * 4);
                 }
             }
             

@@ -38,6 +38,15 @@ public:
     // 0 = None, 1 = 3-tap, 2 = 5-tap
     void SetFilterMode(int mode);
 
+#ifdef _WIN32
+    // Upload CPU interlaced buffer to GPU and render to the main render target (VSync/Field-splitting)
+    // pBuffer: CPU buffer (1920x1080 ARGB)
+    // renderTargetView: SwapChain's RTV
+    // fieldIndex: 0 for Top field, 1 for Bottom field
+    // winWidth, winHeight: SwapChain viewport size
+    void PresentPreview(void* pBuffer, ID3D11RenderTargetView* renderTargetView, int fieldIndex, int winWidth, int winHeight);
+#endif
+
 
 
 private:
@@ -59,6 +68,14 @@ private:
 
     // Constant Buffer for Parameters
     ComPtr<ID3D11Buffer> m_constantBuffer;
+
+    // Preview shaders and objects
+    ComPtr<ID3D11VertexShader> m_previewVS;
+    ComPtr<ID3D11PixelShader> m_previewPS;
+    ComPtr<ID3D11SamplerState> m_previewSampler;
+    ComPtr<ID3D11Buffer> m_previewConstantBuffer;
+    ComPtr<ID3D11Texture2D> m_previewTexture;
+    ComPtr<ID3D11ShaderResourceView> m_previewSRV;
 #endif
 
     float m_alphaThreshold = 0.0f; // Default threshold
