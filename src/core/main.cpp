@@ -201,10 +201,10 @@ static std::string g_format = "5994i"; // "5994i" or "50i"
 std::atomic<int> g_filterMode(0); // 0=None, 1=3-tap, 2=5-tap vertical LPF
 static float g_alphaThreshold = 0.000f;
 
-// Shared preview buffer for VSync window blitting
-static std::vector<uint8_t> g_previewSharedBuffer(1920 * 1080 * 4, 0);
-static std::mutex           g_previewSharedMutex;
-static bool                 g_previewHasNewFrame = false;
+#include <queue>
+// Shared preview queue for VSync window blitting
+static std::queue<std::vector<uint8_t>> g_previewQueue;
+static std::mutex                       g_previewQueueMutex;
 
 #ifndef _WIN32
 static MacWindowHandle g_macWindow = nullptr;
@@ -1312,25 +1312,29 @@ void RenderFrame(HWND hWnd) {
 #ifdef _WIN32
     if (g_deckLink.IsSimulated() && g_pd3dDeviceContext && g_pSwapChain && g_mainRenderTargetView && g_shaderManager) {
         static std::vector<uint8_t> localBuffer(1920 * 1080 * 4, 0);
+        static int s_fieldIndex = 0; // 0 = Top, 1 = Bottom
         bool hasFrame = false;
-        bool isNewFrame = false;
-        {
-            std::lock_guard<std::mutex> lock(g_previewSharedMutex);
-            if (g_previewHasNewFrame) {
-                g_previewSharedBuffer.swap(localBuffer); // Lock-free O(1) swap
-                g_previewHasNewFrame = false; // Reset the dirty flag
-                isNewFrame = true;
+
+        // Fetch a new frame from the queue only when we are starting a new field cycle
+        if (s_fieldIndex == 0) {
+            std::lock_guard<std::mutex> lock(g_previewQueueMutex);
+            
+            // Catch up logic: if the queue has built up too much delay, drain older frames.
+            while (g_previewQueue.size() > 3) {
+                g_previewQueue.pop();
             }
-            if (!localBuffer.empty()) {
-                hasFrame = true;
+
+            if (!g_previewQueue.empty()) {
+                g_previewQueue.front().swap(localBuffer);
+                g_previewQueue.pop();
             }
+        }
+
+        if (!localBuffer.empty()) {
+            hasFrame = true;
         }
         
         if (hasFrame) {
-            static int s_fieldIndex = 0;
-            if (isNewFrame) {
-                s_fieldIndex = 0; // Reset phase: Always start rendering from Top field on new frames
-            }
             RECT rc;
             GetClientRect(hWnd, &rc);
             int winW = rc.right - rc.left;
@@ -1507,12 +1511,16 @@ int main(int argc, char** argv)
             auto BlitToWindow = [&](void* buffer) {
 #ifdef _WIN32
                  if (g_deckLink.IsSimulated() && buffer) {
-                     static std::vector<uint8_t> tempWriteBuffer(1920 * 1080 * 4);
+                     std::vector<uint8_t> tempWriteBuffer(1920 * 1080 * 4);
                      memcpy(tempWriteBuffer.data(), buffer, 1920 * 1080 * 4);
 
-                     std::lock_guard<std::mutex> lock(g_previewSharedMutex);
-                     g_previewSharedBuffer.swap(tempWriteBuffer);
-                     g_previewHasNewFrame = true;
+                     std::lock_guard<std::mutex> lock(g_previewQueueMutex);
+                     g_previewQueue.push(std::move(tempWriteBuffer));
+                     
+                     // Hard threshold drop: keep the queue size minimal (under 5) if something backs up
+                     while (g_previewQueue.size() > 5) {
+                         g_previewQueue.pop();
+                     }
                  }
 #else
                  if (g_deckLink.IsSimulated() && buffer && g_macWindow) {
