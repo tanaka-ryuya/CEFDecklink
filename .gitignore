@@ -88,5 +88,6 @@ licensekey.json
 scratch/
 CEFDecklink/
 
-
-
+# Auto-generated DeckLink API files (Windows build artifacts)
+src/decklink/DeckLinkAPI.h
+src/decklink/DeckLinkAPI_i.c
