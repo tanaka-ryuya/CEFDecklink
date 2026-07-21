@@ -1,6 +1,6 @@
 {
-    "url": "https://example.com",
-    "unmult_thresh": 0.0,
+    "url": "https://cef-decklink-sale.vercel.app/sample.html",
+    "unmult_thresh": 1.0000,
     "format": "5994i",
     "il_filter_mode": 1
 }
