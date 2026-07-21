@@ -1342,7 +1342,11 @@ void RenderFrame(HWND hWnd) {
 
             std::lock_guard<std::mutex> lock(g_d3dContextMutex);
             
-            g_shaderManager->PresentPreview(localBuffer.data(), g_mainRenderTargetView, s_fieldIndex, winW, winH);
+            int currentMode = g_viewMode.load();
+            int shaderMode = currentMode;
+            if (currentMode == 3) shaderMode = 4; // Map TUI Mode 3 to HLSL Mode 4
+
+            g_shaderManager->PresentPreview(localBuffer.data(), g_mainRenderTargetView, shaderMode, s_fieldIndex, winW, winH);
             g_pSwapChain->Present(1, 0); // VSync enabled
             
             s_fieldIndex = (s_fieldIndex + 1) % 2;

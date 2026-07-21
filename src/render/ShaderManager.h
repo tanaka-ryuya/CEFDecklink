@@ -44,7 +44,7 @@ public:
     // renderTargetView: SwapChain's RTV
     // fieldIndex: 0 for Top field, 1 for Bottom field
     // winWidth, winHeight: SwapChain viewport size
-    void PresentPreview(void* pBuffer, ID3D11RenderTargetView* renderTargetView, int fieldIndex, int winWidth, int winHeight);
+    void PresentPreview(void* pBuffer, ID3D11RenderTargetView* renderTargetView, int viewMode, int fieldIndex, int winWidth, int winHeight);
 #endif
 
 

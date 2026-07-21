@@ -24,18 +24,20 @@ Texture2D shaderTexture : register(t0);
 SamplerState sampleType : register(s0);
 cbuffer ParamBuffer : register(b0) {
     float fieldMode; // 0.0 = Top (even lines), 1.0 = Bottom (odd lines)
-    float padding[3];
+    float viewMode;  // 0 = Interlace, 1 = Diff, 2 = Progressive F1, 3 = Progressive F2, 4 = Blend
+    float padding[2];
 };
 float4 PS(VS_OUTPUT input) : SV_Target {
     float2 uv = input.Tex;
     int targetY = (int)(uv.y * 1080.0f);
     
-    // Top field rendering: Only draw even lines, discard odd lines to keep previous bottom field.
-    // Bottom field rendering: Only draw odd lines, discard even lines to keep previous top field.
-    if (fieldMode < 0.5f) {
-        if ((targetY % 2) != 0) discard;
-    } else {
-        if ((targetY % 2) == 0) discard;
+    // Only apply field discard blending for Interlace mode (viewMode == 0)
+    if (viewMode < 0.5f) {
+        if (fieldMode < 0.5f) {
+            if ((targetY % 2) != 0) discard;
+        } else {
+            if ((targetY % 2) == 0) discard;
+        }
     }
     
     float4 col = shaderTexture.Sample(sampleType, uv);
@@ -444,7 +446,7 @@ void ShaderManager::SetFilterMode(int mode) {
 }
 
 #ifdef _WIN32
-void ShaderManager::PresentPreview(void* pBuffer, ID3D11RenderTargetView* renderTargetView, int fieldIndex, int winWidth, int winHeight) {
+void ShaderManager::PresentPreview(void* pBuffer, ID3D11RenderTargetView* renderTargetView, int viewMode, int fieldIndex, int winWidth, int winHeight) {
     if (!pBuffer || !renderTargetView) return;
 
     // 1. Upload CPU buffer to dynamic preview texture
@@ -461,13 +463,13 @@ void ShaderManager::PresentPreview(void* pBuffer, ID3D11RenderTargetView* render
         return;
     }
 
-    // 2. Update Constant Buffer for Field Selection
+    // 2. Update Constant Buffer for Field Selection and View Mode
     D3D11_MAPPED_SUBRESOURCE cbMapped;
     hr = m_context->Map(m_previewConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &cbMapped);
     if (SUCCEEDED(hr)) {
         float* data = (float*)cbMapped.pData;
         data[0] = (float)fieldIndex; // 0.0f = Top field, 1.0f = Bottom field
-        data[1] = 0.0f;
+        data[1] = (float)viewMode;   // 0.0f = Interlace, 1.0f = Diff, etc.
         data[2] = 0.0f;
         data[3] = 0.0f;
         m_context->Unmap(m_previewConstantBuffer.Get(), 0);
