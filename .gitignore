@@ -48,8 +48,15 @@ build/Release/cache/
 # Dependencies
 vender/cef/
 vender/cef_binary_*
-vender/Blackmagic DeckLink SDK*
-vender/Blackmagic*
+
+# DeckLink SDK: Samples and docs are excluded, only include/ headers are tracked
+vender/Blackmagic*/Mac/Samples/
+vender/Blackmagic*/Linux/Samples/
+vender/Blackmagic*/Win/Samples/
+vender/Blackmagic*/Win/DirectShow/
+vender/Blackmagic*/Examples/
+vender/Blackmagic*/*.pdf
+vender/Blackmagic*/*.rtf
 
 # Temporary files
 *.tmp
@@ -81,8 +88,5 @@ licensekey.json
 scratch/
 CEFDecklink/
 
-# Automatically copied or generated DeckLink API files
-src/decklink/DeckLinkAPI.h
-src/decklink/DeckLinkAPI_i.c
 
 
