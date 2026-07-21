@@ -768,8 +768,12 @@
             <h1>CEF-DeckLink パイプラインシミュレータ</h1>
             <div class="subtitle">CEFフリーラン描画 (60fps) から DeckLink 放送出力 (59.94i) への同期とシェーダーの挙動再現</div>
         </div>
-        <div style="text-align: right;">
-            <div class="subtitle">ステート監視コンソール</div>
+        <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                <button class="btn" id="btn-lang-ja" style="padding: 4px 8px; font-size: 0.75rem; background-color: var(--accent-cyan); color: #000; border-color: var(--accent-cyan);">JA</button>
+                <button class="btn" id="btn-lang-en" style="padding: 4px 8px; font-size: 0.75rem;">EN</button>
+            </div>
+            <div class="subtitle" id="label-sys-console">ステート監視コンソール</div>
             <div style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: bold;" id="sys-status">システム稼働中 - STANDBY</div>
         </div>
     </header>
@@ -1499,12 +1503,98 @@ if (pixel.a > alphaThreshold) {
             
             // インスペクタで現在選択されているピクセル座標
             inspectX: 16,
-            inspectY: 16
+            inspectY: 16,
+            lang: 'ja'
         };
 
         // Undo用の履歴スタック
         let historyStack = [];
         const MAX_HISTORY = 100;
+
+        // ログメッセージの英語翻訳マッピング
+        const LOG_TRANSLATIONS = {
+            "パイプラインシミュレータが起動しました。": "Pipeline simulator started.",
+            "シミュレータの内部ステートをリセットしました。初期状態（待機中）です。": "Simulator internal state reset to initial (standby).",
+            "自動シミュレーションを開始しました。": "Auto simulation started.",
+            "自動シミュレーションを一時停止しました。": "Auto simulation paused.",
+            "GetSynchronizedTextures: プレロール完了。フレームの通常消費を開始します。": "GetSynchronizedTextures: Preroll completed. Starting normal consumption.",
+            "GetSynchronizedTextures: キューが完全に空になりました。消費を停止しプレロール(delay=3)にリセットします。": "GetSynchronizedTextures: Queue is completely empty. Stopping consumption and resetting to preroll."
+        };
+
+        function translateLogMsg(msg) {
+            if (state.lang === 'ja') return msg;
+            
+            if (msg.includes("仮想時間進行:")) {
+                return msg.replace("仮想時間進行:", "Virtual time advance:")
+                          .replace("目標時間:", "target:");
+            }
+            if (msg.includes("遅延リードバック:")) {
+                return msg.replace("遅延リードバック: Staging[1] (Tick N-2) を Map し、DeckLink HWから Fill / Key 出力しました。", 
+                                   "Delayed readback: Mapped Staging[1] (Tick N-2) and output Fill/Key from DeckLink HW.");
+            }
+            if (msg.includes("[CPU SPIKE]")) {
+                return msg.replace("[CPU SPIKE] CEFメインスレッドやV8 GCの停止によりプロデューサー処理が", 
+                                   "[CPU SPIKE] Producer execution paused for ")
+                          .replace("停止しました！", " due to CEF main thread or V8 GC stall!");
+            }
+            if (msg.includes("[GPU STALL]")) {
+                return msg.replace("[GPU STALL] PCIe転送やCompute Shader of 遅延によりコンシューマー処理が", 
+                                   "[GPU STALL] Consumer execution paused for ")
+                          .replace("停止しました！", " due to PCIe transfer or Compute Shader delay!");
+            }
+            if (msg.includes("OnPaint: CPU Queue が上限に達しているため、最新のフレーム生成をドロップしました")) {
+                return "OnPaint: CPU Queue is full, dropped latest frame generation (kBufferCount=32 limit)";
+            }
+            if (msg.includes("CEF OnPaint: 新規フレーム")) {
+                return msg.replace("CEF OnPaint: 新規フレーム", "CEF OnPaint: Generated new frame")
+                          .replace("を生成。CPU Queue へ格納。 (現在:", " and pushed to CPU Queue. (Current:")
+                          .replace(")", ")");
+            }
+            if (msg.includes("DeckLink: サイクル")) {
+                return msg.replace("DeckLink: サイクル", "DeckLink: Cycle")
+                          .replace("開始。ポーリング中...", " started. Polling...");
+            }
+            if (msg.includes("SyncWithGPU: [物理的溢れ]")) {
+                return msg.replace("SyncWithGPU: [物理的溢れ] GPU Texture Queue(32)が限界のため、古いテクスチャ", 
+                                   "SyncWithGPU: [Physical Overflow] GPU Texture Queue (32) is full, forced discard of old texture")
+                          .replace("を強制破棄しました", "");
+            }
+            if (msg.includes("SyncWithGPU: 保留中の")) {
+                return msg.replace("SyncWithGPU: 保留中の", "SyncWithGPU: Uploaded pending ")
+                          .replace("枚 のフレームを VRAM (GPU Queue) へアップロード完了。 (現在:", " frames to VRAM (GPU Queue). (Current:")
+                          .replace("枚)", " frames)");
+            }
+            if (msg.includes("GetSynchronizedTextures: プレロール待機中...")) {
+                return msg.replace("GetSynchronizedTextures: プレロール待機中... (残り:", "GetSynchronizedTextures: Waiting for preroll... (Remaining:")
+                          .replace("サイクル)", " cycles)");
+            }
+            if (msg.includes("GetSynchronizedTextures: キュー滞留過多")) {
+                return msg.replace("GetSynchronizedTextures: キュー滞留過多 (>12) のため、計画的ドロップ(Soft Threshold Drop)を実行しました (フレーム", 
+                                   "GetSynchronizedTextures: Queue overflow (>12), executing soft threshold drop (discarded frame")
+                          .replace("破棄)", ")");
+            }
+            if (msg.includes("GetSynchronizedTextures: GPU Queue から F1")) {
+                return msg.replace("GetSynchronizedTextures: GPU Queue から F1", "GetSynchronizedTextures: Consuming F1")
+                          .replace("を引き出して消費します。", " from GPU Queue.");
+            }
+            if (msg.includes("GetSynchronizedTextures: フレーム不足(1枚のみ)。")) {
+                return msg.replace("GetSynchronizedTextures: フレーム不足(1枚のみ)。同一フレーム", "GetSynchronizedTextures: Starvation (only 1 frame). Duplicating frame")
+                          .replace("を複製適用し、枯渇警告状態へ移行します。", " and entering starvation alert state.");
+            }
+            if (msg.includes("GetSynchronizedTextures: 消費なし。")) {
+                return msg.replace("GetSynchronizedTextures: 消費なし。インターレースブレを解除し、直近フレーム", "GetSynchronizedTextures: No consumption. Freezing screen with latest frame")
+                          .replace("で完全静止させます。", " to avoid interlace jitter.");
+            }
+            if (msg.includes("[BREAKPOINT]")) {
+                return msg.replace("[BREAKPOINT] ブレークポイント条件を満たしたため、シミュレーションを一時停止しました。", 
+                                   "[BREAKPOINT] Breakpoint hit! Simulation paused.");
+            }
+            
+            for (let key in LOG_TRANSLATIONS) {
+                if (msg.includes(key)) return LOG_TRANSLATIONS[key];
+            }
+            return msg;
+        }
 
         // ログ出力用
         function logMsg(msg, isWarning = false) {
@@ -1524,7 +1614,9 @@ if (pixel.a > alphaThreshold) {
             
             logLine.appendChild(timeSpan);
             logLine.appendChild(systemSpan);
-            logLine.appendChild(document.createTextNode(' ' + msg));
+            
+            const translatedMsg = translateLogMsg(msg);
+            logLine.appendChild(document.createTextNode(' ' + translatedMsg));
             
             consoleEl.appendChild(logLine);
             
@@ -1736,7 +1828,8 @@ if (pixel.a > alphaThreshold) {
                 lastHwKey: s.lastHwKey ? new Uint8ClampedArray(s.lastHwKey) : null,
                 
                 inspectX: s.inspectX,
-                inspectY: s.inspectY
+                inspectY: s.inspectY,
+                lang: s.lang
             };
         }
 
@@ -2319,14 +2412,14 @@ if (pixel.a > alphaThreshold) {
             const isEven = (y % 2 === 0);
             if (state.viewMode === 0) {
                 document.getElementById('det-sampling').innerText = isEven 
-                    ? `偶数ラインのため [Frame 1 (Top)] をサンプリング` 
-                    : `奇数ラインのため [Frame 2 (Bottom)] をサンプリング`;
+                    ? (state.lang === 'ja' ? `偶数ラインのため [Frame 1 (Top)] をサンプリング` : `Even line: Sampling [Frame 1 (Top)]`)
+                    : (state.lang === 'ja' ? `奇数ラインのため [Frame 2 (Bottom)] をサンプリング` : `Odd line: Sampling [Frame 2 (Bottom)]`);
                 document.getElementById('det-sampling').style.color = isEven ? 'var(--accent-cyan)' : 'var(--accent-violet)';
             } else if (state.viewMode === 1) {
-                document.getElementById('det-sampling').innerText = `差分モード: abs(F1 - F2) をサンプリング`;
+                document.getElementById('det-sampling').innerText = state.lang === 'ja' ? `差分モード: abs(F1 - F2) をサンプリング` : `Diff Mode: Sampling abs(F1 - F2)`;
                 document.getElementById('det-sampling').style.color = 'var(--accent-amber)';
             } else {
-                document.getElementById('det-sampling').innerText = `プログレッシブ/ブレンドサンプリング中`;
+                document.getElementById('det-sampling').innerText = state.lang === 'ja' ? `プログレッシブ/ブレンドサンプリング中` : `Progressive/Blend sampling active`;
                 document.getElementById('det-sampling').style.color = 'var(--success)';
             }
 
@@ -2385,10 +2478,12 @@ if (pixel.a > alphaThreshold) {
             const rawA = lpfVal[3] / 255.0;
             
             if (rawA > state.alphaThreshold) {
-                document.getElementById('det-unmult-val').innerText = `R: ${finalVal[finalIdx]}, G: ${finalVal[finalIdx+1]}, B: ${finalVal[finalIdx+2]}, A: ${outA} (復元適用: RGB /= ${rawA.toFixed(2)})`;
+                const suffix = state.lang === 'ja' ? `(復元適用: RGB /= ${rawA.toFixed(2)})` : `(Restored: RGB /= ${rawA.toFixed(2)})`;
+                document.getElementById('det-unmult-val').innerText = `R: ${finalVal[finalIdx]}, G: ${finalVal[finalIdx+1]}, B: ${finalVal[finalIdx+2]}, A: ${outA} ${suffix}`;
                 document.getElementById('det-unmult-val').style.color = 'var(--success)';
             } else {
-                document.getElementById('det-unmult-val').innerText = `R: ${finalVal[finalIdx]}, G: ${finalVal[finalIdx+1]}, B: ${finalVal[finalIdx+2]}, A: ${outA} (閾値以下無処理)`;
+                const suffix = state.lang === 'ja' ? `(閾値以下無処理)` : `(No process, below threshold)`;
+                document.getElementById('det-unmult-val').innerText = `R: ${finalVal[finalIdx]}, G: ${finalVal[finalIdx+1]}, B: ${finalVal[finalIdx+2]}, A: ${outA} ${suffix}`;
                 document.getElementById('det-unmult-val').style.color = 'var(--text-muted)';
             }
 
@@ -2414,9 +2509,11 @@ if (pixel.a > alphaThreshold) {
                 const g = state.sdiMonitor[sdiIdx+1];
                 const b = state.sdiMonitor[sdiIdx+2];
                 if (y % 2 === 0) {
-                    document.getElementById('det-sdi-val').innerText = `R: ${r}, G: ${g}, B: ${b} (Field 1: 偶数行)`;
+                    const suffix = state.lang === 'ja' ? `(Field 1: 偶数行)` : `(Field 1: Even lines)`;
+                    document.getElementById('det-sdi-val').innerText = `R: ${r}, G: ${g}, B: ${b} ${suffix}`;
                 } else {
-                    document.getElementById('det-sdi-val').innerText = `R: ${r}, G: ${g}, B: ${b} (Field 2: 奇数行)`;
+                    const suffix = state.lang === 'ja' ? `(Field 2: 奇数行)` : `(Field 2: Odd lines)`;
+                    document.getElementById('det-sdi-val').innerText = `R: ${r}, G: ${g}, B: ${b} ${suffix}`;
                 }
             } else {
                 document.getElementById('det-sdi-val').innerText = `R: -, G: -, B: -`;
@@ -2464,22 +2561,22 @@ if (pixel.a > alphaThreshold) {
             const pStateEl = document.getElementById('val-preroll');
             if (!state.isConsuming) {
                 if (state.prerollDelay === 3 && state.gpuQueue.length === 0) {
-                    pStateEl.innerText = '待機中 (0/3)';
+                    pStateEl.innerText = state.lang === 'ja' ? '待機中 (0/3)' : 'Standby (0/3)';
                     pStateEl.style.color = 'var(--text-muted)';
                 } else {
-                    pStateEl.innerText = `プレロール中 (${3 - state.prerollDelay}/3)`;
+                    pStateEl.innerText = state.lang === 'ja' ? `プレロール中 (${3 - state.prerollDelay}/3)` : `Prerolling (${3 - state.prerollDelay}/3)`;
                     pStateEl.style.color = 'var(--accent-amber)';
                 }
             } else {
-                pStateEl.innerText = 'ACTIVE (消費中)';
+                pStateEl.innerText = state.lang === 'ja' ? 'ACTIVE (消費中)' : 'ACTIVE (Consuming)';
                 pStateEl.style.color = 'var(--success)';
             }
 
             document.getElementById('val-cpu-q-load').innerText = `${state.cpuQueue.length} / 32`;
-            document.getElementById('status-cpu-count').innerText = `${state.cpuQueue.length} 枚`;
+            document.getElementById('status-cpu-count').innerText = state.lang === 'ja' ? `${state.cpuQueue.length} 枚` : `${state.cpuQueue.length} frames`;
             
             document.getElementById('val-gpu-q-load').innerText = `${state.gpuQueue.length} / 32`;
-            document.getElementById('status-gpu-count').innerText = `${state.gpuQueue.length} 枚`;
+            document.getElementById('status-gpu-count').innerText = state.lang === 'ja' ? `${state.gpuQueue.length} 枚` : `${state.gpuQueue.length} frames`;
 
             const toggleArrow = (id, active) => {
                 const el = document.getElementById(id);
@@ -2496,8 +2593,9 @@ if (pixel.a > alphaThreshold) {
             toggleArrow('arrow-shader-staging', state.shaderOutput !== null);
             toggleArrow('arrow-staging-hw', state.staging1 !== null);
 
-            const modes = ["INTERLACE (Normal)", "DIFF (差分表示)", "PROGRESSIVE F1", "PROGRESSIVE F2", "30p BLEND"];
-            document.getElementById('status-shader-mode').innerText = modes[state.viewMode];
+            const modesJa = ["INTERLACE (Normal)", "DIFF (差分表示)", "PROGRESSIVE F1", "PROGRESSIVE F2", "30p BLEND"];
+            const modesEn = ["INTERLACE (Normal)", "DIFF (Visualized)", "PROGRESSIVE F1", "PROGRESSIVE F2", "30p BLEND"];
+            document.getElementById('status-shader-mode').innerText = state.lang === 'ja' ? modesJa[state.viewMode] : modesEn[state.viewMode];
 
             if (state.cpuQueue.length > 0) {
                 drawToCanvas('canvas-cef', state.cpuQueue[state.cpuQueue.length - 1].data);
@@ -2797,6 +2895,540 @@ if (pixel.a > alphaThreshold) {
         document.getElementById('chk-break-overflow').addEventListener('change', (e) => state.breakOnOverflow = e.target.checked);
         document.getElementById('chk-break-starve').addEventListener('change', (e) => state.breakOnStarve = e.target.checked);
 
+        // --- 7. 多言語化 (i18n) エンジン ---
+        const TRANSLATIONS = {
+            ja: {
+                title: "CEF-DeckLink パイプラインシミュレータ",
+                subtitle: "CEFフリーラン描画 (60fps) から DeckLink 放送出力 (59.94i) への同期とシェーダーの挙動再現",
+                label_sys_console: "ステート監視コンソール",
+                sys_status_standby: "システム稼働中 - STANDBY",
+                sys_status_running: "シミュレータ稼働中 - RUNNING",
+                sys_status_paused: "シミュレータ一時停止 - PAUSED",
+                btn_play: "▶ 自動再生",
+                btn_pause: "⏸ 一時停止",
+                btn_undo: "⇠ 戻る (Undo)",
+                btn_cef_tick: "⚙ 仮想時間 +16.7ms 進む",
+                btn_dl_tick: "⚙ 仮想時間 +33.3ms 進む",
+                btn_advance: "⚙ 指定ms進む",
+                btn_reset: "↺ リセット",
+                break_title: "🛑 自動停止(ブレーク):",
+                break_planned: "計画的ドロップ",
+                break_overflow: "物理的溢れ",
+                break_starve: "枯渇",
+                view_mode: "ビューモード:",
+                lpf_mode: "垂直LPF:",
+                alpha_threshold: "アルファ閾値:",
+                play_speed: "再生速度:",
+                cef_pattern: "CEF描画絵:",
+                enable_cef: "CEF描画を有効にする",
+                jitter_title: "⚡ データサイエンス用ジッタ・ノイズジェネレータ (CEF送信揺らぎ)",
+                jitter_strength: "ジッタ強度 (σ):",
+                cpu_spike_prob: "CPUスパイク発生率:",
+                cpu_spike_delay: "CPUスパイク遅延:",
+                clock_drift: "クロックドリフト:",
+                gpu_stall_prob: "GPUストール発生率:",
+                gpu_stall_delay: "GPUストール遅延:",
+                epoch_time: "仮想時間 (エポック)",
+                cef_frames: "CEF 生成フレーム数",
+                dl_cycles: "DeckLink サイクル",
+                preroll_state: "プレロール状態",
+                cpu_queue: "CPU Queue 負荷",
+                gpu_queue: "GPU Queue 負荷",
+                planned_drops: "計画的ドロップ (>12)",
+                overflow_drops: "物理的溢れ (>32)",
+                starvations: "枯渇 (使い回し)",
+                latency: "推定レイテンシ",
+                pipeline_title: "映像データ・ストリーム・パイプライン",
+                pipeline_sub: "※各段階の画像(32x32)を256x256フルサイズで拡大表示しています",
+                thread_a: "🧵 スレッドA: CEF Render Thread (プロデューサー 60Hz駆動)",
+                domain_cpu_a: "CPU / メインメモリ (CEF Thread)",
+                stage_cef: "1. CEF WebCore",
+                canvas_premult: "生成フレーム(Premultiplied)",
+                status_draw: "描画:",
+                stage_cpu_q: "2. CPU Frame Queue",
+                label_unuploaded: "未アップロード数:",
+                mutex_sync: "Mutex<br>Sync",
+                thread_b: "🧵 スレッドB: DeckLink Callback Thread (コンシューマー 29.97Hz駆動)",
+                domain_gpu: "GPU / ビデオメモリ (DirectX 11)",
+                stage_gpu_q: "3. GPU Texture Queue",
+                label_vram: "VRAM保持数:",
+                stage_shader: "4. Compute Shader (Detailed 256x256)",
+                canvas_weave: "Step 1: Weave / Sampling",
+                canvas_lpf: "Step 2: Vertical LPF",
+                canvas_unmult: "Step 3: Unmult (Final)",
+                label_shader_mode: "演算モード:",
+                domain_cpu_b: "CPU / メインメモリ (DeckLink Thread)",
+                stage_staging: "5. Staging Buffer",
+                label_staging_transfer: "転送待機:",
+                stage_dl_api: "6. DeckLink API (送信バッファ)",
+                label_dl_transfer: "API転送形式:",
+                thread_c: "⏱ 外部クロック: UltraStudio Hardware (59.94i)",
+                domain_us: "UltraStudio ハードウェア (外部機器)",
+                stage_sdi_wire: "7. UltraStudio SDI Output (BNC Wire)",
+                label_active: "Active:",
+                stage_sdi_mon: "8. SDI Physical Monitor",
+                legend_cef: "CEF 生産領域",
+                legend_queue: "キューバッファ領域",
+                legend_gpu: "GPU / Compute Shader 処理領域",
+                legend_sdi: "最終放送出力領域",
+                inspect_title: "ピクセルレベル詳細解析器（1画素の計算追跡）",
+                inspect_sub: "出力画像の任意のピクセルをマウスホバーすると、該当座標 of F1 / F2 / 出力ピクセルの RGBA値の変化を追跡できます。",
+                final_fill: "最終: Fill",
+                final_key: "最終: Key",
+                inspect_mon: "物理モニター",
+                label_coord: "選択座標:",
+                label_f1_raw: "Frame 1 (Top) 生 RGBA:",
+                label_f2_raw: "Frame 2 (Bottom) 生 RGBA:",
+                label_weave_val: "Weave / サンプリング (フィルター前):",
+                label_apply_rule: "↳ 適用ルール:",
+                label_lpf_val: "垂直 LPF 適用結果:",
+                label_unmult_val: "Unpremultiply 処理 (RGB /= A):",
+                label_fill_val: "DeckLink Fill (RGB分離):",
+                label_key_val: "DeckLink Key (Alpha分離):",
+                label_sdi_val: "SDI Physical Out:",
+                explain_title: "パイプラインロジック解説",
+                explain_preroll_h: "A. プレロール同期キュー (時間制御)",
+                explain_preroll_b: "CEFがフリーランで描画データをプッシュし、DeckLinkがポーリングでテクスチャを取り出します。<br><ul><li><strong>プレロール待機</strong>: キューが0から増えた時、3サイクル（約100ms）消費を一時停止してキューを「貯金」します。ジッターを吸収するためです。</li><li><strong>枯渇時 Freeze</strong>: キューが空になると、前回出力フレームを複製し、プレロール待機にリセットします。</li></ul>",
+                explain_weave_h: "B. Weave（織り交ぜ）インターレース合成",
+                explain_weave_b: "縦のライン座標 <code>y</code> の偶数行を過去フレーム (F1)、奇数行を最新フレーム (F2) からマッピングします。動きがある箇所では、1枚の絵の中に前後のコマが混在するため<b>「櫛状のブレ（インターレース縞）」</b>が発生します。",
+                explain_lpf_h: "C. 垂直 LPF（Anti-Flicker）",
+                explain_lpf_b: "インターレース出力時に、隣接する走査線間の極端な色の差によって発生する「線フリッカー（チラつき）」を抑えるため、縦方向にローパスフィルタ（ぼかし）を適用します。",
+                explain_unmult_h: "D. Unpremultiply（アルファ復元）",
+                explain_unmult_b: "CEFの描画バッファは透明度を含んだ RGB がアルファ値で事前に乗算された <code>Premultiplied Alpha</code> 状態です。DeckLinkで「透明マスク（Key）」と「色信号（Fill）」を完全に切り分けるため、アルファ値で割り算を行い元の鮮やかなRGBカラーを復元します。<br><br>※アルファ値が小さすぎる（透明に近い）ときに割り算を行うと、ゼロ除算（または数値の暴走）が発生するため、<code>alphaThreshold</code>（閾値）を下回る場合は処理をスキップします。",
+                explain_jitter_h: "E. ジッタ・ノイズモデル (Jitter Simulation)",
+                explain_jitter_b: "CEF（プロデューサー）とDeckLink（コンシューマー）の非同期プロセス間で発生する「リアルな遅延・ゆらぎ」を数式モデル化しています。<br><ul><li style=\"margin-bottom: 8px;\"><strong>ガウスノイズ (σ):</strong> <code>interval = base + Normal(0, σ)</code><br>OSのスレッドスケジューラやタイマー精度の限界による微小なブレです。通常、Windowsのタイマー精度は1〜2ms程度ですが、高負荷時は5〜15msのブレ（σ）が発生し得ます。</li><li style=\"margin-bottom: 8px;\"><strong>スパイク遅延 (Burst):</strong> <code>if (random() < Prob) interval += BurstMs</code><br>ガベージコレクション(V8 GC)や重いリソースロードによる「突発的なスレッド停止」です。通常発生率は0.1%〜1%程度ですが、発生時は30〜100ms単位でパイプラインが停止し、バッファが一気に枯渇します。</li><li style=\"margin-bottom: 8px;\"><strong>クロックドリフト (PPM):</strong> <code>interval *= (1.0 + PPM / 1,000,000)</code><br>PCのマザーボードの時計とDeckLink内部のクリスタル発振器の「物理的な周波数ズレ」です。例えば +50 PPM の場合、CEF側の時計が相対的にわずかに遅れるため、数十分〜数時間ごとにバッファが定期的に枯渇（または溢れ）を引き起こします。</li></ul>",
+                buffer_graph_title: "リアルタイムバッファ推移 (Jitter Analyzer)",
+                log_console_title: "シミュレータ動作ログ",
+                
+                // オプション
+                opt_view_0: "0: Interlace (標準)",
+                opt_view_1: "1: Diff (差分可視化)",
+                opt_view_2: "2: Progressive F1",
+                opt_view_3: "3: Progressive F2",
+                opt_view_4: "4: 30p Blend",
+                
+                opt_lpf_0: "0: フィルターなし",
+                opt_lpf_1: "1: 3-Tap LPF",
+                opt_lpf_2: "2: 5-Tap LPF",
+                
+                opt_pattern_0: "0: 全要素ミックス",
+                opt_pattern_1: "1: 動く円 (横移動ティアリング確認)",
+                opt_pattern_2: "2: 回転バー (斜めジャギー確認)",
+                opt_pattern_3: "3: 水平縞模様 (垂直LPF確認用)",
+                opt_pattern_4: "4: 点滅市松模様 (Diff/60pチェッカー)",
+                opt_pattern_5: "5: スクロール文字 (テキストWeave確認)",
+                opt_pattern_6: "6: 回転文字 (テキストLPF/ジャギー確認)",
+                opt_pattern_7: "7: 複合アニメ文字 (スクロール＋回転/拡大)",
+                opt_pattern_8: "8: バウンド文字 (跳ね返りテロップシミュ)",
+                opt_pattern_9: "9: 何も描画しない (完全透明/真っ暗)",
+            },
+            en: {
+                title: "CEF-DeckLink Pipeline Simulator",
+                subtitle: "Synchronization from CEF free-run rendering (60fps) to DeckLink broadcast output (59.94i) and shader behavior reproduction",
+                label_sys_console: "State Monitor Console",
+                sys_status_standby: "System Running - STANDBY",
+                sys_status_running: "Simulator Active - RUNNING",
+                sys_status_paused: "Simulator Paused - PAUSED",
+                btn_play: "▶ Play",
+                btn_pause: "⏸ Pause",
+                btn_undo: "⇠ Undo",
+                btn_cef_tick: "⚙ Advance CEF +16.7ms",
+                btn_dl_tick: "⚙ Advance DeckLink +33.3ms",
+                btn_advance: "⚙ Advance by ms",
+                btn_reset: "↺ Reset",
+                break_title: "🛑 Auto-Break on:",
+                break_planned: "Planned Drop",
+                break_overflow: "Overflow",
+                break_starve: "Starvation",
+                view_mode: "View Mode:",
+                lpf_mode: "Vertical LPF:",
+                alpha_threshold: "Alpha Threshold:",
+                play_speed: "Speed:",
+                cef_pattern: "Test Pattern:",
+                enable_cef: "Enable CEF Rendering",
+                jitter_title: "⚡ Jitter & Noise Generator for Data Science (CEF Jitter)",
+                jitter_strength: "Jitter (σ):",
+                cpu_spike_prob: "CPU Spike Prob:",
+                cpu_spike_delay: "CPU Spike Delay:",
+                clock_drift: "Clock Drift:",
+                gpu_stall_prob: "GPU Stall Prob:",
+                gpu_stall_delay: "GPU Stall Delay:",
+                epoch_time: "Virtual Time (Epoch)",
+                cef_frames: "CEF Generated Frames",
+                dl_cycles: "DeckLink Cycles",
+                preroll_state: "Preroll State",
+                cpu_queue: "CPU Queue Load",
+                gpu_queue: "GPU Queue Load",
+                planned_drops: "Planned Drops (>12)",
+                overflow_drops: "Overflow Drops (>32)",
+                starvations: "Starvation (Reused)",
+                latency: "Est. Latency",
+                pipeline_title: "Video Data Stream Pipeline",
+                pipeline_sub: "*Each stage image (32x32) is zoomed to 256x256 full size",
+                thread_a: "🧵 Thread A: CEF Render Thread (Producer, 60Hz Free-run)",
+                domain_cpu_a: "CPU / Main Memory (CEF Thread)",
+                stage_cef: "1. CEF WebCore",
+                canvas_premult: "Generated Frame (Premultiplied)",
+                status_draw: "Status:",
+                stage_cpu_q: "2. CPU Frame Queue",
+                label_unuploaded: "Unuploaded:",
+                mutex_sync: "Mutex\nSync",
+                thread_b: "🧵 Thread B: DeckLink Callback Thread (Consumer, 29.97Hz)",
+                domain_gpu: "GPU / Video Memory (DirectX 11)",
+                stage_gpu_q: "3. GPU Texture Queue",
+                label_vram: "VRAM Count:",
+                stage_shader: "4. Compute Shader (Detailed 256x256)",
+                canvas_weave: "Step 1: Weave / Sampling",
+                canvas_lpf: "Step 2: Vertical LPF",
+                canvas_unmult: "Step 3: Unmult (Final)",
+                label_shader_mode: "Shader Mode:",
+                domain_cpu_b: "CPU / Main Memory (DeckLink Thread)",
+                stage_staging: "5. Staging Buffer",
+                label_staging_transfer: "Transfer:",
+                stage_dl_api: "6. DeckLink API (Send Buffer)",
+                label_dl_transfer: "API Format:",
+                thread_c: "⏱ External Clock: UltraStudio Hardware (59.94i)",
+                domain_us: "UltraStudio Hardware (External)",
+                stage_sdi_wire: "7. UltraStudio SDI Output (BNC Wire)",
+                label_active: "Active:",
+                stage_sdi_mon: "8. SDI Physical Monitor",
+                legend_cef: "CEF Production Domain",
+                legend_queue: "Queue Buffer Domain",
+                legend_gpu: "GPU / Compute Shader Domain",
+                legend_sdi: "Final Broadcast Output Domain",
+                inspect_title: "Pixel Level Inspector (Track 1 Pixel Calculation)",
+                inspect_sub: "Hover over any pixel on output images to track the change of RGBA values in F1 / F2 / Output.",
+                final_fill: "Final: Fill",
+                final_key: "Final: Key",
+                inspect_mon: "Physical Monitor",
+                label_coord: "Selected Coord:",
+                label_f1_raw: "Frame 1 (Top) Raw RGBA:",
+                label_f2_raw: "Frame 2 (Bottom) Raw RGBA:",
+                label_weave_val: "Weave / Sampling (Pre-filter):",
+                label_apply_rule: "↳ Applied Rule:",
+                label_lpf_val: "Vertical LPF Result:",
+                label_unmult_val: "Unpremultiply Process (RGB /= A):",
+                label_fill_val: "DeckLink Fill (RGB Split):",
+                label_key_val: "DeckLink Key (Alpha Split):",
+                label_sdi_val: "SDI Physical Out:",
+                explain_title: "Pipeline Logic Explanation",
+                explain_preroll_h: "A. Preroll Synchronization Queue (Time Control)",
+                explain_preroll_b: "CEF pushes drawing data in a free-run loop, while DeckLink polls textures.<br><ul><li><strong>Preroll Wait:</strong> When the queue size grows from 0, it pauses consumption for 3 cycles (~100ms) to accumulate a 'buffer'. This absorbs jitter.</li><li><strong>Freeze on Starvation:</strong> If the queue becomes empty, the last output frame is duplicated, and the state resets to preroll wait.</li></ul>",
+                explain_weave_h: "B. Weave Interlace Synthesis",
+                explain_weave_b: "Maps even lines of vertical coordinate <code>y</code> from the past frame (F1) and odd lines from the latest frame (F2). In moving areas, past and present frames coexist in a single picture, resulting in <b>'comb-like artifacts (interlace interlacing)'</b>.",
+                explain_lpf_h: "C. Vertical LPF (Anti-Flicker)",
+                explain_lpf_b: "To suppress 'line flicker' caused by extreme color differences between adjacent scanlines during interlaced output, a low-pass filter (blur) is applied vertically.",
+                explain_unmult_h: "D. Unpremultiply (Alpha Restoration)",
+                explain_unmult_b: "CEF's drawing buffer has RGB premultiplied by the alpha value (<code>Premultiplied Alpha</code>). To completely separate the 'transparency mask (Key)' and 'color signal (Fill)' in DeckLink, division by the alpha value is performed to restore the original vivid RGB color.<br><br>*If the alpha value is too small (close to transparent), division can cause division by zero (or numeric overflow), so the process is skipped if alpha is below <code>alphaThreshold</code>.",
+                explain_jitter_h: "E. Jitter & Noise Model (Jitter Simulation)",
+                explain_jitter_b: "Models 'realistic delay and fluctuation' occurring between asynchronous processes of CEF (producer) and DeckLink (consumer).<br><ul><li style=\"margin-bottom: 8px;\"><strong>Gaussian Noise (σ):</strong> <code>interval = base + Normal(0, σ)</code><br>Micro fluctuations caused by limits in the OS thread scheduler or timer accuracy. Normally, timer accuracy on Windows is about 1 to 2 ms, but under high load, fluctuations (σ) of 5 to 15 ms can occur.</li><li style=\"margin-bottom: 8px;\"><strong>Spike Delay (Burst):</strong> <code>if (random() < Prob) interval += BurstMs</code><br>Sudden thread pauses caused by garbage collection (V8 GC) or heavy resource loading. The probability is typically 0.1% to 1%, but when it occurs, the pipeline pauses for 30 to 100 ms, causing immediate queue starvation.</li><li style=\"margin-bottom: 8px;\"><strong>Clock Drift (PPM):</strong> <code>interval *= (1.0 + PPM / 1,000,000)</code><br>Physical frequency difference between the PC motherboard clock and the DeckLink internal crystal oscillator. For example, at +50 PPM, the CEF clock is relatively slightly slower, causing periodic buffer starvation (or overflow) every few tens of minutes or hours.</li></ul>",
+                buffer_graph_title: "Real-time Buffer Transition (Jitter Analyzer)",
+                log_console_title: "Simulator Operation Log",
+                
+                opt_view_0: "0: Interlace (Normal)",
+                opt_view_1: "1: Diff (Visualized)",
+                opt_view_2: "2: Progressive F1",
+                opt_view_3: "3: Progressive F2",
+                opt_view_4: "4: 30p Blend",
+                
+                opt_lpf_0: "0: No Filter",
+                opt_lpf_1: "1: 3-Tap LPF",
+                opt_lpf_2: "2: 5-Tap LPF",
+                
+                opt_pattern_0: "0: All Mixed Elements",
+                opt_pattern_1: "1: Moving Circle (Check tearing)",
+                opt_pattern_2: "2: Rotating Bar (Check jagged edges)",
+                opt_pattern_3: "3: Horizontal Stripes (For LPF test)",
+                opt_pattern_4: "4: Flashing Checker (Diff/60p checker)",
+                opt_pattern_5: "5: Scrolling Text (Check text Weave)",
+                opt_pattern_6: "6: Rotating Text (Check text LPF/jaggies)",
+                opt_pattern_7: "7: Animated Text (Scroll+Rotate+Scale)",
+                opt_pattern_8: "8: Bouncing Text (Bouncing CG simulator)",
+                opt_pattern_9: "9: No Rendering (Transparent / Black)",
+            }
+        };
+
+        // UI切り替え関数
+        function changeLanguage(lang) {
+            state.lang = lang;
+            const dict = TRANSLATIONS[lang];
+
+            // 1. 静的要素の置換
+            document.querySelector("h1").innerHTML = dict.title;
+            document.querySelector("header .subtitle").innerText = dict.subtitle;
+            document.getElementById("label-sys-console").innerText = dict.label_sys_console;
+
+            // ボタン
+            document.getElementById("btn-undo").innerText = dict.btn_undo;
+            document.getElementById("btn-cef-tick").innerText = dict.btn_cef_tick;
+            document.getElementById("btn-dl-tick").innerText = dict.btn_dl_tick;
+            document.getElementById("btn-advance-ms").innerText = dict.btn_advance;
+            document.getElementById("btn-reset").innerText = dict.btn_reset;
+            
+            // 自動停止 / ブレーク
+            const breakBar = document.querySelector(".main-controls-sticky div strong");
+            if (breakBar) breakBar.innerText = dict.break_title;
+            const breakLabels = document.querySelectorAll(".main-controls-sticky div label");
+            if (breakLabels.length >= 3) {
+                breakLabels[0].innerHTML = `<input type="checkbox" id="chk-break-planned">${dict.break_planned}`;
+                breakLabels[1].innerHTML = `<input type="checkbox" id="chk-break-overflow">${dict.break_overflow}`;
+                breakLabels[2].innerHTML = `<input type="checkbox" id="chk-break-starve">${dict.break_starve}`;
+                // イベント再登録
+                document.getElementById('chk-break-planned').checked = state.breakOnPlanned;
+                document.getElementById('chk-break-overflow').checked = state.breakOnOverflow;
+                document.getElementById('chk-break-starve').checked = state.breakOnStarve;
+                document.getElementById('chk-break-planned').addEventListener('change', (e) => state.breakOnPlanned = e.target.checked);
+                document.getElementById('chk-break-overflow').addEventListener('change', (e) => state.breakOnOverflow = e.target.checked);
+                document.getElementById('chk-break-starve').addEventListener('change', (e) => state.breakOnStarve = e.target.checked);
+            }
+
+            // パラメータラベル
+            const labels = document.querySelectorAll(".main-controls-sticky .control-group label");
+            const selectModeLabel = Array.from(labels).find(el => el.getAttribute("for") === "select-mode");
+            if (selectModeLabel) selectModeLabel.innerText = dict.view_mode;
+            const selectLpfLabel = Array.from(labels).find(el => el.getAttribute("for") === "select-lpf");
+            if (selectLpfLabel) selectLpfLabel.innerText = dict.lpf_mode;
+            const rangeThresholdLabel = Array.from(labels).find(el => el.getAttribute("for") === "range-threshold");
+            if (rangeThresholdLabel) rangeThresholdLabel.innerText = dict.alpha_threshold;
+            const rangeSpeedLabel = Array.from(labels).find(el => el.getAttribute("for") === "range-speed");
+            if (rangeSpeedLabel) rangeSpeedLabel.innerText = dict.play_speed;
+            const selectPatternLabel = Array.from(labels).find(el => el.getAttribute("for") === "select-pattern");
+            if (selectPatternLabel) selectPatternLabel.innerText = dict.cef_pattern;
+
+            const chkCefActiveLabel = document.querySelector(".main-controls-sticky .control-group label[style*=\"cursor\"]");
+            if (chkCefActiveLabel) {
+                chkCefActiveLabel.innerHTML = `<input type="checkbox" id="chk-cef-active">${dict.enable_cef}`;
+                document.getElementById('chk-cef-active').checked = state.cefActive;
+                document.getElementById('chk-cef-active').addEventListener('change', (e) => {
+                    state.cefActive = e.target.checked;
+                    logMsg(`設定変更: CEFフレーム生成を ${state.cefActive ? '有効' : '無効'} にしました。`);
+                });
+            }
+
+            // ノイズジェネレータ
+            document.querySelector("#scrollable-content .control-bar div").innerText = dict.jitter_title;
+            const noiseLabels = document.querySelectorAll("#scrollable-content .control-bar .control-group label");
+            const rangeJitterLabel = Array.from(noiseLabels).find(el => el.getAttribute("for") === "range-jitter");
+            if (rangeJitterLabel) rangeJitterLabel.innerText = dict.jitter_strength;
+            const rangeBurstProbLabel = Array.from(noiseLabels).find(el => el.getAttribute("for") === "range-burst-prob");
+            if (rangeBurstProbLabel) rangeBurstProbLabel.innerText = dict.cpu_spike_prob;
+            const rangeBurstDelayLabel = Array.from(noiseLabels).find(el => el.getAttribute("for") === "range-burst-delay");
+            if (rangeBurstDelayLabel) rangeBurstDelayLabel.innerText = dict.cpu_spike_delay;
+            const rangeDriftLabel = Array.from(noiseLabels).find(el => el.getAttribute("for") === "range-drift");
+            if (rangeDriftLabel) rangeDriftLabel.innerText = dict.clock_drift;
+            const rangeGpuStallProbLabel = Array.from(noiseLabels).find(el => el.getAttribute("for") === "range-gpu-stall-prob");
+            if (rangeGpuStallProbLabel) rangeGpuStallProbLabel.innerText = dict.gpu_stall_prob;
+            const rangeGpuStallMsLabel = Array.from(noiseLabels).find(el => el.getAttribute("for") === "range-gpu-stall-ms");
+            if (rangeGpuStallMsLabel) rangeGpuStallMsLabel.innerText = dict.gpu_stall_delay;
+
+            // タイムラインボックス
+            const tickBoxes = document.querySelectorAll(".timeline-ticks .tick-box");
+            if (tickBoxes.length >= 10) {
+                tickBoxes[0].querySelector(".tick-title").innerText = dict.epoch_time;
+                tickBoxes[1].querySelector(".tick-title").innerText = dict.cef_frames;
+                tickBoxes[2].querySelector(".tick-title").innerText = dict.dl_cycles;
+                tickBoxes[3].querySelector(".tick-title").innerText = dict.preroll_state;
+                tickBoxes[4].querySelector(".tick-title").innerText = dict.cpu_queue;
+                tickBoxes[5].querySelector(".tick-title").innerText = dict.gpu_queue;
+                tickBoxes[6].querySelector(".tick-title").innerText = dict.planned_drops;
+                tickBoxes[7].querySelector(".tick-title").innerText = dict.overflow_drops;
+                tickBoxes[8].querySelector(".tick-title").innerText = dict.starvations;
+                tickBoxes[9].querySelector(".tick-title").innerText = dict.latency;
+            }
+
+            // パイプラインタイトル
+            const pipeTitle = document.querySelector(".pipeline-container .section-title");
+            if (pipeTitle) {
+                pipeTitle.innerHTML = `<span>${dict.pipeline_title}</span><span class="subtitle">${dict.pipeline_sub}</span>`;
+            }
+
+            // スレッド/ドメイン名
+            const threadTitles = document.querySelectorAll(".thread-title");
+            if (threadTitles.length >= 2) {
+                threadTitles[0].innerText = dict.thread_a;
+                threadTitles[1].innerText = dict.thread_b;
+            }
+            const threadHwTitle = document.querySelector(".thread-group:last-of-type .thread-title");
+            if (threadHwTitle) threadHwTitle.innerText = dict.thread_c;
+
+            const domainLabels = document.querySelectorAll(".domain-label");
+            if (domainLabels.length >= 4) {
+                domainLabels[0].innerText = dict.domain_cpu_a;
+                domainLabels[1].innerText = dict.domain_gpu;
+                domainLabels[2].innerText = dict.domain_cpu_b;
+                domainLabels[3].innerText = dict.domain_us;
+            }
+
+            const syncPoint = document.querySelector(".thread-sync-point");
+            if (syncPoint && syncPoint.innerHTML.includes("Mutex")) {
+                syncPoint.innerHTML = `<div style="font-size: 1.8rem;">➔</div><div>${dict.mutex_sync}</div>`;
+            }
+
+            // ステージカード
+            const cardCef = document.getElementById("card-cef");
+            if (cardCef) {
+                cardCef.querySelector(".stage-name").innerText = dict.stage_cef;
+                cardCef.querySelector(".canvas-label").innerText = dict.canvas_premult;
+                cardCef.querySelector(".status-panel span").innerText = dict.status_draw;
+            }
+            const cardCpuQ = document.getElementById("card-cpu-q");
+            if (cardCpuQ) {
+                cardCpuQ.querySelector(".stage-name").innerText = dict.stage_cpu_q;
+                cardCpuQ.querySelector(".status-panel span").innerText = dict.label_unuploaded;
+            }
+            const cardGpuQ = document.getElementById("card-gpu-q");
+            if (cardGpuQ) {
+                cardGpuQ.querySelector(".stage-name").innerText = dict.stage_gpu_q;
+                cardGpuQ.querySelector(".status-panel span").innerText = dict.label_vram;
+            }
+            const cardShader = document.getElementById("card-shader");
+            if (cardShader) {
+                cardShader.querySelector(".stage-name").innerText = dict.stage_stage_shader || dict.stage_shader;
+                const canvasLabels = cardShader.querySelectorAll(".canvas-label");
+                if (canvasLabels.length >= 5) {
+                    canvasLabels[2].innerText = dict.canvas_weave;
+                    canvasLabels[3].innerText = dict.canvas_lpf;
+                    canvasLabels[4].innerText = dict.canvas_unmult;
+                }
+                cardShader.querySelector(".status-panel span").innerText = dict.label_shader_mode;
+            }
+            const cardStaging = document.getElementById("card-staging");
+            if (cardStaging) {
+                cardStaging.querySelector(".stage-name").innerText = dict.stage_staging;
+                cardStaging.querySelector(".status-panel span").innerText = dict.label_staging_transfer;
+            }
+            const cardHw = document.getElementById("card-hw");
+            if (cardHw) {
+                cardHw.querySelector(".stage-name").innerText = dict.stage_dl_api;
+                cardHw.querySelector(".status-panel span").innerText = dict.label_dl_transfer;
+            }
+            const cardWire = document.getElementById("card-wire");
+            if (cardWire) {
+                cardWire.querySelector(".stage-name").innerText = dict.stage_sdi_wire;
+                cardWire.querySelector(".status-panel span").innerText = dict.label_active;
+            }
+            const cardSdi = document.getElementById("card-sdi");
+            if (cardSdi) {
+                cardSdi.querySelector(".stage-name").innerText = dict.stage_sdi_mon;
+                cardSdi.querySelector(".canvas-label").innerText = dict.inspect_mon;
+            }
+
+            // 凡例
+            const legendItems = document.querySelectorAll(".legend .legend-item");
+            if (legendItems.length >= 4) {
+                legendItems[0].innerHTML = `<div class="legend-color" style="background-color: var(--accent-cyan);"></div> ${dict.legend_cef}`;
+                legendItems[1].innerHTML = `<div class="legend-color" style="background-color: var(--accent-amber);"></div> ${dict.legend_queue}`;
+                legendItems[2].innerHTML = `<div class="legend-color" style="background-color: var(--accent-violet);"></div> ${dict.legend_gpu}`;
+                legendItems[3].innerHTML = `<div class="legend-color" style="background-color: var(--success);"></div> ${dict.legend_sdi}`;
+            }
+
+            // 詳細解説
+            const detailTitles = document.querySelectorAll(".details-grid .details-panel .section-title");
+            if (detailTitles.length >= 3) {
+                detailTitles[0].innerText = dict.inspect_title;
+                detailTitles[1].innerText = dict.explain_title;
+                detailTitles[2].innerText = dict.buffer_graph_title;
+            }
+            const logConsoleTitle = document.querySelector(".details-panel:last-of-type .section-title:last-of-type");
+            if (logConsoleTitle) logConsoleTitle.innerText = dict.log_console_title;
+
+            document.querySelector(".zoom-section div[style*=\"font-size\"]").innerText = dict.inspect_sub;
+            const zoomTitles = document.querySelectorAll(".zoom-box .zoom-title");
+            if (zoomTitles.length >= 8) {
+                zoomTitles[2].innerText = dict.canvas_weave;
+                zoomTitles[3].innerText = dict.canvas_lpf;
+                zoomTitles[4].innerText = dict.canvas_unmult;
+                zoomTitles[5].innerText = dict.final_fill;
+                zoomTitles[6].innerText = dict.final_key;
+                zoomTitles[7].innerText = dict.inspect_mon;
+            }
+
+            // ピクセル詳細ラベル
+            const inspectLabels = document.querySelectorAll("#pixel-details .info-row");
+            if (inspectLabels.length >= 9) {
+                inspectLabels[0].querySelector(".info-label").innerText = dict.label_coord;
+                inspectLabels[1].querySelector(".info-label").innerText = dict.label_f1_raw;
+                inspectLabels[2].querySelector(".info-label").innerText = dict.label_f2_raw;
+                inspectLabels[3].querySelector(".info-label").innerText = dict.label_weave_val;
+                inspectLabels[4].querySelector(".info-label").innerText = dict.label_apply_rule;
+                inspectLabels[5].querySelector(".info-label").innerText = dict.label_lpf_val;
+                inspectLabels[6].querySelector(".info-label").innerText = dict.label_unmult_val;
+                inspectLabels[7].querySelector(".info-label").innerText = dict.label_fill_val;
+                inspectLabels[8].querySelector(".info-label").innerText = dict.label_key_val;
+                if (inspectLabels[9]) inspectLabels[9].querySelector(".info-label").innerText = dict.label_sdi_val;
+            }
+
+            // 解説カード
+            const formulaCards = document.querySelectorAll(".formula-card");
+            if (formulaCards.length >= 5) {
+                formulaCards[0].querySelector("h3").innerText = dict.explain_preroll_h;
+                formulaCards[0].querySelector("div").innerHTML = dict.explain_preroll_b;
+                
+                formulaCards[1].querySelector("h3").innerText = dict.explain_weave_h;
+                formulaCards[1].querySelector("div:last-of-type").innerHTML = dict.explain_weave_b;
+                
+                formulaCards[2].querySelector("h3").innerText = dict.explain_lpf_h;
+                formulaCards[2].querySelector("div:last-of-type").innerHTML = dict.explain_lpf_b;
+                
+                formulaCards[3].querySelector("h3").innerText = dict.explain_unmult_h;
+                formulaCards[3].querySelector("div:last-of-type").innerHTML = dict.explain_unmult_b;
+                
+                formulaCards[4].querySelector("h3").innerText = dict.explain_jitter_h;
+                formulaCards[4].querySelector("div:last-of-type").innerHTML = dict.explain_jitter_b;
+            }
+
+            // オプションテキストの書き換え
+            const modeSelect = document.getElementById("select-mode");
+            modeSelect.options[0].text = dict.opt_view_0;
+            modeSelect.options[1].text = dict.opt_view_1;
+            modeSelect.options[2].text = dict.opt_view_2;
+            modeSelect.options[3].text = dict.opt_view_3;
+            modeSelect.options[4].text = dict.opt_view_4;
+
+            const lpfSelect = document.getElementById("select-lpf");
+            lpfSelect.options[0].text = dict.opt_lpf_0;
+            lpfSelect.options[1].text = dict.opt_lpf_1;
+            lpfSelect.options[2].text = dict.opt_lpf_2;
+
+            const patternSelect = document.getElementById("select-pattern");
+            for (let i = 0; i <= 9; i++) {
+                patternSelect.options[i].text = dict["opt_pattern_" + i];
+            }
+
+            // ボタンのアクティブ状態のトグル
+            const btnJa = document.getElementById("btn-lang-ja");
+            const btnEn = document.getElementById("btn-lang-en");
+            if (lang === 'ja') {
+                btnJa.style.backgroundColor = 'var(--accent-cyan)';
+                btnJa.style.borderColor = 'var(--accent-cyan)';
+                btnJa.style.color = '#000';
+                btnEn.style.backgroundColor = '#1e293b';
+                btnEn.style.borderColor = '#334155';
+                btnEn.style.color = 'var(--text-color)';
+            } else {
+                btnEn.style.backgroundColor = 'var(--accent-cyan)';
+                btnEn.style.borderColor = 'var(--accent-cyan)';
+                btnEn.style.color = '#000';
+                btnJa.style.backgroundColor = '#1e293b';
+                btnJa.style.borderColor = '#334155';
+                btnJa.style.color = 'var(--text-color)';
+            }
+
+            // 再生・一時停止ボタンの文字を更新
+            const btnPlay = document.getElementById('btn-play-pause');
+            if (state.isPlaying) {
+                btnPlay.innerText = dict.btn_pause;
+            } else {
+                btnPlay.innerText = dict.btn_play;
+            }
+
+            updateUI();
+        }
+
+        // 言語ボタンのクリックイベント登録
+        document.getElementById("btn-lang-ja").addEventListener("click", () => changeLanguage('ja'));
+        document.getElementById("btn-lang-en").addEventListener("click", () => changeLanguage('en'));
+
         function setupInspectEvents(gridId) {
             const el = document.getElementById(gridId);
             if (!el) return;
@@ -2831,6 +3463,7 @@ if (pixel.a > alphaThreshold) {
 
         // アプリ起動時の初期処理
         resetState();
+        changeLanguage('ja'); // 初期言語を日本語に
 
     </script>
     </div> <!-- /scrollable-content -->
