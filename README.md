@@ -199,8 +199,8 @@ Reference manuals, simulators, and Japanese/English internal specifications for 
     *   Covers internal details on CEF-to-DeckLink inter-thread synchronization, timestamp-based buffering, Compute Shader interlace weaving, LPFs, and Unpremultiply processing.
 
 ### Pipeline Simulator
-*   **[Japanese: pipeline_simulator.html](docs/pipeline_simulator.html)**
-*   **[English: pipeline_simulator_en.html](docs/pipeline_simulator_en.html)**
+*   **[Open Japanese Simulator (Run Directly in Browser)](https://raw.githack.com/tanaka-ryuya/CEFDecklink/main/docs/pipeline_simulator.html)** ([Source File](docs/pipeline_simulator.html))
+*   **[Open English Simulator (Run Directly in Browser)](https://raw.githack.com/tanaka-ryuya/CEFDecklink/main/docs/pipeline_simulator_en.html)** ([Source File](docs/pipeline_simulator_en.html))
     *   Interactive simulator demonstrating CEF free-run (60fps) to DeckLink (59.94i) frame buffering, drop/duplicate behavior, Compute Shader blending, LPFs, and Unpremultiply math down to the pixel level.
 
 ---
