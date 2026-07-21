@@ -1313,16 +1313,22 @@ void RenderFrame(HWND hWnd) {
     if (g_deckLink.IsSimulated() && g_pd3dDeviceContext && g_pSwapChain && g_mainRenderTargetView && g_shaderManager) {
         std::vector<uint8_t> localBuffer;
         bool hasFrame = false;
+        bool isNewFrame = false;
         {
             std::lock_guard<std::mutex> lock(g_previewSharedMutex);
             if (g_previewHasNewFrame) {
-                localBuffer = g_previewSharedBuffer;
-                hasFrame = true;
+                g_previewHasNewFrame = false; // Reset the dirty flag
+                isNewFrame = true;
             }
+            localBuffer = g_previewSharedBuffer;
+            hasFrame = true;
         }
         
         if (hasFrame) {
             static int s_fieldIndex = 0;
+            if (isNewFrame) {
+                s_fieldIndex = 0; // Reset phase: Always start rendering from Top field on new frames
+            }
             RECT rc;
             GetClientRect(hWnd, &rc);
             int winW = rc.right - rc.left;
