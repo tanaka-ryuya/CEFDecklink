@@ -2,24 +2,45 @@
 
 [日本語版 (Japanese Version) はこちら](README_ja.md)
 
-CEFDecklink is a lightweight, single-purpose, highly stable, and broadcast-quality software. It captures web pages rendered with an embedded browser (CEF) and outputs them via SDI as separate **"straight alpha Fill and Key"** signals at an output rate of 1080i59.94 or 1080i50.
+CEFDecklink is a **lightweight, single-purpose, highly stable, open-source broadcast-quality software** that renders web pages using an embedded Chromium Embedded Framework (CEF) and outputs them via SDI as separate **"straight alpha Fill and Key"** signals at 1080i59.94 or 1080i50.
 
-(Internally, it uses the Chromium Embedded Framework to render HTML/CSS/JS contents off-screen, and generates precise Unmultiplied signals for hardware switchers via Blackmagic DeckLink devices.)
+Simply connect a Windows laptop to a Blackmagic **UltraStudio HD Mini** or similar DeckLink device to achieve perfect semi-transparent graphic synthesis (lower-thirds, CG overlays) on video switchers.
 
-It is configured specifically for the following setup:
-- **Devices**: Compatible with **UltraStudio HD Mini** (and similar DeckLink devices).
-- **Format**: **1080i59.94** (NTSC) / **1080i50** (PAL).
+> [!TIP]
+> **Try it instantly — no hardware required!**  
+> If you don't have an UltraStudio or DeckLink device, the software automatically launches in **"Simulator Mode"** (preview window on your PC). You can test HTML/WebGL animation smoothness and the tool's behavior immediately on any Windows PC.
+
+---
+
+## ✨ Key Features
+
+1. **Unmultiplied Keying (Built-in Fringe Prevention)**  
+   Equipped with a built-in "Unmultiplied Filter" to eliminate the edge darkening (fringe/halo issue) that occurs when blending semi-transparent web gradients or drop shadows on switchers. Enables perfect straight alpha synthesis.
+
+2. **60fps Free-Run CEF (Smooth Animations)**  
+   Renders the internal browser (CEF) at 60fps autonomously and synchronizes perfectly with the 29.97fps (59.94i) hardware output via an asynchronous, lock-free queue. This prevents HTML animation stutter and interlaced judder.
+
+3. **Multiple Output Modes (Hot-Switchable)**  
+   Switch instantly between Interlace Standard / Progressive / 30p Blend (motion-blur style blending) / Diff (difference debug view) using hotkeys at runtime.
+
+4. **Vertical Low-Pass Filter (Interlace Flicker Reduction)**  
+   Reduces fine horizontal line flicker (interlace combing) using GPU Compute Shader-based 3-tap / 5-tap vertical LPF. Optimizes video quality at the software level.
+
+5. **External Keying Mode**  
+   Supports hardware external keying mode for switcher-side key compositing.
+
+6. **DirectX 11 GPU Pipeline**  
+   Efficient GPU-based texture sharing, interlace Weave compositing, and color space conversion via Compute Shaders. Minimizes CPU overhead.
+
+7. **Simulator Mode**  
+   Automatically falls back to a desktop window preview if no DeckLink device is found. Verify web graphic rendering without any hardware.
+
+Specifically configured and tested for the following setup:
+- **Devices**: Compatible with **UltraStudio HD Mini** (Thunderbolt connection) and similar DeckLink devices.
+- **Format**: **1080i59.94** (NTSC) / **1080i50** (PAL)
 - **Output**:
   - **SDI A**: Fill Signal
   - **SDI B**: Key Signal
-
-## Features
-- **Unmultiplied Keying**: Generates proper Fill/Key signals with straight alpha channels for correct composting on broadcast switchers.
-- **CEF Integration**: Renders the latest Web contents (HTML5, WebGL, CSS, JS).
-- **DirectX 11**: Implements efficient GPU-based texture sharing and color space conversions.
-- **60fps Free-Run CEF**: Renders via CEF's autonomous timer (60fps/50fps) and synchronizes with 29.97fps/25fps hardware outputs using an asynchronous, lock-free queue. This prevents HTML animation stuttering and juddering when static.
-- **External Keying**: Supports hardware external keying mode.
-- **Simulator Mode**: Automatically falls back to a desktop preview window if no DeckLink device is found.
 
 ---
 
