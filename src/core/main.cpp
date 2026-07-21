@@ -198,8 +198,6 @@ static DeckLinkDevice g_deckLink;
 std::atomic<int> g_viewMode(0); // 0=Interlace, 1=Diff, 2=Progressive, 3=30pBlend
 static std::string g_targetUrl;
 static std::string g_format = "5994i"; // "5994i" or "50i"
-static std::string g_licenseKey = "";
-static bool g_isLicensed = false;
 std::atomic<int> g_filterMode(0); // 0=None, 1=3-tap, 2=5-tap vertical LPF
 static float g_alphaThreshold = 0.000f;
 
@@ -1024,29 +1022,7 @@ bool LoadConfig(std::string& url, float& alpha, std::string& format) {
         format = parsedFormat;
     }
     
-    // Load License from separate file
-#ifdef _WIN32
-    std::wstring licensePath = exeDir + L"\\licensekey.json";
-#else
-    std::string licensePath = exeDir + "/licensekey.json";
-#endif
-    std::ifstream licFile(licensePath);
-    if (licFile.is_open()) {
-        std::string licContent((std::istreambuf_iterator<char>(licFile)), std::istreambuf_iterator<char>());
-        size_t keyPos = licContent.find("\"license_key\"");
-        if (keyPos != std::string::npos) {
-            size_t colonPos = licContent.find(":", keyPos);
-            if (colonPos != std::string::npos) {
-                size_t startQuote = licContent.find("\"", colonPos);
-                if (startQuote != std::string::npos) {
-                    size_t endQuote = licContent.find("\"", startQuote + 1);
-                    if (endQuote != std::string::npos) {
-                        g_licenseKey = licContent.substr(startQuote + 1, endQuote - startQuote - 1);
-                    }
-                }
-            }
-        }
-    }
+
     
     return true;
 }
@@ -1326,15 +1302,7 @@ void RenderFrame(HWND hWnd) {
         oss << "alive cefTotal=" << totalCef;
         g_logger.Log("[HEARTBEAT]", oss.str());
 
-        bool newLicenseStatus = IsLicenseValid(g_licenseKey);
-        if (newLicenseStatus != g_isLicensed) {
-            g_isLicensed = newLicenseStatus;
-            if (g_shaderManager) {
-                std::lock_guard<std::mutex> lock(g_d3dContextMutex);
-                g_shaderManager->SetLicensed(g_isLicensed);
-            }
-            g_cefManager.SetLicensed(g_isLicensed);
-        }
+
     }
 #ifndef _WIN32
     if (g_macWindow) {
@@ -1350,8 +1318,6 @@ int main(int argc, char** argv)
     g_targetUrl = "https://telophub.duckdns.org/graphics/preview.html?machineId=8efb67b2-2fac-418a-9bd9-0284852ccd86";
     
     LoadConfig(g_targetUrl, g_alphaThreshold, g_format);
-    g_isLicensed = IsLicenseValid(g_licenseKey);
-    g_cefManager.SetLicensed(g_isLicensed);
     
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -1479,7 +1445,6 @@ int main(int argc, char** argv)
     g_shaderManager = std::make_unique<ShaderManager>();
 #endif
     g_shaderManager->SetAlphaThreshold(g_alphaThreshold);
-    g_shaderManager->SetLicensed(g_isLicensed);
     g_shaderManager->SetFilterMode(g_filterMode.load());
     if (!g_shaderManager->Initialize(1920, 1080)) {
         std::cerr << "Failed to initialize Shader Manager." << std::endl;

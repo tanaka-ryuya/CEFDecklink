@@ -58,9 +58,7 @@ public:
     // Externally drive CEF frame generation from DeckLink thread
     void DriveExternalBeginFrame(int mode);
 
-    // License Watermark
-    void SetLicensed(bool licensed);
-    void UpdateWatermark();
+
 
 private:
     CefRefPtr<CefRenderHandlerImpl> m_renderHandler;
@@ -77,5 +75,5 @@ private:
     std::string m_initialUrl;
     std::string m_format;
     FullscreenCallback m_fullscreenCallback;
-    bool m_isLicensed = false;
+
 };

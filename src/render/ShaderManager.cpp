@@ -141,7 +141,7 @@ void ShaderManager::ConvertAndDownload(CefFrameResource inputSRV1, CefFrameResou
         float* data = (float*)mappedResource.pData;
         data[0] = m_alphaThreshold;
         data[1] = (float)m_viewMode; // View Mode
-        data[2] = m_isLicensed ? 1.0f : 0.0f; // isLicensed
+        data[2] = 1.0f; // isLicensed (always 1.0 / free open source)
         data[3] = (float)m_filterMode; // 0=None, 1=3-tap, 2=5-tap vertical LPF
         m_context->Unmap(m_constantBuffer.Get(), 0);
     } else {
@@ -318,9 +318,6 @@ void ShaderManager::SetViewMode(int mode) {
     m_viewMode = mode;
 }
 
-void ShaderManager::SetLicensed(bool licensed) {
-    m_isLicensed = licensed;
-}
 
 void ShaderManager::SetFilterMode(int mode) {
     m_filterMode = mode;

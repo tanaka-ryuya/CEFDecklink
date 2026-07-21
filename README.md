@@ -147,16 +147,6 @@ Specify persistent settings in `config.json` next to `DeckLinkDX11.exe` (or in t
 - `format`: SDI output format. Supported values: "5994i" or "50i" (default: "5994i").
 - `il_filter_mode`: Interlace vertical filter mode (0=None, 1=3-tap, 2=5-tap) (default: 1).
 
-### 3. licensekey.json
-Place `licensekey.json` next to `DeckLinkDX11.exe` to configure a time-limited license key:
-```json
-{
-    "license_key": "20261231-5662"
-}
-```
-- `license_key`: Time-limited license key generated using `scripts/generate_license.ps1`. If missing or expired, a red watermark will be applied to the bottom right of the output.
-
----
 
 ## Operations and Controls (Console TUI Shortcuts)
 

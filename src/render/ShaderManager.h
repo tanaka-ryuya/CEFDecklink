@@ -38,8 +38,7 @@ public:
     // 0 = None, 1 = 3-tap, 2 = 5-tap
     void SetFilterMode(int mode);
 
-    // Set License Status
-    void SetLicensed(bool licensed);
+
 
 private:
 #ifdef _WIN32
@@ -65,7 +64,7 @@ private:
     float m_alphaThreshold = 0.0f; // Default threshold
     int m_viewMode = 0;
     int m_filterMode = 0;
-    bool m_isLicensed = false;
+
 
     int m_width = 0;
     int m_height = 0;

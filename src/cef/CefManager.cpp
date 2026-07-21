@@ -31,7 +31,7 @@ public:
     // CefLoadHandler methods
     void OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, int httpStatusCode) override {
         if (m_manager && frame->IsMain()) {
-            m_manager->UpdateWatermark();
+
             
             // Inject a dummy element that translates by 1px and changes color slightly every frame.
             // This forces Chromium to schedule layout and paint cycles without optimizations skipping it.
@@ -287,36 +287,6 @@ void CefManager::DriveExternalBeginFrame(int mode) {
     // No longer driven externally. 
 }
 
-void CefManager::SetLicensed(bool licensed) {
-    if (m_isLicensed != licensed) {
-        m_isLicensed = licensed;
-        UpdateWatermark();
-    }
-}
-
-void CefManager::UpdateWatermark() {
-    if (!m_browser) return;
-    auto frame = m_browser->GetMainFrame();
-    if (!frame) return;
-
-    if (!m_isLicensed) {
-        CefString code = 
-            "var wm = document.getElementById('cefdecklink-wm');"
-            "if(!wm) {"
-            "  wm = document.createElement('div');"
-            "  wm.id = 'cefdecklink-wm';"
-            "  wm.innerHTML = '🍌 CEFDecklink';"
-            "  wm.style.cssText = 'position:fixed; bottom:20px; right:20px; font-size:48px; font-weight:bold; color:white; text-shadow: 2px 2px 4px black; opacity:0.3; z-index:2147483647; pointer-events:none; font-family:sans-serif;';"
-            "  document.body.appendChild(wm);"
-            "}";
-        frame->ExecuteJavaScript(code, frame->GetURL(), 0);
-    } else {
-        CefString code = 
-            "var wm = document.getElementById('cefdecklink-wm');"
-            "if(wm) wm.remove();";
-        frame->ExecuteJavaScript(code, frame->GetURL(), 0);
-    }
-}
 
 void CefManager::SetBrowser(CefRefPtr<CefBrowser> browser) {
     m_browser = browser;
