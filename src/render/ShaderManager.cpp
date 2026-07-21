@@ -28,14 +28,16 @@ cbuffer ParamBuffer : register(b0) {
 };
 float4 PS(VS_OUTPUT input) : SV_Target {
     float2 uv = input.Tex;
-    float targetLine = uv.y * 1080.0f;
-    float sampledLine = 0.0f;
+    int targetY = (int)(uv.y * 1080.0f);
+    
+    // Top field rendering: Only draw even lines, discard odd lines to keep previous bottom field.
+    // Bottom field rendering: Only draw odd lines, discard even lines to keep previous top field.
     if (fieldMode < 0.5f) {
-        sampledLine = floor(targetLine / 2.0f) * 2.0f;
+        if ((targetY % 2) != 0) discard;
     } else {
-        sampledLine = floor((targetLine - 1.0f) / 2.0f) * 2.0f + 1.0f;
+        if ((targetY % 2) == 0) discard;
     }
-    uv.y = sampledLine / 1080.0f;
+    
     float4 col = shaderTexture.Sample(sampleType, uv);
     return float4(col.g, col.r, col.a, 1.0f);
 }
