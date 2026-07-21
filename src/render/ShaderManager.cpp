@@ -36,7 +36,8 @@ float4 PS(VS_OUTPUT input) : SV_Target {
         sampledLine = floor((targetLine - 1.0f) / 2.0f) * 2.0f + 1.0f;
     }
     uv.y = sampledLine / 1080.0f;
-    return shaderTexture.Sample(sampleType, uv);
+    float4 col = shaderTexture.Sample(sampleType, uv);
+    return float4(col.g, col.r, col.a, 1.0f);
 }
 )";
 
