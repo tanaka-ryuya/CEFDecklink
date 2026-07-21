@@ -202,3 +202,9 @@ Reference manuals, simulators, and Japanese/English internal specifications for 
 *   **[Japanese: pipeline_simulator.html](docs/pipeline_simulator.html)**
 *   **[English: pipeline_simulator_en.html](docs/pipeline_simulator_en.html)**
     *   Interactive simulator demonstrating CEF free-run (60fps) to DeckLink (59.94i) frame buffering, drop/duplicate behavior, Compute Shader blending, LPFs, and Unpremultiply math down to the pixel level.
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
