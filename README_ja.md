@@ -199,8 +199,8 @@ CEFDecklink/
     *   CEFからDeckLinkへのスレッド間同期、タイムスタンプベースのバッファリング、Compute Shaderによるインターレース Weave 合成や Unpremultiply 処理などの詳細仕様。
 
 ### パイプラインシミュレータ (Pipeline Simulator)
-*   **[日本語版 Webシミュレータを開く（ブラウザで直接実行）](https://raw.githack.com/tanaka-ryuya/CEFDecklink/main/docs/pipeline_simulator.html)** ([ソースファイル](docs/pipeline_simulator.html))
-*   **[英語版 Webシミュレータを開く（ブラウザで直接実行）](https://raw.githack.com/tanaka-ryuya/CEFDecklink/main/docs/pipeline_simulator_en.html)** ([ソースファイル](docs/pipeline_simulator_en.html))
+*   **[日本語版 Webシミュレータを開く（ブラウザで直接実行）](https://htmlpreview.github.io/?https://github.com/tanaka-ryuya/CEFDecklink/blob/main/docs/pipeline_simulator.html)** ([ソースファイル](docs/pipeline_simulator.html))
+*   **[英語版 Webシミュレータを開く（ブラウザで直接実行）](https://htmlpreview.github.io/?https://github.com/tanaka-ryuya/CEFDecklink/blob/main/docs/pipeline_simulator_en.html)** ([ソースファイル](docs/pipeline_simulator_en.html))
     *   CEFのフリーラン(60fps)からDeckLink(59.94i)へのフレーム蓄積・消費・ドロップ判定、Compute Shaderや垂直LPFの挙動、1画素単位の色計算（Unpremultiply）をWeb上で視覚的に検証・解析できるインタラクティブシミュレータ。
 
 ---
