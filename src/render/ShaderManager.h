@@ -72,10 +72,16 @@ private:
     // Preview shaders and objects
     ComPtr<ID3D11VertexShader> m_previewVS;
     ComPtr<ID3D11PixelShader> m_previewPS;
+    ComPtr<ID3D11PixelShader> m_previewCopyPS; // Pass-through copy shader
     ComPtr<ID3D11SamplerState> m_previewSampler;
     ComPtr<ID3D11Buffer> m_previewConstantBuffer;
     ComPtr<ID3D11Texture2D> m_previewTexture;
     ComPtr<ID3D11ShaderResourceView> m_previewSRV;
+
+    // Intermediate persistent GPU composition buffer
+    ComPtr<ID3D11Texture2D> m_composeTexture;
+    ComPtr<ID3D11RenderTargetView> m_composeRTV;
+    ComPtr<ID3D11ShaderResourceView> m_composeSRV;
 #endif
 
     float m_alphaThreshold = 0.0f; // Default threshold

@@ -41,6 +41,9 @@ float4 PS(VS_OUTPUT input) : SV_Target {
     float4 col = shaderTexture.Sample(sampleType, uv);
     return float4(col.g, col.r, col.a, 1.0f);
 }
+float4 PS_Copy(VS_OUTPUT input) : SV_Target {
+    return shaderTexture.Sample(sampleType, input.Tex);
+}
 )";
 
 ShaderManager::ShaderManager(ID3D11Device* device, ID3D11DeviceContext* context) 
@@ -137,6 +140,16 @@ bool ShaderManager::LoadShader() {
     }
     if (FAILED(m_device->CreatePixelShader(previewPSBlob->GetBufferPointer(), previewPSBlob->GetBufferSize(), nullptr, &m_previewPS))) return false;
 
+    // Compile and Create Preview Copy PS (Passthrough)
+    ComPtr<ID3DBlob> previewCopyPSBlob;
+    ComPtr<ID3DBlob> psCopyErrorBlob;
+    hr = D3DCompile(g_previewShaderSource, strlen(g_previewShaderSource), nullptr, nullptr, nullptr, "PS_Copy", "ps_4_0", 0, 0, &previewCopyPSBlob, &psCopyErrorBlob);
+    if (FAILED(hr)) {
+        if (psCopyErrorBlob) std::cerr << "PS_Copy Compile Error: " << static_cast<char*>(psCopyErrorBlob->GetBufferPointer()) << std::endl;
+        return false;
+    }
+    if (FAILED(m_device->CreatePixelShader(previewCopyPSBlob->GetBufferPointer(), previewCopyPSBlob->GetBufferSize(), nullptr, &m_previewCopyPS))) return false;
+
     return true;
 }
 
@@ -214,6 +227,21 @@ bool ShaderManager::CreateBuffers(int width, int height) {
     pcbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
     if (FAILED(m_device->CreateBuffer(&pcbDesc, nullptr, &m_previewConstantBuffer))) return false;
+
+    // Create m_composeTexture (RenderTarget + SRV, 1920x1080)
+    D3D11_TEXTURE2D_DESC compDesc = {};
+    compDesc.Width = 1920;
+    compDesc.Height = 1080;
+    compDesc.MipLevels = 1;
+    compDesc.ArraySize = 1;
+    compDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    compDesc.SampleDesc.Count = 1;
+    compDesc.Usage = D3D11_USAGE_DEFAULT;
+    compDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+    if (FAILED(m_device->CreateTexture2D(&compDesc, nullptr, &m_composeTexture))) return false;
+    if (FAILED(m_device->CreateRenderTargetView(m_composeTexture.Get(), nullptr, &m_composeRTV))) return false;
+    if (FAILED(m_device->CreateShaderResourceView(m_composeTexture.Get(), nullptr, &m_composeSRV))) return false;
 
     return true;
 }
@@ -445,39 +473,61 @@ void ShaderManager::PresentPreview(void* pBuffer, ID3D11RenderTargetView* render
         m_context->Unmap(m_previewConstantBuffer.Get(), 0);
     }
 
-    // 3. Set up Viewport
-    D3D11_VIEWPORT vp;
-    vp.Width = (float)winWidth;
-    vp.Height = (float)winHeight;
-    vp.MinDepth = 0.0f;
-    vp.MaxDepth = 1.0f;
-    vp.TopLeftX = 0;
-    vp.TopLeftY = 0;
-    m_context->RSSetViewports(1, &vp);
-
-    // 4. Set Render Target
-    m_context->OMSetRenderTargets(1, &renderTargetView, nullptr);
-
-    // 5. Bind Pipeline States
+    // Common setup
     m_context->IASetInputLayout(nullptr); // Input-less drawing
     m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-    m_context->VSSetShader(m_previewVS.Get(), nullptr, 0);
-    m_context->PSSetShader(m_previewPS.Get(), nullptr, 0);
-
-    ID3D11ShaderResourceView* srvs[] = { m_previewSRV.Get() };
-    m_context->PSSetShaderResources(0, 1, srvs);
 
     ID3D11SamplerState* samps[] = { m_previewSampler.Get() };
     m_context->PSSetSamplers(0, 1, samps);
 
+    // ==========================================
+    // Pass 1: Render fields to persistent intermediate compose buffer (1920x1080)
+    // ==========================================
+    D3D11_VIEWPORT vpComp;
+    vpComp.Width = 1920.0f;
+    vpComp.Height = 1080.0f;
+    vpComp.MinDepth = 0.0f;
+    vpComp.MaxDepth = 1.0f;
+    vpComp.TopLeftX = 0.0f;
+    vpComp.TopLeftY = 0.0f;
+    m_context->RSSetViewports(1, &vpComp);
+
+    ID3D11RenderTargetView* compRTVs[] = { m_composeRTV.Get() };
+    m_context->OMSetRenderTargets(1, compRTVs, nullptr);
+
+    m_context->VSSetShader(m_previewVS.Get(), nullptr, 0);
+    m_context->PSSetShader(m_previewPS.Get(), nullptr, 0);
+
+    ID3D11ShaderResourceView* srcSRVs[] = { m_previewSRV.Get() };
+    m_context->PSSetShaderResources(0, 1, srcSRVs);
+
     ID3D11Buffer* cbs[] = { m_previewConstantBuffer.Get() };
     m_context->PSSetConstantBuffers(0, 1, cbs);
 
-    // 6. Draw Fullscreen Triangle
     m_context->Draw(3, 0);
 
-    // 7. Clean up Bindings
+    // ==========================================
+    // Pass 2: Copy intermediate compose buffer to SwapChain viewport
+    // ==========================================
+    D3D11_VIEWPORT vpSwap;
+    vpSwap.Width = (float)winWidth;
+    vpSwap.Height = (float)winHeight;
+    vpSwap.MinDepth = 0.0f;
+    vpSwap.MaxDepth = 1.0f;
+    vpSwap.TopLeftX = 0.0f;
+    vpSwap.TopLeftY = 0.0f;
+    m_context->RSSetViewports(1, &vpSwap);
+
+    m_context->OMSetRenderTargets(1, &renderTargetView, nullptr);
+
+    m_context->PSSetShader(m_previewCopyPS.Get(), nullptr, 0);
+
+    ID3D11ShaderResourceView* compSRVs[] = { m_composeSRV.Get() };
+    m_context->PSSetShaderResources(0, 1, compSRVs);
+
+    m_context->Draw(3, 0);
+
+    // Clean up bindings
     ID3D11ShaderResourceView* nullSRVs[] = { nullptr };
     m_context->PSSetShaderResources(0, 1, nullSRVs);
 }
