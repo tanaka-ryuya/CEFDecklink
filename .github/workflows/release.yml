@@ -39,10 +39,6 @@ jobs:
         Rename-Item -Path $extractedDir.FullName -NewName "cef"
         Write-Host "CEF setup completed."
 
-    - name: Set up DeckLink SDK
-      shell: powershell
-      run: |
-        git clone --depth 1 https://github.com/bmd-hacks/DeckLink-SDK.git "vender/Blackmagic DeckLink SDK 15.3"
 
     - name: Configure CMake
       run: cmake -S . -B build
@@ -101,9 +97,6 @@ jobs:
         mv "$EXTRACTED_DIR" vender/cef
         echo "CEF setup completed."
 
-    - name: Set up DeckLink SDK
-      run: |
-        git clone --depth 1 https://github.com/bmd-hacks/DeckLink-SDK.git "vender/Blackmagic DeckLink SDK 15.3"
 
     - name: Configure CMake
       run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
