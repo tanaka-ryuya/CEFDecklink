@@ -72,3 +72,17 @@ vender/Blackmagic*
 docs/*.txt
 docs/*.log
 !docs/*.md
+
+# License system keys (Private keys & test licenses)
+scripts/private_key.xml
+licensekey.json
+
+# Scratch / Temporary directories
+scratch/
+CEFDecklink/
+
+# Automatically copied or generated DeckLink API files
+src/decklink/DeckLinkAPI.h
+src/decklink/DeckLinkAPI_i.c
+
+
