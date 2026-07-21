@@ -172,6 +172,9 @@ Specify persistent settings in `config.json` next to `DeckLinkDX11.exe` (or in t
 ## Operations and Controls (Console TUI Shortcuts)
 
 This application displays live status updates using a console-based TUI (Text User Interface).
+
+![Console TUI](docs/terminal.webp)
+
 With focus on the console window, you can use the following shortcuts:
 
 ### Windows Shortcuts
