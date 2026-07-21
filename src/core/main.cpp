@@ -1548,12 +1548,23 @@ int main(int argc, char** argv)
 
             if (pBuffer) {
                 if (srvTop && srvBottom && g_shaderManager) {
-                    std::lock_guard<std::mutex> lock(g_d3dContextMutex);
-                    int shaderMode = currentMode;
-                    if (currentMode == 3) shaderMode = 4; // Map TUI Mode 3 to HLSL Mode 4
-                    g_shaderManager->SetViewMode(shaderMode);
-                    g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
-                    BlitToWindow(pBuffer);
+                    bool skipDownload = false;
+#ifdef _WIN32
+                    if (g_deckLink.IsSimulated()) {
+                        std::lock_guard<std::mutex> lock(g_previewQueueMutex);
+                        if (g_previewQueue.size() >= 3) {
+                            skipDownload = true;
+                        }
+                    }
+#endif
+                    if (!skipDownload) {
+                        std::lock_guard<std::mutex> lock(g_d3dContextMutex);
+                        int shaderMode = currentMode;
+                        if (currentMode == 3) shaderMode = 4; // Map TUI Mode 3 to HLSL Mode 4
+                        g_shaderManager->SetViewMode(shaderMode);
+                        g_shaderManager->ConvertAndDownload(srvTop, srvBottom, pBuffer);
+                        BlitToWindow(pBuffer);
+                    }
                 } else if (g_shaderManager) {
                     memset(pBuffer, 0, 1920 * 1080 * 4);
                 }
