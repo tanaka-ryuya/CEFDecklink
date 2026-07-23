@@ -125,7 +125,37 @@ CEFDecklink/
 - **SmartScreenの警告:** 個人開発のため、実行ファイルに対するデジタル署名（コードサイニング証明書）を取得していません。初回実行時に Windows Defender SmartScreen による青い警告画面が表示される場合があります。その場合は、画面内の **「詳細情報」** をクリックし、**「実行」** を押すことで起動できます。
 - **ファイアウォールの警告:** 内部ブラウザ（CEF）が開発者ツール（DevTools）接続用のポートを開くため、Windows ファイアウォールの警告が表示されることがあります。開発者ツールを使用しない場合は、通信を **「キャンセル（許可しない）」** としても本ソフトウェアの送出機能は問題なく動作します。
 
-### ポータブル（ZIP）での配布・実行（推奨）
+### パッケージマネージャー（推奨）
+
+Windows および macOS のパッケージマネージャーを使用して、簡単にインストールおよびアップデートを行うことができます。
+
+#### Scoop (Windows)
+以下のコマンドを実行してバケットを追加し、インストールします：
+```powershell
+scoop bucket add cefdecklink https://github.com/tanaka-ryuya/scoop-cefdecklink.git
+scoop install cefdecklink
+```
+インストール完了後、任意のコマンドプロンプトまたはPowerShellから以下のコマンドでアプリを起動できます：
+```powershell
+cefdecklink
+```
+
+#### Homebrew (macOS Cask)
+以下のコマンドを実行してリポジトリをタップし、インストールします：
+```bash
+brew tap tanaka-ryuya/cefdecklink
+brew install --cask cefdecklink
+```
+インストール完了後、アプリケーションフォルダから、または以下のコマンドを使って起動できます：
+```bash
+# GUIアプリケーションバンドルとして起動する場合
+open -a DeckLinkDX11
+
+# 直接コマンドラインからバイナリを実行する場合
+/Applications/DeckLinkDX11.app/Contents/MacOS/DeckLinkDX11
+```
+
+### ポータブル（ZIP）での配布・実行（手動）
 本アプリケーションはインストーラーを使用しないポータブル配布形式となっています。
 他のPCへ持ち運びやデプロイを行う際は、ビルド出力である `build/Release` フォルダ全体をZIPにアーカイブしてコピーし、任意の場所（書き込み権限のあるユーザーフォルダ推奨）に展開して実行してください。
 

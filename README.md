@@ -125,8 +125,38 @@ Run the following in Command Prompt or PowerShell:
 - **SmartScreen Alert:** Since this is a privately developed software, the executable is not digitally signed with a code signing certificate. On the first run, Windows Defender SmartScreen might block it with a blue warning screen. Click **"More info"** and then select **"Run anyway"** to launch.
 - **Firewall Alert:** Since the internal browser (CEF) opens a port for Developer Tools (DevTools) access, a Windows Firewall alert may pop up. If you do not plan to use DevTools, you can select **"Cancel (Do not allow)"**; the SDI transmission will function normally.
 
-### Portable (ZIP) Deployment (Recommended)
-This application is distributed as a portable folder and does not use an installer.
+### Package Managers (Recommended)
+
+You can easily install and update CEFDecklink using package managers for Windows and macOS.
+
+#### Scoop (Windows)
+To add the bucket and install the package, run:
+```powershell
+scoop bucket add cefdecklink https://github.com/tanaka-ryuya/scoop-cefdecklink.git
+scoop install cefdecklink
+```
+Once installed, you can start the application from any command prompt or PowerShell window using:
+```powershell
+cefdecklink
+```
+
+#### Homebrew (macOS Cask)
+To tap the repository and install the application, run:
+```bash
+brew tap tanaka-ryuya/cefdecklink
+brew install --cask cefdecklink
+```
+Once installed, you can launch the application from the Applications folder or via command line:
+```bash
+# Launch as a GUI application bundle
+open -a DeckLinkDX11
+
+# Run the command line binary directly
+/Applications/DeckLinkDX11.app/Contents/MacOS/DeckLinkDX11
+```
+
+### Portable (ZIP) Deployment (Manual)
+This application can also be distributed as a portable folder without installers.
 To deploy to other PCs, simply compress the built `build/Release` folder into a ZIP archive, copy it, and extract it to any directory (user directories with write permissions are recommended) on the target PC.
 
 ### Direct Execution from Build Folder
